@@ -144,5 +144,6 @@ case class Field[A](form: Form[_], name: String, errors: Seq[FormError], value: 
 def longNumber: Field[Long] = Field("Long")
 def text: Field[String] = Field("String")
 def seq[A] : Field[Seq[A]] = Field("Seq")
+def optional[A] : Field[Option[A]] = Field("Option")
 
 case class FormError(key: String, messages: Seq[String], args: Seq[Any] = Nil)
