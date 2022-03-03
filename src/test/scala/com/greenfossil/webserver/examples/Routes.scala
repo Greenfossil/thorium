@@ -9,9 +9,9 @@
 //
 //  val indexEP = Endpoint
 //    .get
-////    .in("books" / path[String]("genre") / path[Int]("year"))
-////    .in("api" / "v1.0")
-////    .errorOut(/*stringBody*/ "content")
-////    .out(/*stringBody*/ "content")
+//    .in("books" / path[String]("genre") / path[Int]("year"))
+//    .in("api" / "v1.0")
+//    .errorOut(/*stringBody*/ "content")
+//    .out(/*stringBody*/ "content")
 //
 //}

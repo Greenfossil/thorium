@@ -22,9 +22,53 @@ object Form {
     Form[FormTupleMappings[A]](mappings.asInstanceOf[Tuple])
 
   import scala.deriving.Mirror
-  def asClass[A](mappings: Tuple)(using m: Mirror.Of[A]): Form[A] =
+  import scala.compiletime.{summonFrom, error, constValue, erasedValue, summonInline}
 
+  inline def asClass[A](mappings: Tuple)/*(using m: Mirror.Of[A])*/: Form[A] = {
+//    val fields = toMappingFields(mappings)
+    val m = summonInline[Mirror.ProductOf[A]]
+    println(s"m = ${m}")
+//    matchCaseClassMapping(m, mappings)
+//    summonFrom {
+//      case m: Mirror.ProductOf[A] => matchCaseClassMapping(m, mappings)
+//      case _ => error("Only case class is supported")
+//    }
     Form[A](mappings)
+  }
+
+  inline def matchCaseClassMapping[A](p: Mirror.ProductOf[A], fields: Tuple) = {
+    val label = constValue[p.MirroredLabel].toString
+    val elemLabels = getLabelNames[p.MirroredElemLabels]
+    val fieldsTypes:Tuple = getFieldTypes[p.MirroredElemTypes]
+    println(s"fieldsTypes = ${fieldsTypes}")
+//    if fieldsTypes != fields then error("mapping mismatch")
+  }
+
+  inline def toMappingFields(mappings: Tuple): Tuple =
+    mappings match {
+      case EmptyTuple => EmptyTuple
+      case t *: ts =>
+        val f = t match {case (name, field) => field }
+        println(s"f = ${f}")
+        f *: toMappingFields(ts)
+    }
+
+  inline private def getLabelNames[A <: Tuple]: Seq[String] =
+    inline erasedValue[A] match
+      case _: EmptyTuple => Nil
+      case _: (t *: ts) => constValue[t].toString +: getLabelNames[ts]
+
+  inline private def getFieldTypes[A]: Tuple =
+    inline erasedValue[A] match
+      case _: EmptyTuple => EmptyTuple
+      case _: (t *: ts) => toField[t] *: getFieldTypes[ts]
+
+  inline private def toField[A]: Field[_] =
+    inline erasedValue[A] match {
+      case _: Long => longNumber
+      case _: String => text
+    }
+
 }
 
 case class Form[A](mappings: Tuple, data: Map[String, Any] = Map.empty , errors: Seq[FormError] = Nil, value: Option[A] = None) {
