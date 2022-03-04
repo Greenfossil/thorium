@@ -31,14 +31,14 @@ case class Session(data: Map[String, String]) {
 }
 
 object Call {
-  def apply(url: String): String = ???
+//  def apply(url: String): Call = Call(url)
 
   def apply(method: String, url: String): String = ???
 }
 
 //TODO - should this be Endpoint
-trait Call {
-
+case class Call(url: String) {
+  override def toString: String = url
 }
 
 trait HttpErrorHandler {
