@@ -1,6 +1,7 @@
 package com.greenfossil.webserver
 
 import com.linecorp.armeria.common.HttpResponse
+import com.linecorp.armeria.server.DefaultServerErrorHandler
 import com.linecorp.armeria.server.*
 import org.slf4j.LoggerFactory
 
@@ -33,7 +34,7 @@ case class WebServer(_port: Int, server: Server, routes: Seq[(String, HttpServic
     if _port > 0 then sb.http(_port)
 
     routes.foreach{route => sb.service(route._1, route._2) }
-    errorHandlerOpt.foreach{ handler => sb.errorHandler(handler)}
+    errorHandlerOpt.foreach{ handler => sb.errorHandler(handler.orElse(ServerErrorHandler.ofDefault()))}
 
     sb.build
 
