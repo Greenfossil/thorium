@@ -100,7 +100,7 @@ object Field {
 
 }
 
-case class Field[A](tpe: String, form: TupleForm[_] = null, name: String = null, errors: Seq[FormError] = Nil, value: Option[A] = None) {
+case class Field[A](tpe: String, form: Form[_] = null, name: String = null, errors: Seq[FormError] = Nil, value: Option[A] = None) {
   def setValue(a: A): Field[A] = copy(value = Option(a))
 }
 

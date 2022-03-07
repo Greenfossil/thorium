@@ -7,7 +7,7 @@ import java.time.LocalDate
 class FormSuite extends munit.FunSuite {
 
   test("tuple 2") {
-    val form: TupleForm[(Long, String)] = Form.asTuple(
+    val form: Form[(Long, String)] = Form.tuple(
       "long" -> longNumber,
       "text" -> text
     )
@@ -20,7 +20,7 @@ class FormSuite extends munit.FunSuite {
   }
 
   test("fill tuple") {
-    val form: TupleForm[(Long, String, Seq[Long])] = Form.asTuple(
+    val form: Form[(Long, String, Seq[Long])] = Form.tuple(
       "long" -> longNumber,
       "text" -> text,
       "seq" -> seq[Long]
@@ -33,7 +33,7 @@ class FormSuite extends munit.FunSuite {
   }
 
   test("bind tuple 2") {
-    val form: TupleForm[(Long, String, Seq[Int])] = Form.asTuple(
+    val form: Form[(Long, String, Seq[Int])] = Form.tuple(
       "long" -> longNumber,
       "text" -> text,
       "seq" -> seq[Int]
@@ -48,7 +48,7 @@ class FormSuite extends munit.FunSuite {
   }
 
   test("bind tuple 3"){
-    val form = Form.asTuple(
+    val form = Form.tuple(
       "name" -> text,
       "birthday" -> localDate
     )
@@ -65,7 +65,7 @@ class FormSuite extends munit.FunSuite {
 
   test("case class 2") {
     case class Foo(l: Long, s: String)
-    val form: CaseClassForm[Foo, (("l", Field[Long]), ("s", Field[String]))] = Form.asClass[Foo](
+    val form: Form[Foo] = Form.mapping[Foo](
       "l" -> Field.of[Long],
       "s" -> Field.of[String]
     )
@@ -77,7 +77,7 @@ class FormSuite extends munit.FunSuite {
 
   test("case class 3") {
     case class Foo(l: Long, s: String, xs: Seq[Long])
-    val form: CaseClassForm[Foo, (("l", Field[Long]), ("s", Field[String]), ("xs", Field[Seq[Long]]))] = Form.asClass[Foo](
+    val form: Form[Foo] = Form.mapping[Foo](
       "l" -> longNumber,
       "s" -> text,
       "xs" -> seq[Long]

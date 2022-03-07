@@ -1,8 +1,5 @@
 package com.greenfossil.webserver.data
 
-import com.greenfossil.commons.json.JsValue
-import com.linecorp.armeria.common.HttpMethod
-
 import java.time.LocalDate
 
 import com.greenfossil.commons.json.JsValue
@@ -10,59 +7,58 @@ import com.linecorp.armeria.common.HttpMethod
 
 object Form {
 
-  type FormMappings[Xs <: Tuple] <: Tuple = Xs match {
+  /*
+   * Extracts Type  't' from Field[t]
+   */
+  type FieldTypeExtractor[Xs <: Tuple] <: Tuple = Xs match {
     case EmptyTuple => Xs
-    case Field[t] *: ts => t *: FormMappings[ts]
-    case (String, Field[t]) *: ts => t *: FormMappings[ts]
+    case Field[t] *: ts => t *: FieldTypeExtractor[ts]
+    case (String, Field[t]) *: ts => t *: FieldTypeExtractor[ts]
   }
 
-  type NameFieldMappings[X <:Tuple] <: Tuple = X match {
+  /*
+   * Constructs Field[t] from a given type 't'
+   */
+  type FieldConstructor[X <:Tuple] <: Tuple = X match {
     case EmptyTuple => X
-    case t *: ts => Field[t] *: NameFieldMappings[ts]
+    case t *: ts => Field[t] *: FieldConstructor[ts]
   }
 
-  def asTuple[A  <: (String, Field[_]) *: Tuple](tuple: A): TupleForm[FormMappings[A]] =
-    val fs = tuple.map[[X] =>> Field[_]]([X] => (x: X) => x match {
-      case (name: String, f: Field[_]) => f.copy(name = name)
-    })
-    TupleForm[FormMappings[A]](fs)
+  def tuple[A <: Tuple](tuple: A): Form[FieldTypeExtractor[A]] =
+    Form[FieldTypeExtractor[A]](toNamedFieldTuple(tuple).asInstanceOf[Field[_] *: Tuple])
 
   import scala.deriving.*
+  def mapping[A](using m: Mirror.ProductOf[A])(tuple: Tuple.Zip[m.MirroredElemLabels, FieldConstructor[m.MirroredElemTypes]]): Form[A] =
+    Form[A](toNamedFieldTuple(tuple).asInstanceOf[Field[_] *: Tuple])
 
-  def asClass[A](using m: Mirror.ProductOf[A])(tuple: Tuple.Zip[m.MirroredElemLabels, NameFieldMappings[m.MirroredElemTypes]]): CaseClassForm[A, Tuple.Zip[m.MirroredElemLabels, NameFieldMappings[m.MirroredElemTypes]]] =
-    val xs = tuple.map[[X] =>> Field[_]]([X] => (x: X) =>
+  private def toNamedFieldTuple(tuple: Tuple): Tuple =
+    tuple.map[[X] =>> Field[_]]([X] => (x: X) =>
       x match {
         case (name: String, f: Field[_]) => f.copy(name = name)
       }
     )
-    CaseClassForm[A, Tuple.Zip[m.MirroredElemLabels, NameFieldMappings[m.MirroredElemTypes]]](xs.asInstanceOf[Field[_] *: Tuple])
 
 }
 
 /**
- * F Bound type
- * @tparam F
+ *
+ * @param mappings
+ * @param data
+ * @param errors
+ * @param value
  * @tparam T
  */
-trait Form[F <: Form[F, T], T]{ self: F =>
+case class Form[T](mappings: Field[_] *: Tuple, data: Map[String, Any] = Map.empty, errors: Seq[FormError] = Nil, value: Option[T] = None){
 
-  val mappings: Field[_] *: Tuple
+  def setMappings(mappings: Field[_] *: Tuple): Form[T] = copy(mappings = mappings)
 
-  def setMappings(mapping: Field[_] *: Tuple): F
+  def setData(data: Map[String, Any]): Form[T] = copy(data = data)
 
-  val data: Map[String, Any]
+  def setValue(value: T): Form[T] = copy(value = Option(value))
 
-  def setData(data: Map[String, Any]): F
+  def setErrors(errors: Seq[FormError]): Form[T] = copy(errors = errors)
 
-  val value: Option[T]
-
-  def setValue(value: T): F
-
-  val errors: Seq[FormError]
-
-  def setErrors(errors: Seq[FormError]): F
-
-  def fill(values: T): F =
+  def fill(values: T): Form[T] =
     val filledFields  = values match {
       case _values: Tuple =>
         tupleToData(_values)
@@ -73,7 +69,7 @@ trait Form[F <: Form[F, T], T]{ self: F =>
     }
     setMappings(filledFields)
 
-  def bindFromRequest()(using request: com.greenfossil.webserver.Request): Form[F, T] =
+  def bindFromRequest()(using request: com.greenfossil.webserver.Request): Form[T] =
     val querydata: Map[String, Seq[String]] =
       request.method() match {
         case HttpMethod.POST | HttpMethod.PUT | HttpMethod.PATCH => Map.empty
@@ -90,7 +86,7 @@ trait Form[F <: Form[F, T], T]{ self: F =>
         bind(req.asJson, querydata)
     }
 
-  def bind(data: Map[String, Seq[String]]): Form[F, T] = {
+  def bind(data: Map[String, Seq[String]]): Form[T] = {
     val newMappings = mappings.map[[A] =>> Field[_]] {
       [X] => (x: X) => x match
         case f: Field[t] => f.copy(value = Field.toValueOf(f.tpe, data.get(f.name).orNull))
@@ -98,7 +94,7 @@ trait Form[F <: Form[F, T], T]{ self: F =>
     setData(data).setMappings(newMappings)
   }
 
-  def bind(js: JsValue, query: Map[String, Seq[String]]): Form[F, T] = {
+  def bind(js: JsValue, query: Map[String, Seq[String]]): Form[T] = {
     //WIP
     val newMappings = mappings.map[[A] =>> Field[_]] {
       [X] => (x: X) => x match
@@ -116,7 +112,7 @@ trait Form[F <: Form[F, T], T]{ self: F =>
     filledFields
   }
 
-  def fold[R](hasErrors: Form[F, T] => R, success: T => R): R = value match {
+  def fold[R](hasErrors: Form[T] => R, success: T => R): R = value match {
     case Some(v) if errors.isEmpty => success(v)
     case _ => hasErrors(this)
   }
@@ -128,24 +124,4 @@ trait Form[F <: Form[F, T], T]{ self: F =>
       .map(_.asInstanceOf[Field[A]])
       .getOrElse(Field.of[Nothing].copy(name = key))
 
-}
-
-case class CaseClassForm[T, U](mappings: Field[_] *: Tuple = null, data: Map[String, Any] = Map.empty, errors: Seq[FormError] = Nil, value: Option[T] = None) extends Form[CaseClassForm[T, U], T]{
-  override def setMappings(mapping: Field[_] *: Tuple): CaseClassForm[T, U] = copy(mappings = mapping)
-
-  override def setData(data: Map[String, Any]): CaseClassForm[T, U] = copy(data = data)
-
-  override def setValue(value: T): CaseClassForm[T, U] = copy(value = Option(value))
-
-  override def setErrors(errors: Seq[FormError]): CaseClassForm[T, U] = copy(errors = errors)
-}
-
-case class TupleForm[T <: Tuple](mappings: Field[_] *: Tuple, data: Map[String, Any] = Map.empty, errors: Seq[FormError] = Nil, value: Option[T] = None) extends Form[TupleForm[T], T] {
-  override def setMappings(mapping: Field[_] *: Tuple): TupleForm[T] = copy(mappings = mapping)
-
-  override def setData(data: Map[String, Any]): TupleForm[T] = copy(data = data)
-
-  override def setValue(value: T): TupleForm[T] = copy(value = Option(value))
-
-  override def setErrors(errors: Seq[FormError]): TupleForm[T] = copy(errors = errors)
 }

@@ -5,7 +5,7 @@ import com.greenfossil.webserver.data.*
 class BugFormSuite extends munit.FunSuite {
 
   test("Bind form"){
-    val sampleForm = Form.asTuple(
+    val sampleForm = Form.tuple(
       "name" -> text,
       "age" -> longNumber,
       "gender" -> text,
