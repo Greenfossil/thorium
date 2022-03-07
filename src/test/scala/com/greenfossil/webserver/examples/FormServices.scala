@@ -6,7 +6,7 @@ import com.greenfossil.webserver.{*, given}
 object FormServices {
 
   def tupleForm = Action { implicit request =>
-    val form: Form[(String, Long)] = Form.asTuple(
+    val form = Form.asTuple(
       "name" -> text,
       "id" -> longNumber
     )

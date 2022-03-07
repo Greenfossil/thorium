@@ -16,122 +16,46 @@ object Form {
     case t *: ts => Field[t] *: NameFieldMappings[ts]
   }
 
-  def fields[A <: Field[_] *: Tuple](fields: A): Form[FormMappings[A]] =
-    Form[FormMappings[A]](fields)
+//  def fields[A <: Field[_] *: Tuple](fields: A): Form[FormMappings[A]] =
+//    Form[FormMappings[A]](fields)
 
-  def asTuple[A  <: (String, Field[_]) *: Tuple](tuple: A): Form[FormMappings[A]] =
+  def asTuple[A  <: (String, Field[_]) *: Tuple](tuple: A): TupleMapper[FormMappings[A]] =
     val fs = tuple.map[[X] =>> Field[_]]([X] => (x: X) => x match {
       case (name: String, f: Field[_]) => f.copy(name = name)
     })
-    Form[FormMappings[A]](fs)
+    TupleMapper[FormMappings[A]](fs)
 
-  import scala.compiletime.{summonFrom, error, constValue, erasedValue, summonInline}
 
   import scala.deriving.*
-  def asCaseClass[A](using m: Mirror.ProductOf[A]) =
-    CaseClassMapper[A, Tuple.Zip[m.MirroredElemLabels, NameFieldMappings[m.MirroredElemTypes]]]()
 
-  inline def toMappingFields(mappings: Tuple): Tuple =
-    mappings match {
-      case EmptyTuple => EmptyTuple
-      case t *: ts =>
-        val f = t match {case (name, field) => field }
-        println(s"f = ${f}")
-        f *: toMappingFields(ts)
-    }
-
-  inline private def getLabelNames[A <: Tuple]: Seq[String] =
-    inline erasedValue[A] match
-      case _: EmptyTuple => Nil
-      case _: (t *: ts) => constValue[t].toString +: getLabelNames[ts]
-
-  inline private def getFieldTypes[A]: Tuple =
-    inline erasedValue[A] match
-      case _: EmptyTuple => EmptyTuple
-      case _: (t *: ts) => toField[t] *: getFieldTypes[ts]
-
-  inline private def toField[A]: Field[_] =
-    inline erasedValue[A] match {
-      case _: Long => longNumber
-      case _: String => text
-    }
-}
-
-case class CaseClassMapper[A, B](mappings: Field[_] *: Tuple = null, data: Map[String, Any] = Map.empty, errors: Seq[FormError] = Nil, value: Option[A] = None) {
-  def fill(values: A):CaseClassMapper[A, B] = ???
-  def apply(nameFieldmappings:B): CaseClassMapper[A,B] = ???
-}
-
-case class Form[A](mappings: Field[_] *: Tuple, data: Map[String, Any] = Map.empty, errors: Seq[FormError] = Nil, value: Option[A] = None) {
-
-  import scala.deriving.Mirror
-
-  def fill(values: A): Form[A] =
-    val filledFields  = values match {
-      case _values: Tuple =>
-       tupleToData(_values)
-
-      case caseclass: Product =>
-        val tuple = Tuple.fromProduct(caseclass)
-        tupleToData(tuple)
-    }
-    copy(mappings = filledFields)
-
-  def bindFromRequest()(using request: com.greenfossil.webserver.Request): Form[A] =
-    val querydata: Map[String, Seq[String]] =
-      request.method() match {
-        case HttpMethod.POST | HttpMethod.PUT | HttpMethod.PATCH => Map.empty
-        case _ => Map.empty //FIXME - request.queryString
+  def asClass[A](using m: Mirror.ProductOf[A])(tuple: Tuple.Zip[m.MirroredElemLabels, NameFieldMappings[m.MirroredElemTypes]]) =
+    val xs = tuple.map[[X] =>> Field[_]]([X] => (x: X) =>
+      x match {
+        case (name: String, f: Field[_]) => f.copy(name = name)
       }
-    request match {
-      case req if req.asFormUrlEncoded.nonEmpty =>
-        bind(req.asFormUrlEncoded ++ querydata)
+    )
+    CaseClassMapper[A, Tuple.Zip[m.MirroredElemLabels, NameFieldMappings[m.MirroredElemTypes]]](xs.asInstanceOf[Field[_] *: Tuple])
 
-      case req if req.asMultipartFormData.bodyPart.nonEmpty =>
-        bind(req.asMultipartFormData.asFormUrlEncoded ++ querydata)
+}
 
-      case req if req.asJson.asOpt.isDefined =>
-        bind(req.asJson, querydata)
-    }
+case class CaseClassMapper[T, B](mappings: Field[_] *: Tuple = null, data: Map[String, Any] = Map.empty, errors: Seq[FormError] = Nil, value: Option[T] = None) extends FormMapping[CaseClassMapper[T, B], T]{
+  override def setMappings(mapping: Field[_] *: Tuple): CaseClassMapper[T, B] = copy(mappings = mapping)
 
-  def bind(data: Map[String, Seq[String]]): Form[A] = {
-    val newMappings = mappings.map[[A] =>> Field[_]] {
-      [X] => (x: X) => x match
-        case f: Field[t] => f.copy(value = Field.toValueOf(f.tpe, data.get(f.name).orNull))
-    }
-    this.copy(mappings = newMappings, data = data)
-  }
+  override def setData(data: Map[String, Any]): CaseClassMapper[T, B] = copy(data = data)
 
-  def bind(js: JsValue, query: Map[String, Seq[String]]): Form[A] = {
-    //WIP
-    val newMappings = mappings.map[[A] =>> Field[_]] {
-      [X] => (x: X) => x match
-        case f: Field[t] => f.copy(value = Field.toValueOf(f.tpe, (js \ f.name).asOpt[String]))
-    }
-    this.copy(mappings = newMappings, data = null)
-  }
+  override def setValue(value: T): CaseClassMapper[T, B] = copy(value = Option(value))
 
-  private def tupleToData(values: Product): Field[_] *: Tuple = {
-    val valuesIter = values.productIterator
-    val filledFields = mappings.map[[F] =>> Field[_]](
-      [F] => (f: F) => f match {
-        case f: Field[_] => f.copy(value = valuesIter.nextOption())
-      })
-    filledFields
-  }
+  override def setErrors(errors: Seq[FormError]): CaseClassMapper[T, B] = copy(errors = errors)
+}
 
-  def fold[R](hasErrors: Form[A] => R, success: A => R): R = value match {
-    case Some(v) if errors.isEmpty => success(v)
-    case _ => hasErrors(this)
-  }
+case class TupleMapper[T <: Tuple](mappings: Field[_] *: Tuple, data: Map[String, Any] = Map.empty, errors: Seq[FormError] = Nil, value: Option[T] = None) extends FormMapping[TupleMapper[T], T] {
+  override def setMappings(mapping: Field[_] *: Tuple): TupleMapper[T] = copy(mappings = mapping)
 
-  inline def apply[T](key: String): Field[T] =
-    mappings
-      .productIterator
-      .find(_.asInstanceOf[Field[T]].name == key)
-      .map(_.asInstanceOf[Field[T]])
-      .getOrElse(Field("", this, key))
+  override def setData(data: Map[String, Any]): TupleMapper[T] = copy(data = data)
 
+  override def setValue(value: T): TupleMapper[T] = copy(value = Option(value))
+
+  override def setErrors(errors: Seq[FormError]): TupleMapper[T] = copy(errors = errors)
 }
 
 object Field {
@@ -222,7 +146,7 @@ object Field {
 
 }
 
-case class Field[A](tpe: String, form: Form[_] = null , name: String = null, errors: Seq[FormError] = Nil, value: Option[A] = None) {
+case class Field[A](tpe: String, form: TupleMapper[_] = null, name: String = null, errors: Seq[FormError] = Nil, value: Option[A] = None) {
   def setValue(a: A): Field[A] = copy(value = Option(a))
 }
 
