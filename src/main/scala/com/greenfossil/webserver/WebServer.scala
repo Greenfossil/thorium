@@ -1,7 +1,6 @@
 package com.greenfossil.webserver
 
 import com.linecorp.armeria.common.HttpResponse
-import com.linecorp.armeria.server.DefaultServerErrorHandler
 import com.linecorp.armeria.server.*
 import org.slf4j.LoggerFactory
 

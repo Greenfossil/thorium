@@ -2,6 +2,8 @@ package com.greenfossil.webserver
 
 import com.greenfossil.webserver.data.{*, given}
 
+import java.time.LocalDate
+
 class FormSuite extends munit.FunSuite {
 
   test("tuple 2") {
@@ -45,9 +47,25 @@ class FormSuite extends munit.FunSuite {
     assertEquals[Any, Any](bindedForm("seq").value, Option(Seq(1,2)))
   }
 
+  test("bind tuple 3"){
+    val form = Form.asTuple(
+      "name" -> text,
+      "birthday" -> localDate
+    )
+    val filledForm = form.fill("Homer", LocalDate.parse("1990-01-01"))
+    assertEquals(filledForm[LocalDate]("birthday").value, Some(LocalDate.parse("1990-01-01")))
+
+    val bindedForm = form.bind(Map("name" -> Seq("Homer"), "birthday" -> Seq("1990-01-01")))
+    assertEquals(bindedForm[LocalDate]("birthday").value, Some(LocalDate.parse("1990-01-01")))
+  }
+
+  test("bind as JSON"){
+
+  }
+
   test("case class 2") {
     case class Foo(l: Long, s: String)
-    val form = Form.asClass[Foo](
+    val form: CaseClassMapper[Foo, (("l", Field[Long]), ("s", Field[String]))] = Form.asClass[Foo](
       "l" -> Field.of[Long],
       "s" -> Field.of[String]
     )
@@ -59,7 +77,7 @@ class FormSuite extends munit.FunSuite {
 
   test("case class 3") {
     case class Foo(l: Long, s: String, xs: Seq[Long])
-    val form = Form.asClass[Foo](
+    val form: CaseClassMapper[Foo, (("l", Field[Long]), ("s", Field[String]), ("xs", Field[Seq[Long]]))] = Form.asClass[Foo](
       "l" -> longNumber,
       "s" -> text,
       "xs" -> seq[Long]

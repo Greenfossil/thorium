@@ -3,7 +3,12 @@ package com.greenfossil.webserver.data
 import com.greenfossil.commons.json.JsValue
 import com.linecorp.armeria.common.HttpMethod
 
-trait FormMapping[F <: FormMapping[F, T], T]{ self: F =>
+/**
+ * F Bound type
+ * @tparam F
+ * @tparam T
+ */
+trait FormMappings[F <: FormMappings[F, T], T]{ self: F =>
 
   val mappings: Field[_] *: Tuple
 
@@ -32,7 +37,7 @@ trait FormMapping[F <: FormMapping[F, T], T]{ self: F =>
     }
     setMappings(filledFields)
 
-  def bindFromRequest()(using request: com.greenfossil.webserver.Request): FormMapping[F, T] =
+  def bindFromRequest()(using request: com.greenfossil.webserver.Request): FormMappings[F, T] =
     val querydata: Map[String, Seq[String]] =
       request.method() match {
         case HttpMethod.POST | HttpMethod.PUT | HttpMethod.PATCH => Map.empty
@@ -49,7 +54,7 @@ trait FormMapping[F <: FormMapping[F, T], T]{ self: F =>
         bind(req.asJson, querydata)
     }
 
-  def bind(data: Map[String, Seq[String]]): FormMapping[F, T] = {
+  def bind(data: Map[String, Seq[String]]): FormMappings[F, T] = {
     val newMappings = mappings.map[[A] =>> Field[_]] {
       [X] => (x: X) => x match
         case f: Field[t] => f.copy(value = Field.toValueOf(f.tpe, data.get(f.name).orNull))
@@ -57,7 +62,7 @@ trait FormMapping[F <: FormMapping[F, T], T]{ self: F =>
     setData(data).setMappings(newMappings)
   }
 
-  def bind(js: JsValue, query: Map[String, Seq[String]]): FormMapping[F, T] = {
+  def bind(js: JsValue, query: Map[String, Seq[String]]): FormMappings[F, T] = {
     //WIP
     val newMappings = mappings.map[[A] =>> Field[_]] {
       [X] => (x: X) => x match
@@ -75,7 +80,7 @@ trait FormMapping[F <: FormMapping[F, T], T]{ self: F =>
     filledFields
   }
 
-  def fold[R](hasErrors: FormMapping[F, T] => R, success: T => R): R = value match {
+  def fold[R](hasErrors: FormMappings[F, T] => R, success: T => R): R = value match {
     case Some(v) if errors.isEmpty => success(v)
     case _ => hasErrors(this)
   }
