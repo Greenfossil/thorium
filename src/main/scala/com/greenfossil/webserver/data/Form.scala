@@ -121,12 +121,12 @@ trait Form[F <: Form[F, T], T]{ self: F =>
     case _ => hasErrors(this)
   }
 
-  inline def apply[A](key: String): Field[A] =
+  def apply[A](key: String): Field[A] =
     mappings
       .productIterator
       .find(_.asInstanceOf[Field[A]].name == key)
       .map(_.asInstanceOf[Field[A]])
-      .getOrElse(Field.of[A])
+      .getOrElse(Field.of[Nothing].copy(name = key))
 
 }
 
