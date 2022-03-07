@@ -130,7 +130,7 @@ case class Form[A](mappings: Field[_] *: Tuple, data: Map[String, Any] = Map.emp
       .productIterator
       .find(_.asInstanceOf[Field[T]].name == key)
       .map(_.asInstanceOf[Field[T]])
-      .orNull
+      .getOrElse(Field("", this, key))
 
 }
 

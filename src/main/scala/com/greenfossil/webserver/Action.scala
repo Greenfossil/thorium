@@ -48,6 +48,9 @@ def Redirect(call: Call): HttpResponse =  ???
 def NotFound[C](body: C)(using w: Writeable[C]): HttpResponse =
   httpResponse(HttpStatus.NOT_FOUND, body)
 
+def Forbidden[C](body: C)(using w: Writeable[C]): HttpResponse =
+  httpResponse(HttpStatus.FORBIDDEN, body)
+
 def InternalServerError[C](body: C)(using w: Writeable[C]): HttpResponse =
   httpResponse(HttpStatus.INTERNAL_SERVER_ERROR, body)
 

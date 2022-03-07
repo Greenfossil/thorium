@@ -41,10 +41,6 @@ case class Call(url: String) {
   override def toString: String = url
 }
 
-trait HttpErrorHandler {
-
-}
-
 case class Flash(data: Map[String, String]) {
   export data.{+ as _, *}
   def + (tup: (String, String)): Flash = ???
