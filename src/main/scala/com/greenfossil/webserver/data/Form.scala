@@ -126,7 +126,7 @@ trait Form[F <: Form[F, T], T]{ self: F =>
       .productIterator
       .find(_.asInstanceOf[Field[A]].name == key)
       .map(_.asInstanceOf[Field[A]])
-      .getOrElse(Field.of[A])
+      .getOrElse(Field.of[A].copy(name = key))
 
 }
 
