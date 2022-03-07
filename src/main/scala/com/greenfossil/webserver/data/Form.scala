@@ -11,12 +11,10 @@ object Form {
     case (String, Field[t]) *: ts => t *: FormMappings[ts]
   }
 
-//  type FormClassMappings[Xs] <: Tuple = Xs match {
-//    case EmptyTuple => EmptyTuple
-//    case (String, Field[a]) *: xs => a *: FormTupleMappings[xs]
-//  }
-
-  //  def apply[A](mappings: A): Form[MappingsTuple[A]] = ???
+  type NameFieldMappings[X <:Tuple] <: Tuple = X match {
+    case EmptyTuple => X
+    case t *: ts => Field[t] *: NameFieldMappings[ts]
+  }
 
   def fields[A <: Field[_] *: Tuple](fields: A): Form[FormMappings[A]] =
     Form[FormMappings[A]](fields)
@@ -27,28 +25,11 @@ object Form {
     })
     Form[FormMappings[A]](fs)
 
-  import scala.deriving.Mirror
   import scala.compiletime.{summonFrom, error, constValue, erasedValue, summonInline}
 
-  inline def asClass[A](mappings: Field[_] *: Tuple)/*(using m: Mirror.Of[A])*/: Form[A] = {
-//    val fields = toMappingFields(mappings)
-    val m = summonInline[Mirror.ProductOf[A]]
-    println(s"m = ${m}")
-//    matchCaseClassMapping(m, mappings)
-//    summonFrom {
-//      case m: Mirror.ProductOf[A] => matchCaseClassMapping(m, mappings)
-//      case _ => error("Only case class is supported")
-//    }
-    Form[A](mappings)
-  }
-
-  inline def matchCaseClassMapping[A](p: Mirror.ProductOf[A], fields: Tuple) = {
-    val label = constValue[p.MirroredLabel].toString
-    val elemLabels = getLabelNames[p.MirroredElemLabels]
-    val fieldsTypes:Tuple = getFieldTypes[p.MirroredElemTypes]
-    println(s"fieldsTypes = ${fieldsTypes}")
-//    if fieldsTypes != fields then error("mapping mismatch")
-  }
+  import scala.deriving.*
+  def asCaseClass[A](using m: Mirror.ProductOf[A]) =
+    CaseClassMapper[A, Tuple.Zip[m.MirroredElemLabels, NameFieldMappings[m.MirroredElemTypes]]]()
 
   inline def toMappingFields(mappings: Tuple): Tuple =
     mappings match {
@@ -74,6 +55,11 @@ object Form {
       case _: Long => longNumber
       case _: String => text
     }
+}
+
+case class CaseClassMapper[A, B](mappings: Field[_] *: Tuple = null, data: Map[String, Any] = Map.empty, errors: Seq[FormError] = Nil, value: Option[A] = None) {
+  def fill(values: A):CaseClassMapper[A, B] = ???
+  def apply(nameFieldmappings:B): CaseClassMapper[A,B] = ???
 }
 
 case class Form[A](mappings: Field[_] *: Tuple, data: Map[String, Any] = Map.empty, errors: Seq[FormError] = Nil, value: Option[A] = None) {
@@ -160,6 +146,9 @@ object Field {
       case _: Int       => "Int"
       case _: String    => "String"
       case _: Long      => "Long"
+      case _: Double    => "Double"
+      case _: Float     => "Float"
+      case _: Boolean   => "Boolean"
       case _: Seq[a]    => "[" + fieldType[a]
       case _: Option[a] => "?" + fieldType[a]
     }
@@ -190,6 +179,30 @@ object Field {
             case xs: Seq[_] => xs.headOption.map(_.toString)
             case _ => None
           }
+
+        case "Double" =>
+          value match {
+            case x: Double => Option(x)
+            case s: String => s.toDoubleOption
+            case xs: Seq[_] => xs.headOption.flatMap(_.toString.toDoubleOption)
+            case _ => None
+          }
+
+        case "Float" =>
+          value match {
+            case x: Float => Option(x)
+            case s: String => s.toFloatOption
+            case xs: Seq[_] => xs.headOption.flatMap(_.toString.toFloatOption)
+            case _ => None
+          }
+
+        case "Boolean" =>
+          value match {
+            case x: Boolean => Option(x)
+            case s: String => s.toBooleanOption
+            case xs: Seq[_] => xs.headOption.flatMap(_.toString.toBooleanOption)
+            case _ => None
+          }
         case seq if seq.startsWith("[") =>
           value match {
             case xs: Seq[_] =>
@@ -213,9 +226,38 @@ case class Field[A](tpe: String, form: Form[_] = null , name: String = null, err
   def setValue(a: A): Field[A] = copy(value = Option(a))
 }
 
+inline def char = Field.of[Char]
+inline def short = Field.of[Short]
+inline def number = Field.of[Int]
 inline def longNumber = Field.of[Long]
+inline def byteNumber = Field.of[Byte]
 inline def text = Field.of[String]
+inline def nonEmptytext = Field.of[String]
+inline def email = Field.of[String]
+inline def double = Field.of[Double]
+inline def float = Field.of[Float]
+inline def bigDecimal = Field.of[BigDecimal]
+inline def bigDecimal(precision: Int, scale: Int) = Field.of[BigDecimal]
+inline def boolean = Field.of[Boolean]
+inline def date = Field.of[java.util.Date]
+inline def date(patter: String, timeZone: java.util.TimeZone = java.util.TimeZone.getDefault) = Field.of[java.util.Date]
+inline def localDate = Field.of[java.time.LocalDate]
+inline def localDate(pattern: String) = Field.of[java.time.LocalDate]
+inline def localDateTime = Field.of[java.time.LocalDateTime]
+inline def localDateTime(pattern: String) = Field.of[java.time.LocalDateTime]
+inline def localTime = Field.of[java.time.LocalTime]
+inline def localTime(pattern: String) = Field.of[java.time.LocalTime]
+inline def sqlDate = Field.of[java.sql.Date]
+inline def sqlTimestamp = Field.of[java.sql.Timestamp]
+inline def sqlTimestamp(pattern: String, timeZone: java.util.TimeZone = java.util.TimeZone.getDefault) =  Field.of[java.sql.Timestamp]
+inline def list[A] = Field.of[List[A]]
 inline def seq[A] = Field.of[Seq[A]]
+inline def set[A] = Field.of[Set[A]]
+inline def vector[A] = Field.of[Vector[A]]
 inline def optional[A] = Field.of[Option[A]]
+inline def checked(msg: String): Boolean = ???
+inline def default[A](mapping: Field[A], value: A): Field[A] = ???
+inline def ignored[A](value: A): Field[A] = ???
+
 
 case class FormError(key: String, messages: Seq[String], args: Seq[Any] = Nil)

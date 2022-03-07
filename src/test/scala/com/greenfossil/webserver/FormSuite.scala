@@ -45,48 +45,30 @@ class FormSuite extends munit.FunSuite {
     assertEquals[Any, Any](bindedForm("seq").value, Option(Seq(1,2)))
   }
 
-//  test("case class 2") {
-//    case class Foo(l: Long, s: String)
-//    val form: Form[Foo] = Form.asClass[Foo](
-//      "long" -> longNumber,
-//      "text" -> text
-//    )
-//    val filledForm = form.fill(Foo(1, "hello"))
-//    assertEquals(filledForm.data.size, 2)
-//    assertEquals(filledForm.data("long"), 1)
-//    assertEquals(filledForm.data("text"), "hello")
-//  }
-//
-//  test("case class 3") {
-//    case class Foo(l: Long, s: String, xs: Seq[Long])
-//    val form: Form[Foo] = Form.asClass(
-//      "long" -> longNumber,
-//      "text" -> text,
-//      "seq" -> seq[Long]
-//    )
-//    val filledForm = form.fill(Foo(1, "hello", Seq(1,2)))
-//    assertEquals(filledForm.data.size, 3)
-//    assertEquals(filledForm.data("long"), 1)
-//    assertEquals(filledForm.data("text"), "hello")
-//    assertEquals(filledForm.data("seq"), Seq(1,2))
-//  }
+  test("case class 2") {
+    case class Foo(l: Long, s: String)
+    val form = Form.asCaseClass[Foo](
+      "l" -> Field.of[Long],
+      "s" -> Field.of[String]
+    )
+    val filledForm = form.fill(Foo(1, "hello"))
+    assertEquals(filledForm.data.size, 2)
+    assertEquals(filledForm.data("long"), 1)
+    assertEquals(filledForm.data("text"), "hello")
+  }
 
-
-//  test("CaseClass single field") {
-//    case class Class(string: String)
-//    val form = Form(
-//
-//    )
-//  }
-
-//  test("Case Class "){
-//    case class Group(long: Long, string: String, opt: Option[String], seq:Seq[Long])
-//    val groupForm = Form(
-//      mapping(
-//        "long" -> longNumber,
-//        "string" -> text,
-//        "opt" -> optional(text),
-//        "seq" -> seq(longNumber))(Group.apply)(Group.unapply))
-//  }
+  test("case class 3") {
+    case class Foo(l: Long, s: String, xs: Seq[Long])
+    val form = Form.asCaseClass[Foo](
+      "l" -> longNumber,
+      "s" -> text,
+      "xs" -> seq[Long]
+    )
+    val filledForm = form.fill(Foo(1, "hello", Seq(1,2)))
+    assertEquals(filledForm.data.size, 3)
+    assertEquals(filledForm.data("long"), 1)
+    assertEquals(filledForm.data("text"), "hello")
+    assertEquals(filledForm.data("seq"), Seq(1,2))
+  }
 
 }
