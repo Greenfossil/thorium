@@ -3,6 +3,8 @@ package com.greenfossil.webserver.data
 import com.greenfossil.commons.json.JsValue
 import com.linecorp.armeria.common.HttpMethod
 
+import java.time.LocalDate
+
 object Form {
 
   type FormMappings[Xs <: Tuple] <: Tuple = Xs match {
@@ -149,6 +151,7 @@ object Field {
       case _: Double    => "Double"
       case _: Float     => "Float"
       case _: Boolean   => "Boolean"
+      case _: LocalDate => "LocalDate"
       case _: Seq[a]    => "[" + fieldType[a]
       case _: Option[a] => "?" + fieldType[a]
     }
@@ -203,6 +206,15 @@ object Field {
             case xs: Seq[_] => xs.headOption.flatMap(_.toString.toBooleanOption)
             case _ => None
           }
+
+        case "LocalDate" =>
+          value match {
+            case x: LocalDate => Option(x)
+            case s: String => LocalDate.parse(s)
+            case xs: Seq[_] => xs.headOption.flatMap(x => Option(LocalDate.parse(x.toString)))
+            case _ => None
+          }
+
         case seq if seq.startsWith("[") =>
           value match {
             case xs: Seq[_] =>

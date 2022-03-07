@@ -2,6 +2,8 @@ package com.greenfossil.webserver
 
 import com.greenfossil.webserver.data.{*, given}
 
+import java.time.LocalDate
+
 class FormSuite extends munit.FunSuite {
 
   test("tuple 2") {
@@ -30,7 +32,7 @@ class FormSuite extends munit.FunSuite {
     assertEquals[Any, Any](filledForm("seq").value, Option(Seq(1,2)))
   }
 
-  test("bind tuple 2".only) {
+  test("bind tuple 2") {
     val form: Form[(Long, String, Seq[Int])] = Form.asTuple(
       "long" -> longNumber,
       "text" -> text,
@@ -43,6 +45,22 @@ class FormSuite extends munit.FunSuite {
     assertEquals[Any, Any](bindedForm("long").value, Option(1))
     assertEquals[Any, Any](bindedForm("text").value, Option("hello"))
     assertEquals[Any, Any](bindedForm("seq").value, Option(Seq(1,2)))
+  }
+
+  test("bind tuple 3"){
+    val form = Form.asTuple(
+      "name" -> text,
+      "birthday" -> localDate
+    )
+    val filledForm = form.fill("Homer", LocalDate.parse("1990-01-01"))
+    assertEquals(filledForm[LocalDate]("birthday").value, Some(LocalDate.parse("1990-01-01")))
+
+    val bindedForm = form.bind(Map("name" -> Seq("Homer"), "birthday" -> Seq("1990-01-01")))
+    assertEquals(bindedForm[LocalDate]("birthday").value, Some(LocalDate.parse("1990-01-01")))
+  }
+
+  test("bind as JSON"){
+
   }
 
   test("case class 2") {
