@@ -39,6 +39,7 @@ object Field {
           value match {
             case x: Long => Option(x)
             case s: String => s.toLongOption
+            case s: BigDecimal /* This is to handle JsNumber type */ => Option(s.toLong)
             case xs: Option[_] => xs.flatMap(_.toString.toLongOption)
             case xs: Seq[_] => xs.headOption.flatMap(_.toString.toLongOption)
             case _ => None
@@ -92,6 +93,8 @@ object Field {
           value match {
             case xs: Seq[_] =>
               Option(xs.flatMap(x => toValueOf(seq.tail,x)))
+            case xs: Option[_] =>
+              xs.flatMap(x => toValueOf(seq, x))
             case s: String =>
               Option(Seq(toValueOf(seq.tail, s)))
           }

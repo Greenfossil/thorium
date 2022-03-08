@@ -89,6 +89,16 @@ case class Form[T](mappings: Field[_] *: Tuple, data: Map[String, Any] = Map.emp
   def bind(data: Map[String, Seq[String]]): Form[T] = {
     val newMappings = mappings.map[[A] =>> Field[_]] {
       [X] => (x: X) => x match
+        /*
+         * For Seq[_] field type, the type param can have a square bracket "[" after the key.
+         * e.g. "foo[]", "foo[0]", "foo"
+         */
+        case f: Field[t] if f.tpe.startsWith("[") =>
+          val values = data.getOrElse(f.name,
+            data.filter(_._1.startsWith(f.name + "[")).flatMap(_._2).toList
+          )
+          f.copy(value = Field.toValueOf(f.tpe, values))
+
         case f: Field[t] => f.copy(value = Field.toValueOf(f.tpe, data.get(f.name).orNull))
     }
     setData(data).setMappings(newMappings)

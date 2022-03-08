@@ -113,6 +113,23 @@ class FormSuite extends munit.FunSuite {
     assertEquals[Any, Any](filledForm("l").value, Option(1))
     assertEquals[Any, Any](filledForm("s").value, Option("hello"))
     assertEquals[Any, Any](filledForm("xs").value, Option(Seq(1,2)))
+
+    val bindedMappingForm1 = form.bind(Map("l" -> Seq("1"), "s" -> Seq("hello"), "xs[]" -> Seq("1", "2")))
+    assertEquals[Any, Any](bindedMappingForm1("l").value, Option(1))
+    assertEquals[Any, Any](bindedMappingForm1("s").value, Option("hello"))
+    assertEquals[Any, Any](bindedMappingForm1("xs").value, Option(Seq(1, 2)))
+
+    val bindedMappingForm2 = form.bind(Map("l" -> Seq("1"), "s" -> Seq("hello"), "xs[0]" -> Seq("1"), "xs[1]" -> Seq("2")))
+    assertEquals[Any, Any](bindedMappingForm2("l").value, Option(1))
+    assertEquals[Any, Any](bindedMappingForm2("s").value, Option("hello"))
+    assertEquals[Any, Any](bindedMappingForm2("xs").value, Option(Seq(1, 2)))
+
+    val jsonBindedForm = form.bind(Json.obj("l" -> 1, "s" -> "hello", "xs" -> Json.arr(1, 2)), Map.empty)
+    val jsonFields = jsonBindedForm.mappings.toList.asInstanceOf[List[Field[_]]]
+    jsonFields foreach println
+    assertEquals[Any, Any](jsonFields(0).value, Some(1))
+    assertEquals[Any, Any](jsonFields(1).value, Some("hello"))
+    assertEquals[Any, Any](jsonFields(2).value, Some(Seq(1, 2)))
   }
 
 }
