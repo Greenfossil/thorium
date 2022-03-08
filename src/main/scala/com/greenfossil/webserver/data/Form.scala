@@ -159,6 +159,7 @@ case class Form[T](mappings: Field[_] *: Tuple, data: Map[String, Any] = Map.emp
       .find(_.asInstanceOf[Field[A]].name == key)
       .map(_.asInstanceOf[Field[A]])
       .getOrElse(Field.of[Nothing].copy(name = key))
+      .asInstanceOf[Field[A]]
 
   def hasErrors: Boolean = ???
 
