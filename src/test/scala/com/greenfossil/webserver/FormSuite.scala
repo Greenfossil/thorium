@@ -1,5 +1,6 @@
 package com.greenfossil.webserver
 
+import com.greenfossil.commons.json.Json
 import com.greenfossil.webserver.data.{*, given}
 
 import java.time.LocalDate
@@ -60,6 +61,31 @@ class FormSuite extends munit.FunSuite {
   }
 
   test("bind as JSON"){
+    val form = Form.tuple(
+      "name" -> text, 
+      "age" -> number, 
+      "isActive" -> boolean, 
+      "id" -> longNumber, 
+      "balance" -> float, 
+      "remaining" -> double, 
+      "birthday" -> localDate
+    )
+    val jsonObject = Json.obj(
+      "name" -> "Homer", "age" -> 50, "isActive" -> true, "id" -> 123456L, "balance" -> 100.12F, 
+      "remaining" -> 100.00, "birthday" -> LocalDate.parse("1990-01-01")
+    )
+
+    val bindedForm = form.bind(jsonObject, Map.empty)
+    val fields = bindedForm.mappings.toList.asInstanceOf[List[Field[_]]]
+    fields foreach println
+    assertEquals[Any, Any](fields(0).value, Some("Homer"))
+    assertEquals[Any, Any](fields(1).value, Some(50))
+    assertEquals[Any, Any](fields(2).value, Some(true))
+    assertEquals[Any, Any](fields(3).value, Some(123456L))
+    assertEquals[Any, Any](fields(4).value, Some(100.12F))
+    assertEquals[Any, Any](fields(5).value, Some(100.00))
+    assertEquals[Any, Any](fields(6).value, Some(LocalDate.parse("1990-01-01")))
+//    assertEquals(bindedForm.value, Some(("Homer", 50)))
 
   }
 

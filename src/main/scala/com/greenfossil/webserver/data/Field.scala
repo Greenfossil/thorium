@@ -31,6 +31,7 @@ object Field {
             case x: Int => Option(x)
             case s: String => s.toIntOption
             case xs: Seq[_] => xs.headOption.flatMap(_.toString.toIntOption)
+            case xs: Option[_] => xs.flatMap(_.toString.toIntOption)
             case _ => None
           }
 
@@ -38,6 +39,7 @@ object Field {
           value match {
             case x: Long => Option(x)
             case s: String => s.toLongOption
+            case xs: Option[_] => xs.flatMap(_.toString.toLongOption)
             case xs: Seq[_] => xs.headOption.flatMap(_.toString.toLongOption)
             case _ => None
           }
@@ -45,6 +47,7 @@ object Field {
         case "String" =>
           value match {
             case s: String => Option(s)
+            case xs: Option[_] => xs.map(_.toString)
             case xs: Seq[_] => xs.headOption.map(_.toString)
             case _ => None
           }
@@ -53,6 +56,7 @@ object Field {
           value match {
             case x: Double => Option(x)
             case s: String => s.toDoubleOption
+            case xs: Option[_] => xs.flatMap(_.toString.toDoubleOption)
             case xs: Seq[_] => xs.headOption.flatMap(_.toString.toDoubleOption)
             case _ => None
           }
@@ -61,6 +65,7 @@ object Field {
           value match {
             case x: Float => Option(x)
             case s: String => s.toFloatOption
+            case xs: Option[_] => xs.flatMap(_.toString.toFloatOption)
             case xs: Seq[_] => xs.headOption.flatMap(_.toString.toFloatOption)
             case _ => None
           }
@@ -69,6 +74,7 @@ object Field {
           value match {
             case x: Boolean => Option(x)
             case s: String => s.toBooleanOption
+            case xs: Option[_] => xs.flatMap(_.toString.toBooleanOption)
             case xs: Seq[_] => xs.headOption.flatMap(_.toString.toBooleanOption)
             case _ => None
           }
@@ -77,6 +83,7 @@ object Field {
           value match {
             case x: LocalDate => Option(x)
             case s: String => LocalDate.parse(s)
+            case xs: Option[_] => xs.flatMap(x => Option(LocalDate.parse(x.toString)))
             case xs: Seq[_] => xs.headOption.flatMap(x => Option(LocalDate.parse(x.toString)))
             case _ => None
           }

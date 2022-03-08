@@ -98,9 +98,9 @@ case class Form[T](mappings: Field[_] *: Tuple, data: Map[String, Any] = Map.emp
     //WIP
     val newMappings = mappings.map[[A] =>> Field[_]] {
       [X] => (x: X) => x match
-        case f: Field[t] => f.copy(value = Field.toValueOf(f.tpe, (js \ f.name).asOpt[String]))
+        case f: Field[t] => f.copy(value = Field.toValueOf(f.tpe, (js \ f.name).asOpt[Any]))
     }
-    setData(null/*FIXME*/).setMappings(newMappings)
+    setData(null/*FIXME*/).setMappings(newMappings).setValue(null.asInstanceOf[T])
   }
 
   private def tupleToData(values: Product): Field[_] *: Tuple = {
