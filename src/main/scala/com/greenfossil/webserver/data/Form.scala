@@ -79,7 +79,7 @@ case class Form[T](mappings: Field[_] *: Tuple, data: Map[String, Any] = Map.emp
         val tuple = Tuple.fromProduct(caseclass)
         tupleToData(tuple)
     }
-    setMappings(filledFields)
+    setMappings(filledFields).setValue(values)
 
   def bindFromRequest()(using request: com.greenfossil.webserver.Request): Form[T] =
     val querydata: Map[String, Seq[String]] =
@@ -98,7 +98,7 @@ case class Form[T](mappings: Field[_] *: Tuple, data: Map[String, Any] = Map.emp
         bind(req.asJson, querydata)
     }
 
-  def bind(data: Map[String, Seq[String]]): Form[T] = {
+  def bind(data: Map[String, Any]): Form[T] = {
     val newMappings = mappings.map[[A] =>> Field[_]] {
       [X] => (x: X) => x match
         /*
@@ -107,22 +107,36 @@ case class Form[T](mappings: Field[_] *: Tuple, data: Map[String, Any] = Map.emp
          */
         case f: Field[t] if f.tpe.startsWith("[") =>
           val values = data.getOrElse(f.name,
-            data.filter(_._1.startsWith(f.name + "[")).flatMap(_._2).toList
+            /*
+             * If the data is a array form param, concatenate all values that matches the key.
+             */
+            data.filter(_._1.startsWith(f.name + "[")).values.flatMap{
+              case s: Seq[_] => s
+              case s => Seq(s)
+            }
           )
           f.copy(value = Field.toValueOf(f.tpe, values))
 
         case f: Field[t] => f.copy(value = Field.toValueOf(f.tpe, data.get(f.name).orNull))
     }
-    setData(data).setMappings(newMappings)
+    val newValues = newMappings.map[[A] =>> Any]{
+      [X] => (x: X) => x match
+        case f: Field[t] => f.value.orNull
+    }
+    setData(data).setMappings(newMappings).setValue(newValues.asInstanceOf[T])
   }
 
-  def bind(js: JsValue, query: Map[String, Seq[String]]): Form[T] = {
-    //WIP
+  def bind(js: JsValue, query: Map[String, Any]): Form[T] = {
     val newMappings = mappings.map[[A] =>> Field[_]] {
       [X] => (x: X) => x match
         case f: Field[t] => f.copy(value = Field.toValueOf(f.tpe, (js \ f.name).asOpt[Any]))
     }
-    setData(null/*FIXME*/).setMappings(newMappings).setValue(null.asInstanceOf[T])
+    val newValues = newMappings.map[[A] =>> Any]{
+      [X] => (x: X) => x match
+        case f: Field[t] => f.value.orNull
+    }
+    val newData = newMappings.toList.map{ case f: Field[_] => f.name -> f.value.orNull }.toMap
+    setData(newData).setMappings(newMappings).setValue(newValues.asInstanceOf[T])
   }
 
   private def tupleToData(values: Product): Field[_] *: Tuple = {

@@ -18,6 +18,8 @@ class FormSuite extends munit.FunSuite {
 //    assertEquals(filledForm.data("text"), "hello")
     assertEquals[Any, Any](filledForm("long").value, Option(1))
     assertEquals[Any, Any](filledForm("text").value, Option("hello"))
+
+    assertEquals[Any, Any](filledForm.value, Some((1L, "hello")))
   }
 
   test("fill tuple") {
@@ -58,6 +60,10 @@ class FormSuite extends munit.FunSuite {
 
     val bindedForm = form.bind(Map("name" -> Seq("Homer"), "birthday" -> Seq("1990-01-01")))
     assertEquals(bindedForm[LocalDate]("birthday").value, Some(LocalDate.parse("1990-01-01")))
+
+    assertEquals(bindedForm.value, Some(("Homer", LocalDate.parse("1990-01-01"))))
+
+    assertEquals(bindedForm.data.size, 2)
   }
 
   test("bind as JSON"){
@@ -77,7 +83,6 @@ class FormSuite extends munit.FunSuite {
 
     val bindedForm = form.bind(jsonObject, Map.empty)
     val fields = bindedForm.mappings.toList.asInstanceOf[List[Field[_]]]
-    fields foreach println
     assertEquals[Any, Any](fields(0).value, Some("Homer"))
     assertEquals[Any, Any](fields(1).value, Some(50))
     assertEquals[Any, Any](fields(2).value, Some(true))
@@ -85,7 +90,10 @@ class FormSuite extends munit.FunSuite {
     assertEquals[Any, Any](fields(4).value, Some(100.12F))
     assertEquals[Any, Any](fields(5).value, Some(100.00))
     assertEquals[Any, Any](fields(6).value, Some(LocalDate.parse("1990-01-01")))
-//    assertEquals(bindedForm.value, Some(("Homer", 50)))
+
+    assertEquals[Any, Any](bindedForm.value, Some(("Homer", 50, true, 123456L, 100.12F, 100.00, LocalDate.parse("1990-01-01"))))
+
+    assertEquals(bindedForm.data.size, 7)
 
   }
 
