@@ -24,19 +24,31 @@ object Form {
     case t *: ts => Field[t] *: FieldConstructor[ts]
   }
 
-  def tuple[A <: Tuple](tuple: A): Form[FieldTypeExtractor[A]] =
-    Form[FieldTypeExtractor[A]](toNamedFieldTuple(tuple).asInstanceOf[Field[_] *: Tuple])
+  /**
+   *
+   * @param nameValueTuple - a name-value pair tuple
+   * @tparam A
+   * @return
+   */
+  def tuple[A <: Tuple](nameValueTuple: A): Form[FieldTypeExtractor[A]] =
+    Form[FieldTypeExtractor[A]](toNamedFieldTuple(nameValueTuple))
 
   import scala.deriving.*
-  def mapping[A](using m: Mirror.ProductOf[A])(tuple: Tuple.Zip[m.MirroredElemLabels, FieldConstructor[m.MirroredElemTypes]]): Form[A] =
-    Form[A](toNamedFieldTuple(tuple).asInstanceOf[Field[_] *: Tuple])
+  /**
+   *
+   * @param m - Mirror.of[A]
+   * @param nameValueTuple - a name-value pair tuple using  case class [A] members i.e. (fieldLabel -> value)
+   * @tparam A - case class type A
+   * @return - Form[A]
+   */
+  def mapping[A](using m: Mirror.ProductOf[A])(nameValueTuple: Tuple.Zip[m.MirroredElemLabels, FieldConstructor[m.MirroredElemTypes]]): Form[A] =
+    Form[A](toNamedFieldTuple(nameValueTuple))
 
-  private def toNamedFieldTuple(tuple: Tuple): Tuple =
+  private def toNamedFieldTuple(tuple: Tuple): Field[_] *: Tuple =
     tuple.map[[X] =>> Field[_]]([X] => (x: X) =>
-      x match {
+      x match
         case (name: String, f: Field[_]) => f.copy(name = name)
-      }
-    )
+    ).asInstanceOf[Field[_] *: Tuple]
 
 }
 
@@ -123,5 +135,9 @@ case class Form[T](mappings: Field[_] *: Tuple, data: Map[String, Any] = Map.emp
       .find(_.asInstanceOf[Field[A]].name == key)
       .map(_.asInstanceOf[Field[A]])
       .getOrElse(Field.of[Nothing].copy(name = key))
+
+  def hasErrors: Boolean = ???
+
+  def verifying(fn: T => Boolean):Option[T] = ???
 
 }
