@@ -62,16 +62,16 @@ class FormSuite extends munit.FunSuite {
 
   test("bind as JSON"){
     val form = Form.tuple(
-      "name" -> text, 
-      "age" -> number, 
-      "isActive" -> boolean, 
-      "id" -> longNumber, 
-      "balance" -> float, 
-      "remaining" -> double, 
+      "name" -> text,
+      "age" -> number,
+      "isActive" -> boolean,
+      "id" -> longNumber,
+      "balance" -> float,
+      "remaining" -> double,
       "birthday" -> localDate
     )
     val jsonObject = Json.obj(
-      "name" -> "Homer", "age" -> 50, "isActive" -> true, "id" -> 123456L, "balance" -> 100.12F, 
+      "name" -> "Homer", "age" -> 50, "isActive" -> true, "id" -> 123456L, "balance" -> 100.12F,
       "remaining" -> 100.00, "birthday" -> LocalDate.parse("1990-01-01")
     )
 
