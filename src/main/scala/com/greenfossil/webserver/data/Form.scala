@@ -79,7 +79,11 @@ case class Form[T](mappings: Field[_] *: Tuple, data: Map[String, Any] = Map.emp
         val tuple = Tuple.fromProduct(caseclass)
         tupleToData(tuple)
     }
-    setMappings(filledFields).setValue(values)
+    val dataMap = filledFields.toList.map{
+      case f: Field[_] => f.name -> f.value.orNull
+    }.toMap
+
+    setMappings(filledFields).setValue(values).setData(dataMap)
 
   def bindFromRequest()(using request: com.greenfossil.webserver.Request): Form[T] =
     val querydata: Map[String, Seq[String]] =
@@ -123,7 +127,11 @@ case class Form[T](mappings: Field[_] *: Tuple, data: Map[String, Any] = Map.emp
       [X] => (x: X) => x match
         case f: Field[t] => f.value.orNull
     }
-    setData(data).setMappings(newMappings).setValue(newValues.asInstanceOf[T])
+    val newData = newMappings.toList.map{
+      case f: Field[_] => f.name -> f.value.orNull
+    }.toMap
+    
+    setData(newData).setMappings(newMappings).setValue(newValues.asInstanceOf[T])
   }
 
   def bind(js: JsValue, query: Map[String, Any]): Form[T] = {
