@@ -5,15 +5,18 @@ Request
 + Flash - P1
 + Parser
 + MultiFormData - implementation verification
-+ 
++ Request.locale
 
 Form (Data)
 ---
-+ Form[A], Field - P1
-+ Form creation - P1
-+ validation - P1 
++ Form[A], Field - P1 [Done]
++ Form creation - P1 [Done]
++ validation - P1  [Done]
 + Nested form field
-
++ transform
++ implements the rest of Field supported types e.g Temporal, String etc
++ implement Field validation error messages
++ 
 HttpErrorHandler
 ---
 + P1 [DONE - HttpErrorHandler]

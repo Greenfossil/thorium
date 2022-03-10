@@ -168,15 +168,25 @@ inline def bigDecimal(precision: Int, scale: Int) = Field.of[BigDecimal]
 
 //Text
 inline def char = Field.of[Char]
+
 inline def text:Field[String] = Field.of[String]
-inline def text(minLength: Int, maxLength: Int, trim: Boolean): Field[String] = Field.of[String]
-inline def nonEmptyText = Field.of[String]
-inline def nonEmptyText(trim: Boolean) = Field.of[String]
-inline def nonEmptyText(minLength: Int = 0, maxLength: Int = Int.MaxValue, trim: Boolean = true) = Field.of[String]
-inline def email = Field.of[String]
+
+inline def text(minLength: Int, maxLength: Int, trim: Boolean): Field[String] = 
+  Field.of[String] //FIXME
+
+inline def nonEmptyText = 
+  Field.of[String].verifying(Constraints.nonEmpty)
+
+inline def nonEmptyText(minLength: Int = 0, maxLength: Int = Int.MaxValue) =
+  Field.of[String].verifying(Constraints.minLength(minLength), Constraints.maxLength(maxLength))
+  
+inline def email = 
+  Field.of[String].verifying(Constraints.emailAddress)
 
 //Temporal
-inline def date = Field.of[java.util.Date]
+inline def date = 
+  Field.of[java.util.Date]
+  
 inline def date(pattern: String, timeZone: java.util.TimeZone = java.util.TimeZone.getDefault) = Field.of[java.util.Date]
 inline def localDate = Field.of[java.time.LocalDate]
 inline def localDate(pattern: String) = Field.of[java.time.LocalDate]

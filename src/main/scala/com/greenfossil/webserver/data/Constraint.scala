@@ -8,7 +8,7 @@ package com.greenfossil.webserver.data
  * @param args the message arguments, to format the constraint name
  * @param f the validation function
  */
-case class Constraint[-T](name: Option[String], args: Seq[Any])(f: (T => ValidationResult)) {
+case class Constraint[-T](name: Option[String], args: Seq[Any])(f: T => ValidationResult) {
 
   /**
    * Run the constraint validation.

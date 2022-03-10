@@ -68,18 +68,19 @@ case class Form[T](mappings: Field[_] *: Tuple,
                    mirrorrOpt: Option[scala.deriving.Mirror.ProductOf[T]] = None) extends ConstraintVerifier[Form, T]("", constraints) {
 
   def fill(values: T): Form[T] =
-    val filledFields  = values match {
+    val bindedFields  = values match {
       case _values: Tuple =>
-        tupleToData(_values)
+        bindValuesToFields(_values)
 
       case caseclass: Product =>
         val tuple = Tuple.fromProduct(caseclass)
-        tupleToData(tuple)
+        bindValuesToFields(tuple)
     }
-    val dataMap = filledFields.toList.map{
+    val dataMap = bindedFields.toList.collect{
       case f: Field[_] => f.name -> f.value.orNull
     }.toMap
-    copy(mappings = filledFields, value = Option(values), data = dataMap)
+
+    copy(mappings = bindedFields, value = Option(values), data = dataMap)
 
   def bindFromRequest()(using request: com.greenfossil.webserver.Request): Form[T] =
     val querydata: Map[String, Seq[String]] =
@@ -133,9 +134,9 @@ case class Form[T](mappings: Field[_] *: Tuple,
 
   private def updateBindedFields(newMappings: Field[_] *: Tuple): Form[T] = {
 
-    val newData = newMappings.toList.map{ case f: Field[_] => f.name -> f.value.orNull }.toMap
+    val newData = newMappings.toList.collect{ case f: Field[_] => f.name -> f.value.orNull }.toMap
 
-    val fieldsErrors =  newMappings.toList.flatMap{ case f: Field[t] => f.errors }
+    val fieldsErrors =  newMappings.toList.collect{ case f: Field[t] => f.errors }.flatten
 
     val bindedFieldValues = newMappings.map[[A] =>> Any]{
       [X] => (x: X) => x match
@@ -149,13 +150,13 @@ case class Form[T](mappings: Field[_] *: Tuple,
     copy(data= newData, mappings = newMappings, value = Option(bindedValue), errors = formConstraintsErrors ++ fieldsErrors)
   }
 
-  private def tupleToData(values: Product): Field[_] *: Tuple = {
+  private def bindValuesToFields(values: Product): Field[_] *: Tuple = {
     val valuesIter = values.productIterator
-    val filledFields = mappings.map[[F] =>> Field[_]](
+    val bindedFields = mappings.map[[F] =>> Field[_]](
       [F] => (f: F) => f match {
         case f: Field[_] => f.bind(valuesIter.nextOption())
       })
-    filledFields
+    bindedFields
   }
 
   def fold[R](hasErrors: Form[T] => R, success: T => R): R = value match {
