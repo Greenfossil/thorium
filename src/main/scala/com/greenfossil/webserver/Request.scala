@@ -1,10 +1,11 @@
 package com.greenfossil.webserver
 
 import com.greenfossil.commons.json.{JsValue, Json}
-import com.linecorp.armeria.common.{HttpData, RequestHeaders, Cookie}
+import com.linecorp.armeria.common.{Cookie, HttpData, RequestHeaders}
 import com.linecorp.armeria.common.multipart.AggregatedMultipart
 import com.linecorp.armeria.server.ServiceRequestContext
 
+import java.util.Locale
 import java.util.Locale.LanguageRange
 
 trait Request(val requestContext: ServiceRequestContext) {
@@ -34,7 +35,23 @@ trait Request(val requestContext: ServiceRequestContext) {
   //  def getReferer: Option[String] =
 //    headers.get("X-Alt-Referer").orElse(headers.get("referer"))
 //
-//  def flash: Flash
+  def flash: Flash = ???
+
+  def locale: Locale = {
+//    import scala.jdk.CollectionConverters.*
+//    val config: Config = AppSettings.instance.config
+//    val _appLangs: util.List[String] = config.getStringList("app.i18n.langs")
+//    def appLangs: List[String] = _appLangs.asScala.toList
+//    val variant = config.getString("app.i18n.variant")
+//    val supportedLanguages: Seq[String] = ??? //To be used request.acceptLanguages
+//
+//    val lang: String = Locale.lookupTag(request.acceptLanguages, _appLangs)
+//
+//    //PreferLang is constrained by what the app will support
+//    val preferLang = if (appLangs.exists(_.equalsIgnoreCase(lang))) lang else appLangs.headOption.getOrElse("en")
+//      new Locale.Builder().setLanguageTag(preferLang).setVariant(variant).build()
+    ???
+  }
 //
 //
 //  def isXhr: Boolean
