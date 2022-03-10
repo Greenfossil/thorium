@@ -42,7 +42,7 @@ object Form {
    * @return - Form[A]
    */
   def mapping[A](using m: Mirror.ProductOf[A])(nameValueTuple: Tuple.Zip[m.MirroredElemLabels, FieldConstructor[m.MirroredElemTypes]]): Form[A] =
-    Form[A](toNamedFieldTuple(nameValueTuple))
+    Form[A](toNamedFieldTuple(nameValueTuple), mirrorrOpt = Some(m))
 
   private def toNamedFieldTuple(tuple: Tuple): Field[_] *: Tuple =
     tuple.map[[X] =>> Field[_]]([X] => (x: X) =>
@@ -60,15 +60,12 @@ object Form {
  * @param value
  * @tparam T
  */
-case class Form[T](mappings: Field[_] *: Tuple, data: Map[String, Any] = Map.empty, errors: Seq[FormError] = Nil, value: Option[T] = None){
-
-  def setMappings(mappings: Field[_] *: Tuple): Form[T] = copy(mappings = mappings)
-
-  def setData(data: Map[String, Any]): Form[T] = copy(data = data)
-
-  def setValue(value: T): Form[T] = copy(value = Option(value))
-
-  def setErrors(errors: Seq[FormError]): Form[T] = copy(errors = errors)
+case class Form[T](mappings: Field[_] *: Tuple,
+                   data: Map[String, Any] = Map.empty,
+                   errors: Seq[FormError] = Nil,
+                   value: Option[T] = None,
+                   constraints: Seq[Constraint[T]] = Nil,
+                   mirrorrOpt: Option[scala.deriving.Mirror.ProductOf[T]] = None) extends ConstraintVerifier[Form, T]("", constraints) {
 
   def fill(values: T): Form[T] =
     val filledFields  = values match {
@@ -82,8 +79,7 @@ case class Form[T](mappings: Field[_] *: Tuple, data: Map[String, Any] = Map.emp
     val dataMap = filledFields.toList.map{
       case f: Field[_] => f.name -> f.value.orNull
     }.toMap
-
-    setMappings(filledFields).setValue(values).setData(dataMap)
+    copy(mappings = filledFields, value = Option(values), data = dataMap)
 
   def bindFromRequest()(using request: com.greenfossil.webserver.Request): Form[T] =
     val querydata: Map[String, Seq[String]] =
@@ -103,7 +99,7 @@ case class Form[T](mappings: Field[_] *: Tuple, data: Map[String, Any] = Map.emp
     }
 
   def bind(data: Map[String, Any]): Form[T] = {
-    val newMappings = mappings.map[[A] =>> Field[_]] {
+    val bindedFields = mappings.map[[A] =>> Field[_]] {
       [X] => (x: X) => x match
         /*
          * For Seq[_] field type, the type param can have a square bracket "[" after the key.
@@ -119,39 +115,45 @@ case class Form[T](mappings: Field[_] *: Tuple, data: Map[String, Any] = Map.emp
               case s => Seq(s)
             }
           )
-          f.copy(value = Field.toValueOf(f.tpe, values))
+          f.bind(values)
 
-        case f: Field[t] => f.copy(value = Field.toValueOf(f.tpe, data.get(f.name).orNull))
+        case f: Field[t] => f.bind(data.get(f.name).orNull)
     }
-    val newValues = newMappings.map[[A] =>> Any]{
-      [X] => (x: X) => x match
-        case f: Field[t] => f.value.orNull
-    }
-    val newData = newMappings.toList.map{
-      case f: Field[_] => f.name -> f.value.orNull
-    }.toMap
-    
-    setData(newData).setMappings(newMappings).setValue(newValues.asInstanceOf[T])
+
+    updateBindedFields(bindedFields)
   }
 
   def bind(js: JsValue, query: Map[String, Any]): Form[T] = {
-    val newMappings = mappings.map[[A] =>> Field[_]] {
+    val bindedFields = mappings.map[[A] =>> Field[_]] {
       [X] => (x: X) => x match
-        case f: Field[t] => f.copy(value = Field.toValueOf(f.tpe, (js \ f.name).asOpt[Any]))
+        case f: Field[t] => f.bind(js \ f.name)
     }
-    val newValues = newMappings.map[[A] =>> Any]{
+    updateBindedFields(bindedFields)
+  }
+
+  private def updateBindedFields(newMappings: Field[_] *: Tuple): Form[T] = {
+
+    val newData = newMappings.toList.map{ case f: Field[_] => f.name -> f.value.orNull }.toMap
+
+    val fieldsErrors =  newMappings.toList.flatMap{ case f: Field[t] => f.errors }
+
+    val bindedFieldValues = newMappings.map[[A] =>> Any]{
       [X] => (x: X) => x match
         case f: Field[t] => f.value.orNull
     }
-    val newData = newMappings.toList.map{ case f: Field[_] => f.name -> f.value.orNull }.toMap
-    setData(newData).setMappings(newMappings).setValue(newValues.asInstanceOf[T])
+
+    val bindedValue: T = mirrorrOpt.map(m => m.fromProduct(bindedFieldValues)).getOrElse(bindedFieldValues.asInstanceOf[T])
+
+    val formConstraintsErrors = applyConstraints(bindedValue)
+
+    copy(data= newData, mappings = newMappings, value = Option(bindedValue), errors = formConstraintsErrors ++ fieldsErrors)
   }
 
   private def tupleToData(values: Product): Field[_] *: Tuple = {
     val valuesIter = values.productIterator
     val filledFields = mappings.map[[F] =>> Field[_]](
       [F] => (f: F) => f match {
-        case f: Field[_] => f.copy(value = valuesIter.nextOption())
+        case f: Field[_] => f.bind(valuesIter.nextOption())
       })
     filledFields
   }
@@ -169,8 +171,40 @@ case class Form[T](mappings: Field[_] *: Tuple, data: Map[String, Any] = Map.emp
       .getOrElse(Field.of[Nothing].copy(name = key))
       .asInstanceOf[Field[A]]
 
-  def hasErrors: Boolean = ???
+  /**
+   * Returns `true` if there is an error related to this form.
+   */
+  def hasErrors: Boolean = errors.nonEmpty
 
-  def verifying(fn: T => Boolean):Option[T] = ???
+  /**
+   * Retrieve the first error for this key.
+   *
+   * @param key field name.
+   */
+  def error(key: String): Option[FormError] = errors.find(_.key == key)
+
+  /**
+   * Retrieve all errors for this key.
+   *
+   * @param key field name.
+   */
+  def errors(key: String): Seq[FormError] = errors.filter(_.key == key)
+
+  /**
+   * Retrieves the first global error, if it exists, i.e. an error without any key.
+   *
+   * @return an error
+   */
+  def globalError: Option[FormError] = globalErrors.headOption
+
+  /**
+   * Retrieves all global errors, i.e. errors without a key.
+   *
+   * @return all global errors
+   */
+  def globalErrors: Seq[FormError] = errors.filter(_.key.isEmpty)
+
+  override def verifying(addConstraints: Constraint[T]*): Form[T] =
+    copy(constraints = constraints ++ addConstraints)
 
 }

@@ -1,5 +1,7 @@
 package com.greenfossil.webserver.data
 
+import com.greenfossil.commons.json.JsValue
+
 import java.time.LocalDate
 
 object Field {
@@ -100,6 +102,7 @@ object Field {
           }
         case opt if opt.startsWith("?") =>
           value match {
+            case opt: Option[_] => opt
             case xs: Seq[_] => Option(xs.flatMap(x => toValueOf(opt.tail,x)))
             case s: String => Option(Seq(toValueOf(opt.tail, s)))
           }
@@ -113,11 +116,36 @@ object Field {
 case class Field[A](tpe: String, 
                     form: Form[_] = null,
                     name: String = null,
-                    constraints:Seq[(String, Seq[Any])] = Nil,
+                    constraints:Seq[Constraint[A]] = Nil,
                     format: Option[(String, Seq[Any])] = None,
                     errors: Seq[FormError] = Nil,
-                    value: Option[A] = None) {
-  def setValue(a: A): Field[A] = copy(value = Option(a))
+                    value: Option[A] = None) extends ConstraintVerifier[Field, A](name, constraints) {
+
+  def bind(value: Any): Field[A] = {
+    val newValueOpt = value match {
+      case js: JsValue => Field.toValueOf[A](tpe, js.asOpt[Any])
+      case any => Field.toValueOf[A](tpe, any)
+    }
+    //Check constraints here
+    newValueOpt match {
+      case Some(value: A) =>
+        val formErrors = applyConstraints(value)
+        copy(value = newValueOpt, errors = formErrors)
+
+      case None =>
+        copy(value = None)
+    }
+  }
+
+  override def verifying(newConstraints: Constraint[A]*): Field[A] =
+    copy(constraints = constraints ++ newConstraints)
+
+  //If same type, retain all settings, if, if not same all constraints will be dropped
+  //Transform should start before the verifying
+  inline def transform[B](fn: A => B, fn2: B => A): Field[B] =
+    Field.of[B](name).copy(form = this.form)
+
+
 }
 
 /*
@@ -140,10 +168,11 @@ inline def bigDecimal(precision: Int, scale: Int) = Field.of[BigDecimal]
 
 //Text
 inline def char = Field.of[Char]
-inline def text = Field.of[String]
-inline def text(minLength: Int = 0, maxLength: Int = Int.MaxValue) = Field.of[String]
+inline def text:Field[String] = Field.of[String]
+inline def text(minLength: Int, maxLength: Int, trim: Boolean): Field[String] = Field.of[String]
 inline def nonEmptyText = Field.of[String]
-inline def nonEmptyText(minLength: Int = 0, maxLength: Int = Int.MaxValue) = Field.of[String]
+inline def nonEmptyText(trim: Boolean) = Field.of[String]
+inline def nonEmptyText(minLength: Int = 0, maxLength: Int = Int.MaxValue, trim: Boolean = true) = Field.of[String]
 inline def email = Field.of[String]
 
 //Temporal
@@ -170,5 +199,5 @@ inline def optional[A] = Field.of[Option[A]]
 
 inline def uuid = Field.of[java.util.UUID]
 inline def checked(msg: String): Boolean = ???
-inline def default[A](mapping: Field[A], value: A): Field[A] = Field.of[A].setValue(value)
+inline def default[A](mapping: Field[A], value: A): Field[A] = Field.of[A].bind(value)
 inline def ignored[A](value: A): Field[A] = ???

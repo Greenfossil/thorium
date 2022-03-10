@@ -1,0 +1,21 @@
+package com.greenfossil.webserver
+
+
+class FieldSuite extends munit.FunSuite {
+
+  import com.greenfossil.webserver.data.*
+  test("verifying"){
+    val f1 = Field.of[Int]("f1")
+      .verifying("Int must be greater than 10", x => x > 10)
+    val boundField = f1.bind(4)
+    assertNoDiff(boundField.errors.head.messages.head , "Int must be greater than 10")
+  }
+  test("transform".fail) {
+    val f1 = Field.of[Int]("f1")
+      .transform[Int](_ * 2, _ * 2)
+      .verifying("X must be 8", x => x == 8)
+    val boundField = f1.bind(4)
+    assert(boundField.errors.isEmpty)
+  }
+
+}

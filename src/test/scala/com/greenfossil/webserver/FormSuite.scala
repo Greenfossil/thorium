@@ -13,6 +13,7 @@ class FormSuite extends munit.FunSuite {
       "text" -> text
     )
     val filledForm = form.fill(1, "hello")
+    filledForm.data
     assertEquals[Any, Any](filledForm("long").value, Option(1))
     assertEquals[Any, Any](filledForm("text").value, Option("hello"))
 
