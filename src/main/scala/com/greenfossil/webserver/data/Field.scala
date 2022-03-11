@@ -146,16 +146,40 @@ object Field {
           }
 
         case "Byte" =>
-          ???
+          value match {
+            case x: Byte => Option(x)
+            case s: String => Option(s.toByte)
+            case xs: Option[_] => xs.flatMap(x => Option(x.toString.toByte))
+            case xs: Seq[_] => xs.headOption.flatMap(x => Option(x.toString.toByte))
+            case _ => None
+          }
 
         case "Short" =>
-          ???
+          value match {
+            case x: Short => Option(x)
+            case s: String => Option(s.toShort)
+            case xs: Option[_] => xs.flatMap(x => Option(x.toString.toShort))
+            case xs: Seq[_] => xs.headOption.flatMap(x => Option(x.toString.toShort))
+            case _ => None
+          }
 
         case "BigDecimal" =>
-          ???
-        
+          value match {
+            case x: BigDecimal => Option(x)
+            case s: String => Option(BigDecimal(s))
+            case xs: Option[_] => xs.flatMap(x => Option(BigDecimal(x.toString)))
+            case xs: Seq[_] => xs.headOption.flatMap(x => Option(BigDecimal(x.toString)))
+            case _ => None
+          }
+
         case "Char" =>
-          ???
+          value match {
+            case x: Char => Option(x)
+            case s: String => s.headOption
+            case xs: Option[_] => xs.flatMap(_.toString.headOption)
+            case xs: Seq[_] => xs.headOption.flatMap(_.toString.headOption)
+            case _ => None
+          }
 
         case seq if seq.startsWith("[") =>
           value match {
@@ -220,25 +244,31 @@ case class Field[A](tpe: String,
 //Numeric
 inline def boolean = Field.of[Boolean]
 inline def byteNumber = Field.of[Byte]
-inline def byteNumber(min: Byte = Byte.MinValue, max: Byte = Byte.MaxValue, strict: Boolean = false) = Field.of[Byte]
+inline def byteNumber(min: Byte = Byte.MinValue, max: Byte = Byte.MaxValue, strict: Boolean = false) = 
+  Field.of[Byte].verifying(Constraints.min(min, strict), Constraints.max(max, strict))
+  
 inline def shortNumber = Field.of[Short]
-inline def shortNumber(min: Short = Short.MinValue, max: Short = Short.MinValue, strict: Boolean = false) = Field.of[Short]
+inline def shortNumber(min: Short = Short.MinValue, max: Short = Short.MinValue, strict: Boolean = false) =
+  Field.of[Short].verifying(Constraints.min[Short](min, strict), Constraints.max[Short](max, strict))
 inline def number = Field.of[Int]
-inline def number(min:Int, max:Int) = Field.of[Int]
+inline def number(min:Int, max:Int) = Field.of[Int].verifying(Constraints.min(min), Constraints.max(max))
 inline def longNumber = Field.of[Long]
-inline def longNumber(min: Long = Long.MinValue, max: Long = Long.MaxValue, strict: Boolean = false) = Field.of[Long]
+inline def longNumber(min: Long = Long.MinValue, max: Long = Long.MaxValue, strict: Boolean = false) =
+  Field.of[Long].verifying(Constraints.min[Long](min, strict), Constraints.max[Long](max, strict))
 inline def double = Field.of[Double]
 inline def float = Field.of[Float]
 inline def bigDecimal = Field.of[BigDecimal]
-inline def bigDecimal(precision: Int, scale: Int) = Field.of[BigDecimal]
+inline def bigDecimal(precision: Int, scale: Int) = 
+  Field.of[BigDecimal].verifying(Constraints.precision(precision, scale))
 
 //Text
 inline def char = Field.of[Char]
 
 inline def text:Field[String] = Field.of[String]
 
-inline def text(minLength: Int, maxLength: Int, trim: Boolean): Field[String] = 
-  Field.of[String] //FIXME
+inline def text(minLength: Int, maxLength: Int, trim: Boolean): Field[String] =
+  Field.of[String].verifying(Constraints.minLength(minLength), Constraints.maxLength(maxLength)) //FIXME to use trim
+
 
 inline def nonEmptyText = 
   Field.of[String].verifying(Constraints.nonEmpty)
