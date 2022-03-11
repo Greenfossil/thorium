@@ -85,7 +85,7 @@ object Field {
         case "LocalDate" =>
           value match {
             case x: LocalDate => Option(x)
-            case s: String => LocalDate.parse(s)
+            case s: String => Option(LocalDate.parse(s))
             case xs: Option[_] => xs.flatMap(x => Option(LocalDate.parse(x.toString)))
             case xs: Seq[_] => xs.headOption.flatMap(x => Option(LocalDate.parse(x.toString)))
             case _ => None
@@ -171,22 +171,22 @@ inline def char = Field.of[Char]
 
 inline def text:Field[String] = Field.of[String]
 
-inline def text(minLength: Int, maxLength: Int, trim: Boolean): Field[String] = 
+inline def text(minLength: Int, maxLength: Int, trim: Boolean): Field[String] =
   Field.of[String] //FIXME
 
-inline def nonEmptyText = 
+inline def nonEmptyText =
   Field.of[String].verifying(Constraints.nonEmpty)
 
 inline def nonEmptyText(minLength: Int = 0, maxLength: Int = Int.MaxValue) =
   Field.of[String].verifying(Constraints.minLength(minLength), Constraints.maxLength(maxLength))
-  
-inline def email = 
+
+inline def email =
   Field.of[String].verifying(Constraints.emailAddress)
 
 //Temporal
-inline def date = 
+inline def date =
   Field.of[java.util.Date]
-  
+
 inline def date(pattern: String, timeZone: java.util.TimeZone = java.util.TimeZone.getDefault) = Field.of[java.util.Date]
 inline def localDate = Field.of[java.time.LocalDate]
 inline def localDate(pattern: String) = Field.of[java.time.LocalDate]
