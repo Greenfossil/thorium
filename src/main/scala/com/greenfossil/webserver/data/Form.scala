@@ -24,6 +24,8 @@ object Form {
     case t *: ts => Field[t] *: FieldConstructor[ts]
   }
 
+  def tuple[A](x: (String, Field[A])): Form[A] = ???
+
   /**
    *
    * @param nameValueTuple - a name-value pair tuple
@@ -204,6 +206,8 @@ case class Form[T](mappings: Field[_] *: Tuple,
    * @return all global errors
    */
   def globalErrors: Seq[FormError] = errors.filter(_.key.isEmpty)
+  
+  def withGlobalError(errorMsg: String): Form[T] = ???
 
   override def verifying(addConstraints: Constraint[T]*): Form[T] =
     copy(constraints = constraints ++ addConstraints)

@@ -16,5 +16,7 @@ extension (resp: HttpResponse)
   def withSession(nvPair: (String, String)): HttpResponse = ???
 
   def flashing(flash: Flash): HttpResponse =  ???
+  
+  def flashing(flash: (String, String)*): HttpResponse =  ???
 
   def withHeaders(tup: (String, String)*): HttpResponse = ???

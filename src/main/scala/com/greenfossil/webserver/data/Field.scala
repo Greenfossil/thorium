@@ -268,10 +268,13 @@ inline def sqlTimestamp(pattern: String, timeZone: java.util.TimeZone = java.uti
 //Collection
 inline def indexedSeq[A] = Field.of[IndexedSeq[A]]
 inline def list[A] = Field.of[List[A]]
+inline def list[A](a: Field[A]): Field[List[A]] = ???
 inline def seq[A] = Field.of[Seq[A]]
+inline def seq[A](a: Field[A]): Field[Seq[A]] = ???
 inline def set[A] = Field.of[Set[A]]
 inline def vector[A] = Field.of[Vector[A]]
 inline def optional[A] = Field.of[Option[A]]
+inline def optional[A](a: Field[A]): Field[Option[A]] = ??? // Field.of[Option[A]]
 
 inline def uuid = Field.of[java.util.UUID]
 inline def checked(msg: String): Boolean = ???
