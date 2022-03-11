@@ -146,10 +146,22 @@ object Field {
           }
 
         case "Byte" =>
-          ???
+          value match {
+            case x: Byte => Option(x)
+            case s: String => Option(s.toByte)
+            case xs: Option[_] => xs.flatMap(x => Option(x.toString.toByte))
+            case xs: Seq[_] => xs.headOption.flatMap(x => Option(x.toString.toByte))
+            case _ => None
+          }
 
         case "Short" =>
-          ???
+          value match {
+            case x: Short => Option(x)
+            case s: String => Option(s.toShort)
+            case xs: Option[_] => xs.flatMap(x => Option(x.toString.toShort))
+            case xs: Seq[_] => xs.headOption.flatMap(x => Option(x.toString.toShort))
+            case _ => None
+          }
 
         case "BigDecimal" =>
           ???

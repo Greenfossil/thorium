@@ -219,11 +219,37 @@ class FieldTypeSuite extends munit.FunSuite {
   }
 
   test("byte"){
+    val value: Byte = 123.toByte
+    val field = Field.of[Byte]("field")
 
+    val boundField = field.bind(value.toString)
+    val boundField2 = field.bind(Option(value.toString))
+    val boundField3 = field.bind(value)
+    val boundField4 = field.bind(Seq(value))
+    val boundField5 = field.bind(None)
+
+    assertEquals(boundField.value, Option(value))
+    assertEquals(boundField2.value, Option(value))
+    assertEquals(boundField3.value, Option(value))
+    assertEquals(boundField4.value, Option(value))
+    assertEquals(boundField5.value, None)
   }
 
   test("short"){
+    val value: Short = 1
+    val field = Field.of[Short]("field")
 
+    val boundField = field.bind(value.toString)
+    val boundField2 = field.bind(Option(value.toString))
+    val boundField3 = field.bind(value)
+    val boundField4 = field.bind(Seq(value))
+    val boundField5 = field.bind(None)
+
+    assertEquals(boundField.value, Option(value))
+    assertEquals(boundField2.value, Option(value))
+    assertEquals(boundField3.value, Option(value))
+    assertEquals(boundField4.value, Option(value))
+    assertEquals(boundField5.value, None)
   }
 
   test("big decimal"){
