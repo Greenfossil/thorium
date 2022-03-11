@@ -39,9 +39,16 @@ def BadRequest[C](body: C)(using w: Writeable[C]): HttpResponse =
   httpResponse(HttpStatus.BAD_REQUEST, body)
 
 //def Redirect(url: String, status: Int): HttpResponse = Redirect(url, Map.empty, status)
+def Redirect(url: String): HttpResponse = HttpResponse.ofRedirect(HttpStatus.SEE_OTHER, url)
 
-def Redirect(url: String, status: HttpStatus = HttpStatus.SEE_OTHER): HttpResponse =
+def Redirect(url: String, status: HttpStatus): HttpResponse =
   HttpResponse.ofRedirect(status, url)
+
+def Redirect(url: String, queryString: Map[String, Seq[String]]): HttpResponse =
+  ???
+
+def Redirect(url: String, queryString: Map[String, Seq[String]], status: HttpStatus): HttpResponse =
+  ???
 
 def Redirect(call: Call): HttpResponse =  ???
 

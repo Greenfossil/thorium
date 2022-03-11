@@ -37,24 +37,11 @@ trait Request(val requestContext: ServiceRequestContext) {
 //
   def flash: Flash = ???
 
-  def locale: Locale = {
-//    import scala.jdk.CollectionConverters.*
-//    val config: Config = AppSettings.instance.config
-//    val _appLangs: util.List[String] = config.getStringList("app.i18n.langs")
-//    def appLangs: List[String] = _appLangs.asScala.toList
-//    val variant = config.getString("app.i18n.variant")
-//    val supportedLanguages: Seq[String] = ??? //To be used request.acceptLanguages
-//
-//    val lang: String = Locale.lookupTag(request.acceptLanguages, _appLangs)
-//
-//    //PreferLang is constrained by what the app will support
-//    val preferLang = if (appLangs.exists(_.equalsIgnoreCase(lang))) lang else appLangs.headOption.getOrElse("en")
-//      new Locale.Builder().setLanguageTag(preferLang).setVariant(variant).build()
-    ???
-  }
-//
-//
-//  def isXhr: Boolean
+  def availableLanguages: Seq[Locale] = Seq(Locale.getDefault)
+
+  def localeVariantOpt: Option[String] = None
+
+  def locale: Locale = LocaleUtil.getBestMatchLocale(acceptLanguages, availableLanguages, localeVariantOpt)
 
   //https://www.playframework.com/documentation/2.8.x/ScalaBodyParsers
   lazy val asText: String = request().aggregate().join().contentUtf8()

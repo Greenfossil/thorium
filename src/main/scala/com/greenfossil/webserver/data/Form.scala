@@ -24,6 +24,8 @@ object Form {
     case t *: ts => Field[t] *: FieldConstructor[ts]
   }
 
+  def apply[A](name: String,  f: Field[A]): Form[A] = new Form[A](mappings = f.copy(name = name) *: EmptyTuple)
+
   /**
    *
    * @param nameValueTuple - a name-value pair tuple
@@ -31,7 +33,7 @@ object Form {
    * @return
    */
   def tuple[A <: Tuple](nameValueTuple: A): Form[FieldTypeExtractor[A]] =
-    Form[FieldTypeExtractor[A]](toNamedFieldTuple(nameValueTuple))
+    new Form[FieldTypeExtractor[A]](toNamedFieldTuple(nameValueTuple))
 
   import scala.deriving.*
   /**
@@ -42,7 +44,7 @@ object Form {
    * @return - Form[A]
    */
   def mapping[A](using m: Mirror.ProductOf[A])(nameValueTuple: Tuple.Zip[m.MirroredElemLabels, FieldConstructor[m.MirroredElemTypes]]): Form[A] =
-    Form[A](toNamedFieldTuple(nameValueTuple), mirrorrOpt = Some(m))
+    new Form[A](toNamedFieldTuple(nameValueTuple), mirrorrOpt = Some(m))
 
   private def toNamedFieldTuple(tuple: Tuple): Field[_] *: Tuple =
     tuple.map[[X] =>> Field[_]]([X] => (x: X) =>
@@ -204,6 +206,8 @@ case class Form[T](mappings: Field[_] *: Tuple,
    * @return all global errors
    */
   def globalErrors: Seq[FormError] = errors.filter(_.key.isEmpty)
+  
+  def withGlobalError(errorMsg: String): Form[T] = ???
 
   override def verifying(addConstraints: Constraint[T]*): Form[T] =
     copy(constraints = constraints ++ addConstraints)

@@ -2,7 +2,7 @@ package com.greenfossil.webserver.data
 
 import com.greenfossil.commons.json.JsValue
 
-import java.time.LocalDate
+import java.time.{LocalDate, LocalDateTime, LocalTime}
 
 object Field {
   import scala.compiletime.*
@@ -13,15 +13,24 @@ object Field {
 
   inline def fieldType[A]: String =
     inline erasedValue[A] match {
-      case _: Int       => "Int"
-      case _: String    => "String"
-      case _: Long      => "Long"
-      case _: Double    => "Double"
-      case _: Float     => "Float"
-      case _: Boolean   => "Boolean"
-      case _: LocalDate => "LocalDate"
-      case _: Seq[a]    => "[" + fieldType[a]
-      case _: Option[a] => "?" + fieldType[a]
+      case _: Int                => "Int"
+      case _: String             => "String"
+      case _: Long               => "Long"
+      case _: Double             => "Double"
+      case _: Float              => "Float"
+      case _: Boolean            => "Boolean"
+      case _: LocalDate          => "LocalDate"
+      case _: LocalTime          => "LocalTime"
+      case _: LocalDateTime      => "LocalDateTime"
+      case _: java.sql.Date      => "SqlDate"
+      case _: java.sql.Timestamp => "SqlTimestamp"
+      case _: java.util.UUID     => "UUID"
+      case _: Byte               => "Byte"
+      case _: Short              => "Short"
+      case _: BigDecimal         => "BigDecimal"
+      case _: Char               => "Char"
+      case _: Seq[a]             => "[" + fieldType[a]
+      case _: Option[a]          => "?" + fieldType[a]
     }
 
   def toValueOf[A](tpe: String, value: Any): Option[A] = {
@@ -91,6 +100,87 @@ object Field {
             case _ => None
           }
 
+        case "LocalTime" =>
+          value match {
+            case x: LocalTime => Option(x)
+            case s: String => Option(LocalTime.parse(s))
+            case xs: Option[_] => xs.flatMap(x => Option(LocalTime.parse(x.toString)))
+            case xs: Seq[_] => xs.headOption.flatMap(x => Option(LocalTime.parse(x.toString)))
+            case _ => None
+          }
+
+        case "SqlDate" =>
+          value match {
+            case x: java.sql.Date => Option(x)
+            case s: String => Option(java.sql.Date.valueOf(s))
+            case xs: Option[_] => xs.flatMap(x => Option(java.sql.Date.valueOf(x.toString)))
+            case xs: Seq[_] => xs.headOption.flatMap(x => Option(java.sql.Date.valueOf(x.toString)))
+            case _ => None
+          }
+
+        case "SqlTimestamp" =>
+          value match {
+            case x: java.sql.Timestamp => Option(x)
+            case s: String => Option(java.sql.Timestamp.valueOf(s))
+            case xs: Option[_] => xs.flatMap(x => Option(java.sql.Timestamp.valueOf(x.toString)))
+            case xs: Seq[_] => xs.headOption.flatMap(x => Option(java.sql.Timestamp.valueOf(x.toString)))
+            case _ => None
+          }
+
+        case "LocalDateTime" =>
+          value match {
+            case x: LocalDateTime => Option(x)
+            case s: String => Option(LocalDateTime.parse(s))
+            case xs: Option[_] => xs.flatMap(x => Option(LocalDateTime.parse(x.toString)))
+            case xs: Seq[_] => xs.headOption.flatMap(x => Option(LocalDateTime.parse(x.toString)))
+            case _ => None
+          }
+
+        case "UUID" =>
+          value match {
+            case x: java.util.UUID => Option(x)
+            case s: String => Option(java.util.UUID.fromString(s))
+            case xs: Option[_] => xs.flatMap(x => Option(java.util.UUID.fromString(x.toString)))
+            case xs: Seq[_] => xs.headOption.flatMap(x => Option(java.util.UUID.fromString(x.toString)))
+            case _ => None
+          }
+
+        case "Byte" =>
+          value match {
+            case x: Byte => Option(x)
+            case s: String => Option(s.toByte)
+            case xs: Option[_] => xs.flatMap(x => Option(x.toString.toByte))
+            case xs: Seq[_] => xs.headOption.flatMap(x => Option(x.toString.toByte))
+            case _ => None
+          }
+
+        case "Short" =>
+          value match {
+            case x: Short => Option(x)
+            case s: String => Option(s.toShort)
+            case xs: Option[_] => xs.flatMap(x => Option(x.toString.toShort))
+            case xs: Seq[_] => xs.headOption.flatMap(x => Option(x.toString.toShort))
+            case _ => None
+          }
+
+        case "BigDecimal" =>
+          value match {
+            case x: BigDecimal => Option(x)
+            case s: String => Option(BigDecimal(s))
+            case xs: Option[_] => xs.flatMap(x => Option(BigDecimal(x.toString)))
+            case xs: Seq[_] => xs.headOption.flatMap(x => Option(BigDecimal(x.toString)))
+            case _ => None
+          }
+
+        case "Char" =>
+          value match {
+            case x: Char => Option(x)
+            case s: String => s.headOption
+            case xs: Option[_] => xs.flatMap(_.toString.headOption)
+            case xs: Seq[_] => xs.headOption.flatMap(_.toString.headOption)
+            case _ => None
+          }
+
         case seq if seq.startsWith("[") =>
           value match {
             case xs: Seq[_] =>
@@ -154,17 +244,22 @@ case class Field[A](tpe: String,
 //Numeric
 inline def boolean = Field.of[Boolean]
 inline def byteNumber = Field.of[Byte]
-inline def byteNumber(min: Byte = Byte.MinValue, max: Byte = Byte.MaxValue, strict: Boolean = false) = Field.of[Byte]
+inline def byteNumber(min: Byte = Byte.MinValue, max: Byte = Byte.MaxValue, strict: Boolean = false) =
+  Field.of[Byte].verifying(Constraints.min(min, strict), Constraints.max(max, strict))
+
 inline def shortNumber = Field.of[Short]
-inline def shortNumber(min: Short = Short.MinValue, max: Short = Short.MinValue, strict: Boolean = false) = Field.of[Short]
+inline def shortNumber(min: Short = Short.MinValue, max: Short = Short.MinValue, strict: Boolean = false) =
+  Field.of[Short].verifying(Constraints.min[Short](min, strict), Constraints.max[Short](max, strict))
 inline def number = Field.of[Int]
-inline def number(min:Int, max:Int) = Field.of[Int]
+inline def number(min:Int, max:Int) = Field.of[Int].verifying(Constraints.min(min), Constraints.max(max))
 inline def longNumber = Field.of[Long]
-inline def longNumber(min: Long = Long.MinValue, max: Long = Long.MaxValue, strict: Boolean = false) = Field.of[Long]
+inline def longNumber(min: Long = Long.MinValue, max: Long = Long.MaxValue, strict: Boolean = false) =
+  Field.of[Long].verifying(Constraints.min[Long](min, strict), Constraints.max[Long](max, strict))
 inline def double = Field.of[Double]
 inline def float = Field.of[Float]
 inline def bigDecimal = Field.of[BigDecimal]
-inline def bigDecimal(precision: Int, scale: Int) = Field.of[BigDecimal]
+inline def bigDecimal(precision: Int, scale: Int) =
+  Field.of[BigDecimal].verifying(Constraints.precision(precision, scale))
 
 //Text
 inline def char = Field.of[Char]
@@ -172,7 +267,7 @@ inline def char = Field.of[Char]
 inline def text:Field[String] = Field.of[String]
 
 inline def text(minLength: Int, maxLength: Int, trim: Boolean): Field[String] =
-  Field.of[String] //FIXME
+  Field.of[String].verifying(Constraints.minLength(minLength), Constraints.maxLength(maxLength)) //FIXME to use trim
 
 inline def nonEmptyText =
   Field.of[String].verifying(Constraints.nonEmpty)
@@ -202,10 +297,13 @@ inline def sqlTimestamp(pattern: String, timeZone: java.util.TimeZone = java.uti
 //Collection
 inline def indexedSeq[A] = Field.of[IndexedSeq[A]]
 inline def list[A] = Field.of[List[A]]
+inline def list[A](a: Field[A]): Field[List[A]] = ???
 inline def seq[A] = Field.of[Seq[A]]
+inline def seq[A](a: Field[A]): Field[Seq[A]] = ???
 inline def set[A] = Field.of[Set[A]]
 inline def vector[A] = Field.of[Vector[A]]
 inline def optional[A] = Field.of[Option[A]]
+inline def optional[A](a: Field[A]): Field[Option[A]] = ??? // Field.of[Option[A]]
 
 inline def uuid = Field.of[java.util.UUID]
 inline def checked(msg: String): Boolean = ???

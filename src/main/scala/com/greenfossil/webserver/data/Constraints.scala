@@ -145,4 +145,22 @@ trait Constraints {
     else regex.unapplySeq(o).map(_ => Valid).getOrElse(Invalid(ValidationError(error, regex)))
   }
 
+
+  /**
+   * Checks the precision and scale of the given BigDecimal
+   * https://stackoverflow.com/questions/35435691/bigdecimal-precision-and-scale
+   */
+  def precision(
+                 precision: Int,
+                 scale: Int,
+                 name: String = "constraint.precision",
+                 error: String = "error.real.precision",
+               ) :Constraint[BigDecimal] = Constraint[BigDecimal](name, (precision, scale)){ bd =>
+    if (bd.precision - bd.scale > precision - scale) {
+      Invalid(ValidationError(error, precision, scale))
+    }else{
+      Valid
+    }
+  }
+
 }
