@@ -78,7 +78,7 @@ class FieldConstraintsSuite extends munit.FunSuite {
     val f = byteNumber(min = 2, max = 8)
     println(s"f.constraints = ${f.constraints}")
 
-    val errorField = f.bind(10)
+    val errorField = f.bind(10.toByte)
     assertEquals(errorField.errors.size, 1)
     errorField.errors.foreach(e => println(e.message))
 
