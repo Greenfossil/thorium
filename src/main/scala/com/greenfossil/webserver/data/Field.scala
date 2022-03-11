@@ -2,7 +2,7 @@ package com.greenfossil.webserver.data
 
 import com.greenfossil.commons.json.JsValue
 
-import java.time.LocalDate
+import java.time.{LocalDate, LocalDateTime, LocalTime}
 
 object Field {
   import scala.compiletime.*
@@ -13,15 +13,24 @@ object Field {
 
   inline def fieldType[A]: String =
     inline erasedValue[A] match {
-      case _: Int       => "Int"
-      case _: String    => "String"
-      case _: Long      => "Long"
-      case _: Double    => "Double"
-      case _: Float     => "Float"
-      case _: Boolean   => "Boolean"
-      case _: LocalDate => "LocalDate"
-      case _: Seq[a]    => "[" + fieldType[a]
-      case _: Option[a] => "?" + fieldType[a]
+      case _: Int                => "Int"
+      case _: String             => "String"
+      case _: Long               => "Long"
+      case _: Double             => "Double"
+      case _: Float              => "Float"
+      case _: Boolean            => "Boolean"
+      case _: LocalDate          => "LocalDate"
+      case _: LocalTime          => "LocalTime"
+      case _: LocalDateTime      => "LocalDateTime"
+      case _: java.sql.Date      => "SqlDate"
+      case _: java.sql.Timestamp => "SqlTimestamp"
+      case _: java.util.UUID     => "UUID"
+      case _: Byte               => "Byte"
+      case _: Short              => "Short"
+      case _: BigDecimal         => "BigDecimal"
+      case _: Char               => "Char"
+      case _: Seq[a]             => "[" + fieldType[a]
+      case _: Option[a]          => "?" + fieldType[a]
     }
 
   def toValueOf[A](tpe: String, value: Any): Option[A] = {
@@ -85,11 +94,68 @@ object Field {
         case "LocalDate" =>
           value match {
             case x: LocalDate => Option(x)
-            case s: String => LocalDate.parse(s)
+            case s: String => Option(LocalDate.parse(s))
             case xs: Option[_] => xs.flatMap(x => Option(LocalDate.parse(x.toString)))
             case xs: Seq[_] => xs.headOption.flatMap(x => Option(LocalDate.parse(x.toString)))
             case _ => None
           }
+
+        case "LocalTime" =>
+          value match {
+            case x: LocalTime => Option(x)
+            case s: String => Option(LocalTime.parse(s))
+            case xs: Option[_] => xs.flatMap(x => Option(LocalTime.parse(x.toString)))
+            case xs: Seq[_] => xs.headOption.flatMap(x => Option(LocalTime.parse(x.toString)))
+            case _ => None
+          }
+
+        case "SqlDate" =>
+          value match {
+            case x: java.sql.Date => Option(x)
+            case s: String => Option(java.sql.Date.valueOf(s))
+            case xs: Option[_] => xs.flatMap(x => Option(java.sql.Date.valueOf(x.toString)))
+            case xs: Seq[_] => xs.headOption.flatMap(x => Option(java.sql.Date.valueOf(x.toString)))
+            case _ => None
+          }
+
+        case "SqlTimestamp" =>
+          value match {
+            case x: java.sql.Timestamp => Option(x)
+            case s: String => Option(java.sql.Timestamp.valueOf(s))
+            case xs: Option[_] => xs.flatMap(x => Option(java.sql.Timestamp.valueOf(x.toString)))
+            case xs: Seq[_] => xs.headOption.flatMap(x => Option(java.sql.Timestamp.valueOf(x.toString)))
+            case _ => None
+          }
+
+        case "LocalDateTime" =>
+          value match {
+            case x: LocalDateTime => Option(x)
+            case s: String => Option(LocalDateTime.parse(s))
+            case xs: Option[_] => xs.flatMap(x => Option(LocalDateTime.parse(x.toString)))
+            case xs: Seq[_] => xs.headOption.flatMap(x => Option(LocalDateTime.parse(x.toString)))
+            case _ => None
+          }
+
+        case "UUID" =>
+          value match {
+            case x: java.util.UUID => Option(x)
+            case s: String => Option(java.util.UUID.fromString(s))
+            case xs: Option[_] => xs.flatMap(x => Option(java.util.UUID.fromString(x.toString)))
+            case xs: Seq[_] => xs.headOption.flatMap(x => Option(java.util.UUID.fromString(x.toString)))
+            case _ => None
+          }
+
+        case "Byte" =>
+          ???
+
+        case "Short" =>
+          ???
+
+        case "BigDecimal" =>
+          ???
+        
+        case "Char" =>
+          ???
 
         case seq if seq.startsWith("[") =>
           value match {
