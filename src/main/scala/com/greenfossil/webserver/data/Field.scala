@@ -164,10 +164,22 @@ object Field {
           }
 
         case "BigDecimal" =>
-          ???
-        
+          value match {
+            case x: BigDecimal => Option(x)
+            case s: String => Option(BigDecimal(s))
+            case xs: Option[_] => xs.flatMap(x => Option(BigDecimal(x.toString)))
+            case xs: Seq[_] => xs.headOption.flatMap(x => Option(BigDecimal(x.toString)))
+            case _ => None
+          }
+
         case "Char" =>
-          ???
+          value match {
+            case x: Char => Option(x)
+            case s: String => s.headOption
+            case xs: Option[_] => xs.flatMap(_.toString.headOption)
+            case xs: Seq[_] => xs.headOption.flatMap(_.toString.headOption)
+            case _ => None
+          }
 
         case seq if seq.startsWith("[") =>
           value match {
