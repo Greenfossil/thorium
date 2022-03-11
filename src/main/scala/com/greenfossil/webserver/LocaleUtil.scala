@@ -24,12 +24,12 @@ trait LocaleUtil {
    * 
    * @param acceptedLanguageRanges
    * @param availableLocales
-   * @param variationOpt
+   * @param variantOpt
    * @return
    */
-  def getBestMatchLocale(acceptedLanguageRanges: Seq[LanguageRange], availableLocales: Seq[Locale], variationOpt: Option[String]): Locale =
+  def getBestMatchLocale(acceptedLanguageRanges: Seq[LanguageRange], availableLocales: Seq[Locale], variantOpt: Option[String]): Locale =
     val bestMatchLocale = Locale.lookup(acceptedLanguageRanges.asJava, availableLocales.asJava)
-    new Builder().setLocale(bestMatchLocale).setVariant(variationOpt.getOrElse("")).build()
+    new Builder().setLocale(bestMatchLocale).setVariant(variantOpt.getOrElse("")).build()
 
 }
 
