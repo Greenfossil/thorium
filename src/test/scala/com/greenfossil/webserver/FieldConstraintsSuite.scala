@@ -16,19 +16,74 @@ class FieldConstraintsSuite extends munit.FunSuite {
   }
 
   test("email"){
+    val f = email
+    val errorField = f.bind("https://www.google.com")
+    assertEquals(errorField.errors.size, 1)
+    errorField.errors.foreach(e => println(e.message))
 
+    val validField = f.bind("test@greenfossil.com")
+    assert(validField.errors.isEmpty)
   }
 
   test("number"){
+    val f = number(1, 10)
 
+    val errorField = f.bind(20)
+    assertEquals(errorField.errors.size, 1)
+    errorField.errors.foreach(e => println(e.message))
+
+    val validField = f.bind(5)
+    assert(validField.errors.isEmpty)
   }
 
-  test("text"){
+  test("text with trim option"){
+    val f = text(1, 5, true)
 
+    val errorField = f.bind("hello world")
+    assertEquals(errorField.errors.size, 1)
+    errorField.errors.foreach(e => println(e.message))
+
+    val errorField2 = f.bind("    ")
+    assertEquals(errorField2.errors.size, 1)
+    errorField2.errors.foreach(e => println(e.message))
+    assertEquals(errorField2.value, Option(""))
+
+    val validField = f.bind("hello")
+    assert(validField.errors.isEmpty)
+
+    val validField2 = f.bind("hello ")
+    assert(validField2.errors.isEmpty)
+    assertEquals(validField2.value, Option("hello"))
+  }
+
+  test("text without trim option"){
+    val f = text(1, 5, false)
+
+    val errorField = f.bind("hello world")
+    assertEquals(errorField.errors.size, 1)
+    errorField.errors.foreach(e => println(e.message))
+
+    val errorField2 = f.bind("hello ")
+    assertEquals(errorField2.errors.size, 1)
+    errorField.errors.foreach(e => println(e.message))
+
+    val validField = f.bind("hello")
+    assert(validField.errors.isEmpty)
+
+    val validField2 = f.bind("    ")
+    assert(validField.errors.isEmpty)
   }
 
   test("byte number"){
+    val f = byteNumber(min = 2, max = 8)
+    println(s"f.constraints = ${f.constraints}")
 
+    val errorField = f.bind(10)
+    assertEquals(errorField.errors.size, 1)
+    errorField.errors.foreach(e => println(e.message))
+
+    val validField = f.bind(8)
+    assert(validField.errors.isEmpty)
   }
 
   test("short number"){
@@ -79,6 +134,13 @@ class FieldConstraintsSuite extends munit.FunSuite {
   }
 
   test("custom constraint"){
+    val field = text.verifying("text needs to be alphanumerical", _.matches("[a-zA-Z0-9]*"))
 
+    val errorField = field.bind("@#$")
+    assertEquals(errorField.errors.size, 1)
+    assertEquals(errorField.errors.head.message, "text needs to be alphanumerical")
+
+    val validField = field.bind("asdf1234")
+    assert(validField.errors.isEmpty)
   }
 }

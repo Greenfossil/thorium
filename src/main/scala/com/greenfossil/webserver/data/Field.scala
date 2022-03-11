@@ -244,12 +244,14 @@ case class Field[A](tpe: String,
 //Numeric
 inline def boolean = Field.of[Boolean]
 inline def byteNumber = Field.of[Byte]
-inline def byteNumber(min: Byte = Byte.MinValue, max: Byte = Byte.MaxValue, strict: Boolean = false) = Field.of[Byte]
+inline def byteNumber(min: Byte = Byte.MinValue, max: Byte = Byte.MaxValue, strict: Boolean = false) = 
+  Field.of[Byte].verifying(Constraints.min(min, strict), Constraints.max(max, strict))
+  
 inline def shortNumber = Field.of[Short]
 inline def shortNumber(min: Short = Short.MinValue, max: Short = Short.MinValue, strict: Boolean = false) =
   Field.of[Short].verifying(Constraints.min[Short](min, strict), Constraints.max[Short](max, strict))
 inline def number = Field.of[Int]
-inline def number(min:Int, max:Int) = Field.of[Int]
+inline def number(min:Int, max:Int) = Field.of[Int].verifying(Constraints.min(min), Constraints.max(max))
 inline def longNumber = Field.of[Long]
 inline def longNumber(min: Long = Long.MinValue, max: Long = Long.MaxValue, strict: Boolean = false) =
   Field.of[Long].verifying(Constraints.min[Long](min, strict), Constraints.max[Long](max, strict))
@@ -264,8 +266,9 @@ inline def char = Field.of[Char]
 
 inline def text:Field[String] = Field.of[String]
 
-inline def text(minLength: Int, maxLength: Int, trim: Boolean): Field[String] = 
-  Field.of[String] //FIXME
+inline def text(minLength: Int, maxLength: Int, trim: Boolean): Field[String] =
+  Field.of[String].verifying(Constraints.minLength(minLength), Constraints.maxLength(maxLength)) //FIXME to use trim
+
 
 inline def nonEmptyText = 
   Field.of[String].verifying(Constraints.nonEmpty)
