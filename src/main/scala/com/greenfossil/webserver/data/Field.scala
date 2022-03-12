@@ -2,7 +2,7 @@ package com.greenfossil.webserver.data
 
 import com.greenfossil.commons.json.JsValue
 
-import java.time.{LocalDate, LocalDateTime, LocalTime}
+import java.time.*
 
 object Field {
   import scala.compiletime.*
@@ -266,8 +266,11 @@ inline def char = Field.of[Char]
 
 inline def text:Field[String] = Field.of[String]
 
-inline def text(minLength: Int, maxLength: Int, trim: Boolean): Field[String] =
-  Field.of[String].verifying(Constraints.minLength(minLength), Constraints.maxLength(maxLength)) //FIXME to use trim
+inline def text(minLength: Int, maxLength: Int, trim: Boolean): Field[String] = (minLength, maxLength)  match {
+  case (min, Int.MaxValue) => text.verifying(Constraints.minLength(min))
+  case (0, max)            => text.verifying(Constraints.maxLength(max))
+  case (min, max)          => text.verifying(Constraints.minLength(min), Constraints.maxLength(max))
+}
 
 inline def nonEmptyText =
   Field.of[String].verifying(Constraints.nonEmpty)

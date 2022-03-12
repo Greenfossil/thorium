@@ -1,30 +1,37 @@
 package com.greenfossil.webserver
 
-import com.linecorp.armeria.common.{HttpRequest, HttpResponse, HttpStatus}
+import com.linecorp.armeria.common.{HttpHeaders, HttpRequest, HttpResponse, HttpStatus, ResponseHeaders}
+import com.linecorp.armeria.server.annotation.{ResponseConverter, ResponseConverterFunction}
 import com.linecorp.armeria.server.{HttpService, ServiceRequestContext}
-
-//type DecoratingHttpServiceFunction = (HttpService, ServiceRequestContext, HttpRequest) => HttpResponse
-//
-//trait EssentialAction extends (HttpRequest => HttpResponse) {
-//  def decorate (fn: DecoratingHttpServiceFunction): HttpResponse
-//}
 
 /********************************
  * Action
  */
 
-trait Action(fn: Request => HttpResponse) extends HttpService {
-  override def serve(ctx: ServiceRequestContext, req: HttpRequest): HttpResponse =
-    val req = new Request(ctx) {}
-    HttpResponse.from(() => fn(req), ctx.blockingTaskExecutor())
+class ActionResponseConverter extends ResponseConverterFunction {
+  override def convertResponse(ctx: ServiceRequestContext, headers: ResponseHeaders, result: Any, trailers: HttpHeaders): HttpResponse =
+    result match
+      case action: Controller#Action => action(ctx)
+      case _ => ResponseConverterFunction.fallthrough()
 }
 
-object Action {
+@ResponseConverter(classOf[ActionResponseConverter])
+trait Controller {
 
-  def apply(fn: Request => HttpResponse): HttpService = new Action(fn){}
+  trait Action(fn: Request => HttpResponse) {
+    def apply(ctx: ServiceRequestContext): HttpResponse =
+      val req = new Request(ctx) {}
+      HttpResponse.from(() => fn(req), ctx.blockingTaskExecutor())
+  }
 
-  //TODO
-  def async = ???
+  object Action {
+
+    def apply(fn: Request => HttpResponse): Action = new Action(fn){}
+
+    //TODO
+    def async = ???
+  }
+
 }
 
 

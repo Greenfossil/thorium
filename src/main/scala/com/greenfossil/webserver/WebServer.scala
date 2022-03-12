@@ -8,11 +8,16 @@ import java.util.concurrent.CompletableFuture
 import scala.util.Try
 
 object WebServer {
-  def apply(): WebServer = WebServer(0, null, Nil, None)
-  def apply(port: Int): WebServer = WebServer(port, null, Nil, None)
+  def apply(): WebServer = WebServer(0, null, Nil, Nil, None)
+  def apply(port: Int): WebServer = WebServer(port, null, Nil, Nil, None)
 }
 
-case class WebServer(_port: Int, server: Server, routes: Seq[(String, HttpService)], errorHandlerOpt: Option[ServerErrorHandler]) {
+case class WebServer(_port: Int,
+                     server: Server,
+                     routes: Seq[(String, HttpService)],
+                     annotatedServices: Seq[Any] = Nil,
+                     errorHandlerOpt: Option[ServerErrorHandler]) {
+
   private val logger = LoggerFactory.getLogger("webserver")
 
   export server.{start as _, toString as _ , *}
@@ -25,6 +30,9 @@ case class WebServer(_port: Int, server: Server, routes: Seq[(String, HttpServic
   def addServices(newRoutes: Seq[(String, HttpService)]): WebServer  =
     copy(routes = routes ++ newRoutes)
 
+  def addAnnotatedService(annotatedService: Controller): WebServer =
+    copy(annotatedServices = annotatedServices :+ annotatedService)
+
   def setErrorHandler(h: ServerErrorHandler): WebServer =
     copy(errorHandlerOpt = Some(h))
 
@@ -33,6 +41,7 @@ case class WebServer(_port: Int, server: Server, routes: Seq[(String, HttpServic
     if _port > 0 then sb.http(_port)
 
     routes.foreach{route => sb.service(route._1, route._2) }
+    annotatedServices.foreach{s => sb.annotatedService(s)}
     errorHandlerOpt.foreach{ handler => sb.errorHandler(handler.orElse(ServerErrorHandler.ofDefault()))}
 
     sb.build

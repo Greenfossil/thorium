@@ -3,7 +3,7 @@ package com.greenfossil.webserver.examples
 import com.greenfossil.webserver.{*, given}
 import com.linecorp.armeria.server.annotation.{Get, Post}
 
-object BasicServices {
+object BasicServices extends Controller {
   
   @Get("/hello")
   def helloText = Action { request =>
@@ -41,8 +41,3 @@ object BasicServices {
 
 }
 
-object RouteService {
-  import com.linecorp.armeria.server.Route
-  val routeText = Route.builder().path("/routeText").build()
-
-}
