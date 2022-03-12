@@ -2,6 +2,7 @@ package com.greenfossil.webserver
 
 import com.linecorp.armeria.common.HttpResponse
 import com.linecorp.armeria.server.*
+import com.linecorp.armeria.server.annotation.*
 import org.slf4j.LoggerFactory
 
 import java.util.concurrent.CompletableFuture
@@ -30,7 +31,7 @@ case class WebServer(_port: Int,
   def addServices(newRoutes: Seq[(String, HttpService)]): WebServer  =
     copy(routes = routes ++ newRoutes)
 
-  def addAnnotatedService(annotatedService: Controller): WebServer =
+  def addAnnotatedService(annotatedService: AnnotatedHttpServiceSet): WebServer =
     copy(annotatedServices = annotatedServices :+ annotatedService)
 
   def setErrorHandler(h: ServerErrorHandler): WebServer =
