@@ -3,7 +3,15 @@ package com.greenfossil.webserver.examples
 import com.greenfossil.webserver.{*, given}
 import com.linecorp.armeria.server.annotation.{Get, Post}
 
+given Conversion[Action, Call] with
+  inline def apply(action: Action): Call =  ???
+
 object BasicServices extends Controller {
+
+  @Get("/simple")
+  def simple = Action { request =>
+    "HelloWorld!"
+  }
   
   @Get("/hello")
   def helloText = Action { request =>
@@ -19,6 +27,7 @@ object BasicServices extends Controller {
 
   @Get("/redirect")
   def redirectText = Action { request =>
+//    Redirect(redirectText2)
     Redirect("/redirectText2")
   }
 

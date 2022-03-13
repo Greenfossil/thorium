@@ -13,4 +13,3 @@ class AnnotatedHttpServiceResponseConverter extends ResponseConverterFunction:
     result match
       case service: AnnotatedHttpService => service.serve(ctx, ctx.request())
       case _ => ResponseConverterFunction.fallthrough()
-

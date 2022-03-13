@@ -1,20 +1,41 @@
 package com.greenfossil.webserver
 
-import com.linecorp.armeria.common.{HttpRequest, HttpResponse, HttpStatus}
-import com.linecorp.armeria.server.annotation.{AnnotatedHttpServiceSet, AnnotatedHttpService}
+import com.linecorp.armeria.common.{AggregatedHttpRequest, HttpHeaders, HttpRequest, HttpResponse, HttpStatus, ResponseHeaders}
+import com.linecorp.armeria.server.annotation.{AnnotatedHttpService, AnnotatedHttpServiceSet, RequestConverter, RequestConverterFunction}
 import com.linecorp.armeria.server.ServiceRequestContext
 
+import java.lang.reflect.ParameterizedType
+
+/*
+ * https://armeria.dev/docs/server-annotated-service#converting-an-http-request-to-a-java-object
+ * https://armeria.dev/docs/server-annotated-service#converting-a-java-object-to-an-http-response
+ */
+class WebServerRequestConverter extends RequestConverterFunction:
+  override def convertRequest(ctx: ServiceRequestContext,
+                              request: AggregatedHttpRequest,
+                              expectedResultType: Class[_],
+                              expectedParameterizedResultType: ParameterizedType): AnyRef =
+    if (expectedResultType == classOf[com.greenfossil.webserver.Request])
+      new com.greenfossil.webserver.Request(ctx){}
+    else
+      RequestConverterFunction.fallthrough()
+
+@RequestConverter(classOf[WebServerRequestConverter])
 trait Controller extends AnnotatedHttpServiceSet
 
-trait Action(fn: Request => HttpResponse) extends AnnotatedHttpService:
+trait Action(fn: Request => HttpResponse | String) extends AnnotatedHttpService:
   override def serve(ctx: ServiceRequestContext, req: HttpRequest): HttpResponse =
     val req = new Request(ctx) {}
-    HttpResponse.from(() => fn(req), ctx.blockingTaskExecutor())
+    val resp  = fn(req) match {
+      case s: String => HttpResponse.of(s)
+      case httpResponse: HttpResponse => httpResponse
+    }
+    HttpResponse.from(() => resp, ctx.blockingTaskExecutor())
 
 
 object Action {
 
-  def apply(fn: Request => HttpResponse): Action = new Action(fn){}
+  def apply(fn: Request => HttpResponse | String): Action = new Action(fn){}
 
   //TODO
   def async = ???
