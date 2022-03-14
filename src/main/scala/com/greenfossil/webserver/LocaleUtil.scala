@@ -20,15 +20,10 @@ trait LocaleUtil {
     getBestMatchLocale(acceptedLanguageRange, availableLocales, variantOpt)
 
   /**
-   * Get best matched locale from the accepted language ranges and available locales. 
-   * 
-   * @param acceptedLanguageRanges
-   * @param availableLocales
-   * @param variantOpt
-   * @return
+   * Get best matched locale from the accepted language ranges and available locales.
    */
   def getBestMatchLocale(acceptedLanguageRanges: Seq[LanguageRange], availableLocales: Seq[Locale], variantOpt: Option[String]): Locale =
-    val bestMatchLocale = Locale.lookup(acceptedLanguageRanges.asJava, availableLocales.asJava)
+    val bestMatchLocale = Option(Locale.lookup(acceptedLanguageRanges.asJava, availableLocales.asJava)).getOrElse(Locale.getDefault)
     new Builder().setLocale(bestMatchLocale).setVariant(variantOpt.getOrElse("")).build()
 
 }
