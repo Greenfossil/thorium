@@ -291,14 +291,14 @@ class FieldTypeSuite extends munit.FunSuite {
 
 
   test("ignored type"){
-    val field = ignored[Long](0L)
+    val field: Field[Long] = ignored[Long](0L)
 
     val boundField = field.bind(2L)
     assertEquals(boundField.value, Option(0L))
   }
 
   test("default type"){
-    val field = default(text, "Foo")
+    val field: Field[String] = default(text, "Foo")
 
     assertEquals(field.value, Option("Foo"))
 
@@ -310,7 +310,7 @@ class FieldTypeSuite extends munit.FunSuite {
   }
 
   test("checked type"){
-    val field = checked("Please check this field")
+    val field: Field[Boolean] = checked("Please check this field")
 
     assertEquals(field.bind("true").value, Option(true))
     assertEquals(field.bind("true").errors.size, 0)
