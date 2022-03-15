@@ -226,8 +226,44 @@ class FormSuite extends munit.FunSuite {
   }
 
 
-  test("ignored, default, checked type"){
+  test("invalid ignored, default, checked type"){
+    val form: Form[(/*Long, */String, Boolean)] = Form.tuple(
+//      "l" -> ignored[Long](0L),
+      "s" ->  default(text, "Foo"),
+      "xs" -> checked("this should be checked")
+    )
+    val data = Map(
+      "l" -> 10L,
+      "xs" -> false,
+    )
 
+    val filledForm = form.bind(data)
+    filledForm.fold(
+      errorForm=> assertEquals(errorForm.errors.size, 1),
+      data=> fail("Should not give invalid data")
+    )
+  }
+
+  test("valid ignored, default, checked type"){
+    val form: Form[(String, Boolean)] = Form.tuple(
+//      "l" -> ignored[Long](0L),
+      "s" ->  default(text, "Foo"),
+      "xs" -> checked("this should be checked")
+    )
+    val data = Map(
+//      "l" -> 1L,
+      "s" -> null,
+      "xs" -> true,
+    )
+
+    val filledForm = form.bind(data)
+    filledForm.fold(
+      errorForm=> fail("should not have errors"),
+      data=> {
+        println(s"data = ${data}")
+        assertEquals(data, ("Foo", true))
+      }
+    )
   }
 
 }
