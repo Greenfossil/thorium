@@ -39,6 +39,8 @@ object Call {
 //TODO - should this be Endpoint
 case class Call(url: String) {
   override def toString: String = url
+  def absoluteURL: String = ???
+  def absoluteURL(secure: Boolean): String = ???
 }
 
 case class Flash(data: Map[String, String]) {

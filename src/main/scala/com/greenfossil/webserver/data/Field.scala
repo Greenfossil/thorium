@@ -23,6 +23,7 @@ object Field {
       case _: LocalTime          => "LocalTime"
       case _: LocalDateTime      => "LocalDateTime"
       case _: java.sql.Date      => "SqlDate"
+      case _: java.util.Date     => "Date"
       case _: java.sql.Timestamp => "SqlTimestamp"
       case _: java.util.UUID     => "UUID"
       case _: Byte               => "Byte"
@@ -115,6 +116,15 @@ object Field {
             case s: String => Option(java.sql.Date.valueOf(s))
             case xs: Option[_] => xs.flatMap(x => Option(java.sql.Date.valueOf(x.toString)))
             case xs: Seq[_] => xs.headOption.flatMap(x => Option(java.sql.Date.valueOf(x.toString)))
+            case _ => None
+          }
+
+        case "Date" =>
+          value match {
+            case x: java.util.Date => Option(x)
+            case s: String => Option(java.util.Date.parse(s))
+            case xs: Option[_] => xs.flatMap(x => Option(java.util.Date.parse(x.toString)))
+            case xs: Seq[_] => xs.headOption.flatMap(x => Option(java.util.Date.parse(x.toString)))
             case _ => None
           }
 
