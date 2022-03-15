@@ -213,8 +213,16 @@ class FormSuite extends munit.FunSuite {
     )
   }
 
-  test("form fill"){
-
+  test("valid form fill"){
+    val form: Form[(Long, String, Seq[Long])] = Form.tuple(
+      "l" -> longNumber,
+      "s" -> text,
+      "xs" -> seq[Long]
+    )
+    val filledForm = form.fill((1L, "text", Seq(1L, 2L)))
+    assertEquals[Any, Any](filledForm.data.get("l"), Some(1L))
+    assertEquals[Any, Any](filledForm.data.get("s"), Some("text"))
+    assertEquals[Any, Any](filledForm.data.get("xs"), Some(Seq(1L, 2L)))
   }
 
 
