@@ -286,4 +286,18 @@ class FieldTypeSuite extends munit.FunSuite {
     assertEquals(boundField4.value, Option(value))
     assertEquals(boundField5.value, None)
   }
+
+
+  test("ignored type"){
+
+  }
+
+  test("default type"){
+
+  }
+
+  test("checked type"){
+
+  }
+
 }

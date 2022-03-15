@@ -170,4 +170,56 @@ class FormSuite extends munit.FunSuite {
     assertEquals[Any, Any](jsonFields(2).value, Some(Seq(1, 2)))
   }
 
+
+  test("valid bind and fold"){
+
+    val form: Form[(Long, String, Seq[Long])] = Form.tuple(
+      "l" -> longNumber,
+      "s" -> text,
+      "xs" -> seq[Long]
+    )
+
+    val data = Map(
+      "l" -> 1L,
+      "s" -> "text",
+      "xs" -> Seq(1L, 2L),
+    )
+
+    form.bind(data).fold(
+      errorForm => fail("Should not have error form"),
+      data => assertEquals(data, (1L, "text", Seq(1L, 2L)))
+    )
+  }
+
+  test("invalid bind and fold"){
+
+    val form: Form[(Long, String, Seq[Long])] = Form.tuple(
+      "l" -> longNumber(1,2, true),
+      "s" -> text,
+      "xs" -> seq[Long]
+    )
+
+    val data = Map(
+      "l" -> 10L,
+      "s" -> "text",
+      "xs" -> Seq(1L, 2L),
+    )
+
+    form.bind(data).fold(
+      errorForm => {
+        assertEquals(errorForm.errors.size, 1)
+      },
+      data => fail("should not return invalid data")
+    )
+  }
+
+  test("form fill"){
+
+  }
+
+
+  test("ignored, default, checked type"){
+
+  }
+
 }
