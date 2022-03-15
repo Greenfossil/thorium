@@ -35,7 +35,7 @@ trait Request(val requestContext: ServiceRequestContext) {
   //  def getReferer: Option[String] =
 //    headers.get("X-Alt-Referer").orElse(headers.get("referer"))
 //
-  def flash: Flash = ???
+  def flash: Flash = Flash(Map.empty) // FIXME
 
   def availableLanguages: Seq[Locale] = Seq(Locale.getDefault)
 

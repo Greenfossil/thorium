@@ -64,6 +64,8 @@ def Redirect(url: String): HttpResponse = HttpResponse.ofRedirect(HttpStatus.SEE
 
 def Redirect(url: String, status: HttpStatus): HttpResponse =
   HttpResponse.ofRedirect(status, url)
+  
+def Redirect(action: Action): HttpResponse = ???
 
 def Redirect(url: String, queryString: Map[String, Seq[String]]): HttpResponse =
   ???
