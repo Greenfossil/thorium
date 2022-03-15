@@ -98,12 +98,14 @@ class FieldTypeSuite extends munit.FunSuite {
     val boundField3 = field.bind(value)
     val boundField4 = field.bind(Seq(value))
     val boundField5 = field.bind(None)
+    val boundField6 = field.bind("hello")
 
     assertEquals(boundField.value, Option(value))
     assertEquals(boundField2.value, Option(value))
     assertEquals(boundField3.value, Option(value))
     assertEquals(boundField4.value, Option(value))
     assertEquals(boundField5.value, None)
+    assertEquals(boundField6.value, None)
   }
 
   test("seq"){
@@ -308,7 +310,13 @@ class FieldTypeSuite extends munit.FunSuite {
   }
 
   test("checked type"){
+    val field = checked("Please check this field")
 
+    assertEquals(field.bind("true").value, Option(true))
+    assertEquals(field.bind("true").errors.size, 0)
+    assertEquals(field.bind("false").errors.size, 1)
+    assertEquals(field.bind("test").errors.size, 1)
+    assertEquals(field.bind("").errors.size, 1)
   }
 
 }
