@@ -5,9 +5,8 @@ import com.linecorp.armeria.server.annotation.{Get, Param}
 
 object SimpleServices extends Controller {
 
-  @Get("/simple-text/{name}")
-  def simpleText(@Param name: String, request: Request) =
-    s"HelloWorld ${name}! path:${request.requestContext.path()}"
-
-
+  @Get("/simple-text/{name}/:date")
+  def simpleText(@Param name: String)(@Param date: java.time.LocalDate)(using request: Request) =
+    s"HelloWorld ${name}! $date path:${request.requestContext.path()}"
+  
 }

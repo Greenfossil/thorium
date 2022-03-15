@@ -3,7 +3,7 @@ TODO
 Request
 + Session and APIs - P1
 + Flash - P1
-+ Parser
++ Parser - Not required
 + MultiFormData - implementation verification
 + Request.locale
 

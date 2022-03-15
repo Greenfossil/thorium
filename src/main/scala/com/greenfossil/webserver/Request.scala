@@ -44,13 +44,13 @@ trait Request(val requestContext: ServiceRequestContext) {
   def locale: Locale = LocaleUtil.getBestMatchLocale(acceptLanguages, availableLanguages, localeVariantOpt)
 
   //https://www.playframework.com/documentation/2.8.x/ScalaBodyParsers
-  lazy val asText: String = request().aggregate().join().contentUtf8()
+  def  asText: String = request().aggregate().join().contentUtf8()
 
   //application/json
-  lazy val asJson: JsValue = Json.parse(asText)
+  def asJson: JsValue = Json.parse(asText)
 
   //application/x-www-form-urlencoded
-  lazy val asFormUrlEncoded: Map[String, Seq[String]] =
+  def asFormUrlEncoded: Map[String, Seq[String]] =
     FormUrlEncodedParser.parse(asText)
 
   //MultiPart

@@ -15,10 +15,17 @@ class WebServerRequestConverter extends RequestConverterFunction:
                               request: AggregatedHttpRequest,
                               expectedResultType: Class[_],
                               expectedParameterizedResultType: ParameterizedType): AnyRef =
-    if (expectedResultType == classOf[com.greenfossil.webserver.Request])
-      new com.greenfossil.webserver.Request(ctx){}
-    else
-      RequestConverterFunction.fallthrough()
+    val currentThread = Thread.currentThread()
+    val oldCl = currentThread.getContextClassLoader
+    currentThread.setContextClassLoader(getClass.getClassLoader)
+    try {
+      if (expectedResultType == classOf[com.greenfossil.webserver.Request])
+        new com.greenfossil.webserver.Request(ctx){}
+      else
+        RequestConverterFunction.fallthrough()
+    }finally {
+      currentThread.setContextClassLoader(oldCl)
+    }
 
 @RequestConverter(classOf[WebServerRequestConverter])
 trait Controller extends AnnotatedHttpServiceSet
