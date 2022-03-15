@@ -15,6 +15,11 @@ class FieldConstraintsSuite extends munit.FunSuite {
     assertEquals(errorField.errors.head.message, "error.required")
     errorField.errors foreach println
 
+    val errorField2 = f.bind(None)
+    assertEquals(errorField2.errors.size, 1)
+    assertEquals(errorField2.errors.head.message, "error.required")
+    errorField2.errors foreach println
+
     val validField = f.bind("abc")
     assert(validField.errors.isEmpty)
   }
