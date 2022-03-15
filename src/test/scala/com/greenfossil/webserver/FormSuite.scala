@@ -226,14 +226,12 @@ class FormSuite extends munit.FunSuite {
   }
 
 
-  test("invalid ignored, default, checked type"){
-    val form: Form[(/*Long, */String, Boolean)] = Form.tuple(
-//      "l" -> ignored[Long](0L),
+  test("invalid default, checked type"){
+    val form: Form[(String, Boolean)] = Form.tuple(
       "s" ->  default(text, "Foo"),
       "xs" -> checked("this should be checked")
     )
     val data = Map(
-      "l" -> 10L,
       "xs" -> false,
     )
 
@@ -244,14 +242,12 @@ class FormSuite extends munit.FunSuite {
     )
   }
 
-  test("valid ignored, default, checked type"){
+  test("valid default, checked type"){
     val form: Form[(String, Boolean)] = Form.tuple(
-//      "l" -> ignored[Long](0L),
       "s" ->  default(text, "Foo"),
       "xs" -> checked("this should be checked")
     )
     val data = Map(
-//      "l" -> 1L,
       "s" -> null,
       "xs" -> true,
     )
