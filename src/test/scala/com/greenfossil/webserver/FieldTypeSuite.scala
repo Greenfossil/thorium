@@ -1,6 +1,6 @@
 package com.greenfossil.webserver
 
-import com.greenfossil.webserver.data.Field
+import com.greenfossil.webserver.data.*
 
 import java.time.{LocalDate, LocalDateTime, LocalTime}
 
@@ -289,11 +289,22 @@ class FieldTypeSuite extends munit.FunSuite {
 
 
   test("ignored type"){
+    val field = ignored[Long](0L)
 
+    val boundField = field.bind(2L)
+    assertEquals(boundField.value, Option(0L))
   }
 
   test("default type"){
+    val field = default(text, "Foo")
 
+    assertEquals(field.value, Option("Foo"))
+
+    val boundField = field.bind("Bar")
+    assertEquals(boundField.value, Option("Bar"))
+
+    val boundField2 = field.bind(null)
+    assertEquals(boundField2.value, Option("Foo"))
   }
 
   test("checked type"){

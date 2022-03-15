@@ -312,5 +312,5 @@ inline def optional[A](a: Field[A]): Field[Option[A]] = ??? // Field.of[Option[A
 
 inline def uuid = Field.of[java.util.UUID]
 inline def checked(msg: String): Boolean = ???
-inline def default[A](mapping: Field[A], value: A): Field[A] = Field.of[A].fill(value)
-inline def ignored[A](value: A): Field[A] = ???
+inline def default[A](mapping: Field[A], value: A): Field[A] = Field.of[A].fill(value) //FIXME OptionalMapping(mapping).transform(_.getOrElse(value), Some(_))
+inline def ignored[A](value: A): Field[A] = ??? // of(ignoredFormat(value))
