@@ -21,15 +21,6 @@ import java.util.Locale.LanguageRange
 
 case class DiscardingCookie(name: String)
 
-/**
- * HTTP Session.
- * Session data are encoded into an HTTP cookie, and can only contain simple String values.
- * @param data
- */
-case class Session(data: Map[String, String]) {
-  export data.*
-}
-
 object Call {
 //  def apply(url: String): Call = Call(url)
 
@@ -41,10 +32,5 @@ case class Call(url: String) {
   override def toString: String = url
   def absoluteURL: String = ???
   def absoluteURL(secure: Boolean): String = ???
-}
-
-case class Flash(data: Map[String, String]) {
-  export data.{+ as _, *}
-  def + (tup: (String, String)): Flash = ???
 }
 

@@ -34,8 +34,8 @@ trait Action(fn: Request => HttpResponse | String) extends AnnotatedHttpService:
   override def serve(ctx: ServiceRequestContext, req: HttpRequest): HttpResponse =
     val req = new Request(ctx) {}
     val resp  = fn(req) match {
-      case s: String => HttpResponse.of(s)
-      case httpResponse: HttpResponse => httpResponse
+      case s: String => HttpResponse.of(s).withSession(req.session)
+      case httpResponse: HttpResponse => httpResponse.withSession(req.session)
     }
     HttpResponse.from(() => resp, ctx.blockingTaskExecutor())
 

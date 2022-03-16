@@ -1,12 +1,21 @@
 package com.greenfossil.webserver
 
-import com.greenfossil.commons.json.{JsValue, Json}
+import com.greenfossil.commons.json.{JsObject, JsValue, Json}
 import com.linecorp.armeria.common.{Cookie, HttpData, RequestHeaders}
 import com.linecorp.armeria.common.multipart.AggregatedMultipart
 import com.linecorp.armeria.server.ServiceRequestContext
 
-import java.util.Locale
+import java.time.ZoneId
+import java.util.{Base64, Locale}
 import java.util.Locale.LanguageRange
+import scala.util.Try
+
+object RequestAttrs {
+  import io.netty.util.AttributeKey
+  val TZ = AttributeKey.valueOf[ZoneId]("tz")
+  val Session = AttributeKey.valueOf[Session]("session")
+  val Flash = AttributeKey.valueOf[Flash]("flash")
+}
 
 trait Request(val requestContext: ServiceRequestContext) {
   export requestContext.*
@@ -26,8 +35,33 @@ trait Request(val requestContext: ServiceRequestContext) {
 
   def cookies: Set[Cookie] =
     request().headers().cookies().asInstanceOf[java.util.Set[Cookie]].asScala.toSet
-  
-  def session: Session = Session(Map.empty) //FIXME
+
+  /*
+   * Setup attrs
+   */
+  cookies.find(c => c.name() == RequestAttrs.TZ.name()).foreach{c =>
+    val tz = Try(ZoneId.of(c.value())).fold(
+      ex => ZoneId.systemDefault(),
+      tz => tz
+    )
+    requestContext.setAttr(RequestAttrs.TZ, tz)
+  }
+
+  val session: Session = cookies.find(c => c.name() == RequestAttrs.Session.name()).flatMap{c =>
+    val base64Value = new String(Base64.getUrlDecoder.decode(c.value()))
+    Json.parse(base64Value).asOpt[JsObject].map{jsObj =>
+      val fields = jsObj.fields.map((key, jsValue) => key-> jsValue.as[String])
+      Session(fields.toMap)
+    }
+  }.getOrElse(Session.newSession)
+
+  def flash: Flash = cookies.find(c => c.name() == RequestAttrs.Flash.name()).flatMap{c =>
+    val base64Value = new String(Base64.getUrlDecoder.decode(c.value()))
+    Json.parse(base64Value).asOpt[JsObject].map{jsObj =>
+      val fields = jsObj.fields.map((key, jsValue) => key-> jsValue.as[String])
+      Flash(fields.toMap)
+    }
+  }.getOrElse(Flash.empty)
 
   @deprecated("use remoteAddress instead")
   def getRealIP: String = "FIXME"
@@ -35,7 +69,6 @@ trait Request(val requestContext: ServiceRequestContext) {
   //  def getReferer: Option[String] =
 //    headers.get("X-Alt-Referer").orElse(headers.get("referer"))
 //
-  def flash: Flash = Flash(Map.empty) // FIXME
 
   def availableLanguages: Seq[Locale] = Seq(Locale.getDefault)
 
@@ -62,32 +95,3 @@ trait Request(val requestContext: ServiceRequestContext) {
   def asRaw: HttpData =
     requestContext.request().aggregate().join().content()
 }
-
-//trait PlayRequest[+A](val requestContext: ServiceRequestContext) {
-//
-//  /**
-//   * Body content
-//   */
-//  def body[A]: A
-//
-//  def path: String
-//  def uri: String
-//  def method: String
-//  def headers: Headers
-//  def remoteAddress: String
-//
-//  @deprecated("use remoteAddress instead")
-//  def getRealIP: String
-//
-//  //https://www.javatips.net/api/java.util.locale.languagerange
-//  def acceptLanguages: Seq[LanguageRange]
-//
-//  def cookies: Set[Cookie]
-//  def getReferer: Option[String] =  headers.get("X-Alt-Referer").orElse(headers.get("referer"))
-//  def flash: Flash
-//
-//  def session: Session // = Session(Map.empty) //FIXME
-//
-//  def isXhr: Boolean
-//
-//}
