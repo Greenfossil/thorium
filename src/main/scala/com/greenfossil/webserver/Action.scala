@@ -21,7 +21,7 @@ class WebServerRequestConverter extends RequestConverterFunction:
     currentThread.setContextClassLoader(getClass.getClassLoader)
     try {
       if (expectedResultType == classOf[com.greenfossil.webserver.Request])
-        new com.greenfossil.webserver.Request(ctx){}
+        new com.greenfossil.webserver.Request(ctx, request){}
       else
         RequestConverterFunction.fallthrough()
     }finally {
@@ -33,16 +33,14 @@ trait Controller extends AnnotatedHttpServiceSet
 
 trait Action(fn: Request => HttpResponse | String) extends AnnotatedHttpService:
   override def serve(ctx: ServiceRequestContext, req: HttpRequest): HttpResponse =
-    import com.linecorp.armeria.scala.implicits._
-    given ExecutionContext = ServiceRequestContext.current.eventLoopExecutionContext
-    val f = scala.concurrent.Future {
-      val req = new Request(ctx) {}
+    val f = ctx.request().aggregate().thenApply(aggregateRequest => {
+      val req = new Request(ctx, aggregateRequest) {}
       fn(req) match {
         case s: String => HttpResponse.of(s).withSession(req.session)
         case httpResponse: HttpResponse => httpResponse.withSession(req.session)
       }
-    }
-    HttpResponse.from(f.toJava)
+    })
+    HttpResponse.from(f)
 
 
 object Action {

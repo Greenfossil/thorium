@@ -48,8 +48,8 @@ class RequestSuite extends munit.FunSuite{
   }
 
   override def afterAll(): Unit = {
-    Thread.sleep(5000)
-    server.server.blockUntilShutdown()
+    Thread.sleep(1000)
+    server.stop()
   }
 
   import com.linecorp.armeria.scala.implicits._
@@ -57,7 +57,7 @@ class RequestSuite extends munit.FunSuite{
     val client = WebClient.of(s"http://localhost:${server.port}")
 
     val creq = HttpRequest.of(HttpMethod.POST, "/text", MediaType.PLAIN_TEXT, "Hello Armeria!")
-    client.execute(creq).aggregate().thenApply(
+    client.execute(creq).aggregate().thenAccept(
       aggregate =>
         assertNoDiff(aggregate.contentUtf8(), "Received Text")
     )
@@ -66,19 +66,17 @@ class RequestSuite extends munit.FunSuite{
   test("Json"){
     val client = WebClient.of(s"http://localhost:${server.port}")
     val creq = HttpRequest.of(HttpMethod.POST, "/json", MediaType.JSON, Json.obj("msg" -> "Hello Armeria!").toString)
-    client.execute(creq).aggregate().thenApply(aggregate =>
+    client.execute(creq).aggregate().thenAccept(aggregate =>
       assertNoDiff(aggregate.contentUtf8(), "Received Text")
     )
-
   }
 
   test("FormUrlEncoded"){
     val client = WebClient.of(s"http://localhost:${server.port}")
     val creq = HttpRequest.of(HttpMethod.POST, "/form", MediaType.FORM_DATA, "msg[]=Hello&msg[]=Armeria!")
-    client.execute(creq).aggregate().thenApply(aggregate =>
+    client.execute(creq).aggregate().thenAccept(aggregate =>
       assertNoDiff(aggregate.contentUtf8(), "Received Text")
     )
-
   }
 
   test("Multipart Form"){
@@ -91,7 +89,7 @@ class RequestSuite extends munit.FunSuite{
       BodyPart.of(ContentDisposition.of("form-data", "name2", "hello.txt"), "hello1")
     )
     val client = WebClient.of(s"http://localhost:${server.port}")
-    client.execute(mp.toHttpRequest("/multipart-form")).aggregate().thenApply(aggregate =>
+    client.execute(mp.toHttpRequest("/multipart-form")).aggregate().thenAccept(aggregate =>
       assertNoDiff(aggregate.contentUtf8(), "Received Text")
     )
   }
@@ -99,7 +97,7 @@ class RequestSuite extends munit.FunSuite{
   test("Cookie"){
     val creq = HttpRequest.of(HttpMethod.GET, "/cookie")
     val client = WebClient.of(s"http://localhost:${server.port}")
-    client.execute(creq).aggregate().thenApply(aggregate => {
+    client.execute(creq).aggregate().thenAccept(aggregate => {
       val cookies = aggregate.headers().cookies()
       assertEquals(cookies.size, 2)
       assertNoDiff(aggregate.contentUtf8(), "Here is your cookie")

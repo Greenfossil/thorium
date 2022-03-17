@@ -1,7 +1,7 @@
 package com.greenfossil.webserver
 
 import com.greenfossil.commons.json.{JsObject, JsValue, Json}
-import com.linecorp.armeria.common.{Cookie, HttpData, HttpMethod, RequestHeaders}
+import com.linecorp.armeria.common.{AggregatedHttpRequest, Cookie, HttpData, HttpMethod, RequestHeaders}
 import com.linecorp.armeria.common.multipart.AggregatedMultipart
 import com.linecorp.armeria.server.ServiceRequestContext
 
@@ -17,24 +17,24 @@ object RequestAttrs {
   val Flash = AttributeKey.valueOf[Flash]("flash")
 }
 
-trait Request(val requestContext: ServiceRequestContext) {
-  export requestContext.*
+trait Request(val requestContext: ServiceRequestContext, aggregatedHttpRequest: AggregatedHttpRequest) {
+//  export requestContext.*
 
 //Overlap Play and Armeria api  
 //  def path: String
 //  def method: String = ""
 //  def remoteAddress[A <: java.net.SocketAddress]: A /*String*/ = requestContext.remoteAddress()
 
-  def uri: java.net.URI  /*String*/ = request().uri()
+  def uri: java.net.URI  /*String*/ = aggregatedHttpRequest.uri()
   
-  def headers: RequestHeaders /*Headers*/ = request().headers()
+  def headers: RequestHeaders /*Headers*/ = aggregatedHttpRequest.headers()
 
   //https://www.javatips.net/api/java.util.locale.languagerange
   import scala.jdk.CollectionConverters.*
-  def acceptLanguages: Seq[LanguageRange] = request().acceptLanguages().asScala.toSeq
+  def acceptLanguages: Seq[LanguageRange] = aggregatedHttpRequest.acceptLanguages().asScala.toSeq
 
   def cookies: Set[Cookie] =
-    request().headers().cookies().asInstanceOf[java.util.Set[Cookie]].asScala.toSet
+    aggregatedHttpRequest.headers().cookies().asInstanceOf[java.util.Set[Cookie]].asScala.toSet
 
   /*
    * Setup attrs
@@ -68,8 +68,10 @@ trait Request(val requestContext: ServiceRequestContext) {
 
   def locale: Locale = LocaleUtil.getBestMatchLocale(acceptLanguages, availableLanguages, localeVariantOpt)
 
+  def method(): HttpMethod = aggregatedHttpRequest.method()
+
   //https://www.playframework.com/documentation/2.8.x/ScalaBodyParsers
-  def  asText: String = request().aggregate().get().contentUtf8()
+  def  asText: String = aggregatedHttpRequest.contentUtf8()
 
   //application/json
   def asJson: JsValue = Json.parse(asText)
