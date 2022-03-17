@@ -26,6 +26,8 @@ trait Request(val requestContext: ServiceRequestContext, aggregatedHttpRequest: 
 //  def remoteAddress[A <: java.net.SocketAddress]: A /*String*/ = requestContext.remoteAddress()
 
   def uri: java.net.URI  /*String*/ = aggregatedHttpRequest.uri()
+
+  def path(): String = aggregatedHttpRequest.path()
   
   def headers: RequestHeaders /*Headers*/ = aggregatedHttpRequest.headers()
 
