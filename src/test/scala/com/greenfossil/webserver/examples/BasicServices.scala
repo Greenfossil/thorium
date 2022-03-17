@@ -49,14 +49,17 @@ object BasicServices extends Controller {
   //curl -v -F person=anonymous -F secret=file.txt http://localhost:8080/multipart
   @Post("/multipart")
   def multipartForm = Action {request =>
-    val mp = request.asMultipartFormData
-    val names  = mp.names()
-    println(s"names = $names")
-    val map = mp.asFormUrlEncoded
-    println(s"map = ${map}")
-    val files = mp.files
-    println(s"files = ${files}")
-    Ok("Received Multiopart")
+    request
+      .asMultipartFormData
+      .thenApply(form =>
+        val names  = form.names()
+        println(s"names = $names")
+        val map = form.asFormUrlEncoded
+        println(s"map = ${map}")
+        val files = form.files
+        println(s"files = ${files}")
+        Ok("Received Multiopart")
+    ).get()
   }
 
 }

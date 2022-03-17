@@ -94,8 +94,8 @@ case class Form[T](mappings: Field[_] *: Tuple,
       case req if req.asFormUrlEncoded.nonEmpty =>
         bind(req.asFormUrlEncoded ++ querydata)
 
-      case req if req.asMultipartFormData.bodyPart.nonEmpty =>
-        bind(req.asMultipartFormData.asFormUrlEncoded ++ querydata)
+//      case req if req.asMultipartFormData.bodyPart.nonEmpty =>
+//        bind(req.asMultipartFormData.asFormUrlEncoded ++ querydata)
 
       case req if req.asJson.asOpt.isDefined =>
         bind(req.asJson, querydata)

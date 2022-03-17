@@ -1,13 +1,15 @@
 package com.greenfossil.webserver
 
 import com.greenfossil.commons.json.{JsObject, JsValue, Json}
-import com.linecorp.armeria.common.{AggregatedHttpRequest, Cookie, HttpData, HttpMethod, RequestHeaders}
-import com.linecorp.armeria.common.multipart.AggregatedMultipart
+import com.linecorp.armeria.common.{AggregatedHttpRequest, Cookie, HttpData, HttpMethod, HttpResponse, RequestHeaders}
+import com.linecorp.armeria.common.multipart.{AggregatedMultipart, BodyPart}
+import com.linecorp.armeria.common.stream.StreamMessage
 import com.linecorp.armeria.server.ServiceRequestContext
 
 import java.time.ZoneId
 import java.util.{Base64, Locale}
 import java.util.Locale.LanguageRange
+import java.util.concurrent.CompletableFuture
 import scala.util.Try
 
 object RequestAttrs {
@@ -17,7 +19,7 @@ object RequestAttrs {
   val Flash = AttributeKey.valueOf[Flash]("flash")
 }
 
-trait Request(val requestContext: ServiceRequestContext, aggregatedHttpRequest: AggregatedHttpRequest) {
+trait Request(val requestContext: ServiceRequestContext, val aggregatedHttpRequest: AggregatedHttpRequest) {
 //  export requestContext.*
 
 //Overlap Play and Armeria api  
@@ -84,10 +86,12 @@ trait Request(val requestContext: ServiceRequestContext, aggregatedHttpRequest: 
 
   //MultiPart
   import com.linecorp.armeria.common.multipart.Multipart
-  def asMultipartFormData: MultipartFormData =
-    MultipartFormData(Multipart.from(requestContext.request()).aggregate().join())
+  import com.linecorp.armeria.scala.implicits.*
+  def asMultipartFormData: CompletableFuture[MultipartFormData] =
+    Multipart.from(requestContext.request())
+      .aggregate()
+      .thenApply(mp => MultipartFormData(mp))
 
   //Raw Buffer - TODO - testcase needed and check for conformance
-  def asRaw: HttpData =
-    requestContext.request().aggregate().join().content()
+  def asRaw: HttpData = aggregatedHttpRequest.content()
 }
