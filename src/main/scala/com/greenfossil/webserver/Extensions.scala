@@ -15,26 +15,26 @@ extension (resp: HttpResponse)
   def withNewSession: HttpResponse = ???
 
   def withSession(nvPair: Map[String, String]): HttpResponse =
-    val sessionCookie = Cookie.ofSecure(RequestAttrs.Session.name(), nvPair.toString)
+    val jwt = Json.toJson(nvPair).encodeBase64URL
+    val sessionCookie = Cookie.ofSecure(RequestAttrs.Session.name(), jwt)
     resp.mapHeaders(_.toBuilder.cookies(sessionCookie).build())
 
   def withSession(newSession: Session): HttpResponse =
     //FIXME - need to merge with existing session
-    val value = Base64.getUrlEncoder.encodeToString(Json.toJson(newSession.data).toString.getBytes())
-    val sessionCookie = Cookie.ofSecure(RequestAttrs.Session.name(),value)
+    val jwt = Json.toJson(newSession.data).encodeBase64URL
+    val sessionCookie = Cookie.ofSecure(RequestAttrs.Session.name(),jwt)
     resp.mapHeaders(_.toBuilder.cookies(sessionCookie).build())
-
 
   def withSession(nvPair: (String, Any)): HttpResponse =
     //TODO - need to improve Json library
-    val value = Base64.getUrlEncoder.encodeToString(Json.obj(nvPair._1 -> nvPair._2.toString).toString.getBytes())
-    val sessionCookie = Cookie.ofSecure(RequestAttrs.Session.name(),value)
+    val jwt = Json.toJson(nvPair).encodeBase64URL
+    val sessionCookie = Cookie.ofSecure(RequestAttrs.Session.name(),jwt)
     resp.mapHeaders(_.toBuilder.cookies(sessionCookie).build())
 
   def flashing(flash: Flash): HttpResponse =
     //FIXME - need to merge with newly flashed message
-    val value = Base64.getUrlEncoder.encodeToString(Json.toJson(flash.data).toString.getBytes())
-    val sessionCookie = Cookie.ofSecure(RequestAttrs.Flash.name(),value)
+    val jwt = Json.toJson(flash.data).encodeBase64URL
+    val sessionCookie = Cookie.ofSecure(RequestAttrs.Flash.name(),jwt)
     resp.mapHeaders(_.toBuilder.cookies(sessionCookie).build())
   
   def flashing(tups: (String, String)*): HttpResponse =

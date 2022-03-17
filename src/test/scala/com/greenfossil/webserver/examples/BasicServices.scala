@@ -36,6 +36,17 @@ object BasicServices extends Controller {
     Ok("You are at Text2!")
   }
 
+  //curl -v -d "user=user1&pass=abcd" -X POST  http://localhost:8080/form 
+  @Post("/form")
+  def form = Action { request =>
+    val f = request.asFormUrlEncoded
+    println(s"form = ${f}")
+    Ok(s"Form f ${f}")
+  }
+
+  //https://stackoverflow.com/questions/19116016/what-is-the-right-way-to-post-multipart-form-data-using-curl
+  //https://everything.curl.dev/http/multipart
+  //curl -v -F person=anonymous -F secret=file.txt http://localhost:8080/multipart
   @Post("/multipart")
   def multipartForm = Action {request =>
     val mp = request.asMultipartFormData

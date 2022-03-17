@@ -10,4 +10,7 @@
         <appender-ref ref="Console"/>
     </root>
 
+    <logger name="com.linecorp.armeria.common" level="off"/>
+
+
 </configuration>

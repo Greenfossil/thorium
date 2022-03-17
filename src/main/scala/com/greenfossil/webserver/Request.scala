@@ -1,7 +1,7 @@
 package com.greenfossil.webserver
 
 import com.greenfossil.commons.json.{JsObject, JsValue, Json}
-import com.linecorp.armeria.common.{Cookie, HttpData, RequestHeaders}
+import com.linecorp.armeria.common.{Cookie, HttpData, HttpMethod, RequestHeaders}
 import com.linecorp.armeria.common.multipart.AggregatedMultipart
 import com.linecorp.armeria.server.ServiceRequestContext
 
@@ -48,19 +48,11 @@ trait Request(val requestContext: ServiceRequestContext) {
   }
 
   val session: Session = cookies.find(c => c.name() == RequestAttrs.Session.name()).flatMap{c =>
-    val base64Value = new String(Base64.getUrlDecoder.decode(c.value()))
-    Json.parse(base64Value).asOpt[JsObject].map{jsObj =>
-      val fields = jsObj.fields.map((key, jsValue) => key-> jsValue.as[String])
-      Session(fields.toMap)
-    }
+    Json.parseBase64URL(c.value()).asOpt[Map[String, String]].map(Session(_))
   }.getOrElse(Session.newSession)
 
   def flash: Flash = cookies.find(c => c.name() == RequestAttrs.Flash.name()).flatMap{c =>
-    val base64Value = new String(Base64.getUrlDecoder.decode(c.value()))
-    Json.parse(base64Value).asOpt[JsObject].map{jsObj =>
-      val fields = jsObj.fields.map((key, jsValue) => key-> jsValue.as[String])
-      Flash(fields.toMap)
-    }
+    Json.parseBase64URL(c.value()).asOpt[Map[String, String]].map(Flash(_))
   }.getOrElse(Flash.empty)
 
   @deprecated("use remoteAddress instead")
@@ -77,7 +69,7 @@ trait Request(val requestContext: ServiceRequestContext) {
   def locale: Locale = LocaleUtil.getBestMatchLocale(acceptLanguages, availableLanguages, localeVariantOpt)
 
   //https://www.playframework.com/documentation/2.8.x/ScalaBodyParsers
-  def  asText: String = request().aggregate().join().contentUtf8()
+  def  asText: String = request().aggregate().get().contentUtf8()
 
   //application/json
   def asJson: JsValue = Json.parse(asText)

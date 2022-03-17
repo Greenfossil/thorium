@@ -5,6 +5,7 @@ import com.linecorp.armeria.server.annotation.{AnnotatedHttpService, AnnotatedHt
 import com.linecorp.armeria.server.ServiceRequestContext
 
 import java.lang.reflect.ParameterizedType
+import scala.concurrent.{ExecutionContext, Future}
 
 /*
  * https://armeria.dev/docs/server-annotated-service#converting-an-http-request-to-a-java-object
@@ -32,12 +33,16 @@ trait Controller extends AnnotatedHttpServiceSet
 
 trait Action(fn: Request => HttpResponse | String) extends AnnotatedHttpService:
   override def serve(ctx: ServiceRequestContext, req: HttpRequest): HttpResponse =
-    val req = new Request(ctx) {}
-    val resp  = fn(req) match {
-      case s: String => HttpResponse.of(s).withSession(req.session)
-      case httpResponse: HttpResponse => httpResponse.withSession(req.session)
+    import com.linecorp.armeria.scala.implicits._
+    given ExecutionContext = ServiceRequestContext.current.eventLoopExecutionContext
+    val f = scala.concurrent.Future {
+      val req = new Request(ctx) {}
+      fn(req) match {
+        case s: String => HttpResponse.of(s).withSession(req.session)
+        case httpResponse: HttpResponse => httpResponse.withSession(req.session)
+      }
     }
-    HttpResponse.from(() => resp, ctx.blockingTaskExecutor())
+    HttpResponse.from(f.toJava)
 
 
 object Action {
@@ -45,7 +50,8 @@ object Action {
   def apply(fn: Request => HttpResponse | String): Action = new Action(fn){}
 
   //TODO
-  def async = ???
+  def async(fn: Request => HttpResponse | String): Future[Action] = 
+    ???
 }
 
 
