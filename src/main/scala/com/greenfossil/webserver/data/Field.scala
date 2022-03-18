@@ -22,6 +22,7 @@ object Field {
       case _: LocalDate          => "LocalDate"
       case _: LocalTime          => "LocalTime"
       case _: LocalDateTime      => "LocalDateTime"
+      case _: YearMonth          => "YearMonth"
       case _: java.sql.Date      => "SqlDate"
       case _: java.util.Date     => "Date"
       case _: java.sql.Timestamp => "SqlTimestamp"
@@ -107,6 +108,15 @@ object Field {
             case s: String => Option(LocalTime.parse(s))
             case xs: Option[_] => xs.flatMap(x => Option(LocalTime.parse(x.toString)))
             case xs: Seq[_] => xs.headOption.flatMap(x => Option(LocalTime.parse(x.toString)))
+            case _ => None
+          }
+
+        case "YearMonth" =>
+          value match {
+            case x: YearMonth => Option(x)
+            case s: String => Option(YearMonth.parse(s))
+            case xs: Option[_] => xs.flatMap(x => Option(YearMonth.parse(x.toString)))
+            case xs: Seq[_] => xs.headOption.flatMap(x => Option(YearMonth.parse(x.toString)))
             case _ => None
           }
 
@@ -304,6 +314,8 @@ inline def localDateTime = Field.of[java.time.LocalDateTime]
 inline def localDateTime(pattern: String) = Field.of[java.time.LocalDateTime]
 inline def localTime = Field.of[java.time.LocalTime]
 inline def localTime(pattern: String) = Field.of[java.time.LocalTime]
+inline def yearMonth = Field.of[java.time.YearMonth]
+inline def yearMonth(pattern: String) = Field.of[java.time.YearMonth]
 inline def sqlDate = Field.of[java.sql.Date]
 inline def sqlDate(pattern: String) = Field.of[java.sql.Date]
 inline def sqlTimestamp = Field.of[java.sql.Timestamp]
