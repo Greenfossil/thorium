@@ -66,6 +66,8 @@ trait Request(val requestContext: ServiceRequestContext, val aggregatedHttpReque
 //    headers.get("X-Alt-Referer").orElse(headers.get("referer"))
 //
 
+  def refererOpt: Option[String] = ???
+
   def availableLanguages: Seq[Locale] = Seq(Locale.getDefault)
 
   def localeVariantOpt: Option[String] = None
