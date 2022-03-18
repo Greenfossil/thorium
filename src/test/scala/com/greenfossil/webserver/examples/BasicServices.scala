@@ -50,8 +50,7 @@ object BasicServices extends Controller {
   @Post("/multipart")
   def multipartForm = Action {request =>
     request
-      .asMultipartFormData
-      .thenApply(form =>
+      .asMultipartFormData(form =>
         val names  = form.names()
         println(s"names = $names")
         val map = form.asFormUrlEncoded
@@ -59,7 +58,7 @@ object BasicServices extends Controller {
         val files = form.files
         println(s"files = ${files}")
         Ok("Received Multiopart")
-    ).get()
+    )
   }
 
 }

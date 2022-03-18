@@ -33,14 +33,13 @@ class RequestSuite extends munit.FunSuite{
       })
       .addService("/multipart-form", Action { req =>
         val method = req.method()
-        req.asMultipartFormData
-          .thenApply(mpForm => {
+        req.asMultipartFormData(mpForm => {
               val form = mpForm.asFormUrlEncoded
               val files = mpForm.files
               if form.nonEmpty then Ok("Received Text")
               else BadRequest("Did not receive the right text")
             }
-          ).get()
+          )
       })
       .addService("/cookie", Action { req =>
         val cookie1 = Cookie.ofSecure("cookie1", "one")

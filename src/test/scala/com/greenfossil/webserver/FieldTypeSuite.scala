@@ -2,7 +2,7 @@ package com.greenfossil.webserver
 
 import com.greenfossil.webserver.data.*
 
-import java.time.{LocalDate, LocalDateTime, LocalTime}
+import java.time.{LocalDate, LocalDateTime, LocalTime, YearMonth}
 
 class FieldTypeSuite extends munit.FunSuite {
 
@@ -317,6 +317,24 @@ class FieldTypeSuite extends munit.FunSuite {
     assertEquals(field.bind("false").errors.size, 1)
     assertEquals(field.bind("test").errors.size, 1)
     assertEquals(field.bind("").errors.size, 1)
+  }
+
+  test("year month type"){
+    val data = YearMonth.now()
+    val field: Field[YearMonth] = yearMonth
+
+    val boundField = field.bind(data.toString)
+    val boundField2 = field.bind(Option(data.toString))
+    val boundField3 = field.bind(data)
+    val boundField4 = field.bind(Seq(data))
+    val boundField5 = field.bind(None)
+
+    assertEquals(boundField.value, Option(data))
+    assertEquals(boundField2.value, Option(data))
+    assertEquals(boundField3.value, Option(data))
+    assertEquals(boundField4.value, Option(data))
+    assertEquals(boundField5.value, None)
+
   }
 
 }
