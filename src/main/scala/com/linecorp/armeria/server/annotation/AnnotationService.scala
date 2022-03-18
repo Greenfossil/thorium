@@ -10,6 +10,13 @@ trait AnnotatedHttpService extends HttpService
 
 class AnnotatedHttpServiceResponseConverter extends ResponseConverterFunction:
   override def convertResponse(ctx: ServiceRequestContext, headers: ResponseHeaders, result: Any, trailers: HttpHeaders): HttpResponse =
-    result match
-      case service: AnnotatedHttpService => service.serve(ctx, ctx.request())
-      case _ => ResponseConverterFunction.fallthrough()
+    val currentThread = Thread.currentThread()
+    val oldCl = currentThread.getContextClassLoader
+    currentThread.setContextClassLoader(ClassLoader.getSystemClassLoader)
+    try {
+      result match
+        case service: AnnotatedHttpService => service.serve(ctx, ctx.request())
+        case _ => ResponseConverterFunction.fallthrough()
+    } finally {
+      currentThread.setContextClassLoader(oldCl)
+    }
