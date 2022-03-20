@@ -1,10 +1,12 @@
 package com.greenfossil.webserver
 
-import com.linecorp.armeria.common.{AggregatedHttpRequest, HttpHeaders, HttpRequest, HttpResponse, HttpStatus, ResponseHeaders}
+import com.greenfossil.commons.json.Json
+import com.linecorp.armeria.common.{AggregatedHttpRequest, Cookie, CookieBuilder, HttpHeaders, HttpRequest, HttpResponse, HttpStatus, ResponseHeaders}
 import com.linecorp.armeria.server.annotation.{AnnotatedHttpService, AnnotatedHttpServiceSet, RequestConverter, RequestConverterFunction}
 import com.linecorp.armeria.server.ServiceRequestContext
 
 import java.lang.reflect.ParameterizedType
+import java.util.concurrent.CompletableFuture
 import scala.concurrent.{ExecutionContext, Future}
 
 /*
@@ -31,24 +33,78 @@ class WebServerRequestConverter extends RequestConverterFunction:
 @RequestConverter(classOf[WebServerRequestConverter])
 trait Controller extends AnnotatedHttpServiceSet
 
-trait Action(fn: Request => HttpResponse | String) extends AnnotatedHttpService:
+trait Action(fn: Request => Result | String) extends AnnotatedHttpService:
   override def serve(ctx: ServiceRequestContext, req: HttpRequest): HttpResponse =
-    val f = ctx.request().aggregate().thenApply(aggregateRequest => {
+    val f: CompletableFuture[HttpResponse] = ctx.request().aggregate().thenApply(aggregateRequest => {
       val req = new Request(ctx, aggregateRequest) {}
       fn(req) match {
-        case s: String => HttpResponse.of(s).withSession(req.session)
-        case httpResponse: HttpResponse => httpResponse.withSession(req.session)
+        case s: String =>
+          createSessionCookie(req.session) match {
+            case None => HttpResponse.of(s)
+            case Some(cookie) =>
+              HttpResponse.of(s).mapHeaders(_.toBuilder.cookies(cookie).build())
+          }
+
+        case result:Result =>
+          val httpResp = result.body match
+            case httpResponse: HttpResponse => httpResponse
+            case string: String => HttpResponse.of(string)
+
+          //Forward Session
+          val sessionCookieOption: Option[Cookie] = result.newSessionOpt match {
+            case None =>
+              //Forward Request session
+              createSessionCookie(req.session)
+
+            case Some(newSession) if newSession.isEmpty =>
+              //Request session will not be forwarded
+              None
+
+            case Some(newSession) =>
+              //Request session + new session will be forwarded
+              val session = req.session + newSession
+              createSessionCookie(session)
+          }
+
+          //Forward Flash
+          val flashCookieOpt: Option[Cookie] = result.newFlashOpt match  //result.newFlashOpt.flatMap(flash => createFlashCookie(flash))
+            case None =>
+              if req.flash.nonEmpty then Some(Cookie.secureBuilder(RequestAttrs.Flash.name(), "").maxAge(0).build())
+              else None
+            case Some(flash) =>  createFlashCookie(flash)
+
+
+          val xs: HttpResponse =  (sessionCookieOption ++ flashCookieOpt).toList match {
+            case Nil => httpResp
+            case cookies => httpResp.mapHeaders(_.toBuilder.cookies(cookies*).build())
+          }
+
+          xs
       }
     })
     HttpResponse.from(f)
 
+private def createSessionCookie(session: Session): Option[Cookie] =
+  if session.data.isEmpty then None
+  else
+    val jwt = Json.toJson(session.data).encodeBase64URL
+    println(s"Response Session jwt = ${jwt} ${session.data}")
+    Some(Cookie.ofSecure(RequestAttrs.Session.name(),jwt))
+
+
+private def createFlashCookie(flash: Flash): Option[Cookie] =
+  if flash.data.isEmpty then None
+  else
+    val jwt = Json.toJson(flash.data).encodeBase64URL
+    println(s"Response Flash jwt = ${jwt} ${flash.data}")
+    Some(Cookie.ofSecure(RequestAttrs.Flash.name(),jwt))
 
 object Action {
 
-  def apply(fn: Request => HttpResponse | String): Action = new Action(fn){}
+  def apply(fn: Request => Result | String): Action = new Action(fn){}
 
   //TODO
-  def async(fn: Request => HttpResponse | String): Future[Action] = 
+  def async(fn: Request => Result): Future[Action] =
     ???
 }
 
@@ -57,39 +113,45 @@ object Action {
  * Resonse
  */
 
-def Ok[C](body: C)(using w: Writeable[C]): HttpResponse =
-  httpResponse(HttpStatus.OK, body)
+def Ok[C](body: C)(using w: Writeable[C]): Result =
+  toResult(HttpStatus.OK, body)
 
-def BadRequest[C](body: C)(using w: Writeable[C]): HttpResponse =
-  httpResponse(HttpStatus.BAD_REQUEST, body)
+def BadRequest[C](body: C)(using w: Writeable[C]): Result =
+  toResult(HttpStatus.BAD_REQUEST, body)
 
 //def Redirect(url: String, status: Int): HttpResponse = Redirect(url, Map.empty, status)
-def Redirect(url: String): HttpResponse = HttpResponse.ofRedirect(HttpStatus.SEE_OTHER, url)
 
-def Redirect(url: String, status: HttpStatus): HttpResponse =
-  HttpResponse.ofRedirect(status, url)
-  
-def Redirect(action: Action): HttpResponse = ???
+def Redirect(url: String): Result =
+  toResult(HttpStatus.SEE_OTHER, url)
 
-def Redirect(url: String, queryString: Map[String, Seq[String]]): HttpResponse =
+def Redirect(url: String, status: HttpStatus): Result =
+ toResult(status, url)
+
+def Redirect(action: Action): Result = ???
+
+def Redirect(url: String, queryString: Map[String, Seq[String]]): Result =
   ???
 
-def Redirect(url: String, queryString: Map[String, Seq[String]], status: HttpStatus): HttpResponse =
+def Redirect(url: String, queryString: Map[String, Seq[String]], status: HttpStatus): Result =
   ???
 
-def Redirect(call: Call): HttpResponse =  ???
+def Redirect(call: Call): Result =  ???
 
-def NotFound[C](body: C)(using w: Writeable[C]): HttpResponse =
-  httpResponse(HttpStatus.NOT_FOUND, body)
+def NotFound[C](body: C)(using w: Writeable[C]): Result =
+  toResult(HttpStatus.NOT_FOUND, body)
 
-def Forbidden[C](body: C)(using w: Writeable[C]): HttpResponse =
-  httpResponse(HttpStatus.FORBIDDEN, body)
+def Forbidden[C](body: C)(using w: Writeable[C]): Result =
+  toResult(HttpStatus.FORBIDDEN, body)
 
-def InternalServerError[C](body: C)(using w: Writeable[C]): HttpResponse =
-  httpResponse(HttpStatus.INTERNAL_SERVER_ERROR, body)
+def InternalServerError[C](body: C)(using w: Writeable[C]): Result =
+  toResult(HttpStatus.INTERNAL_SERVER_ERROR, body)
 
-def Unauthorized[C](body: C)(using w: Writeable[C]): HttpResponse = ???
+def Unauthorized[C](body: C)(using w: Writeable[C]): Result = ???
 
-def httpResponse[C](status: HttpStatus, body: C)(using w: Writeable[C]): HttpResponse =
-  val (mediaType, bytes) = w.content(body)
-  HttpResponse.of(status, mediaType, bytes)
+private def toResult[C](status: HttpStatus, body: C)(using w: Writeable[C]): Result =
+  if (status == HttpStatus.SEE_OTHER)
+  then
+    Result(HttpResponse.ofRedirect(status, body.asInstanceOf[String]))
+  else
+    val (mediaType, bytes) = w.content(body)
+    Result(HttpResponse.of(status, mediaType, bytes))

@@ -1,7 +1,7 @@
 package com.greenfossil.webserver
 
 object Flash {
-  val empty: Flash = Flash(Map.empty)
+  def apply(): Flash = new Flash(Map.empty)
 }
 
 case class Flash(data: Map[String, String]) {

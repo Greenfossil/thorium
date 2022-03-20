@@ -52,12 +52,14 @@ trait Request(val requestContext: ServiceRequestContext, val aggregatedHttpReque
   }
 
   val session: Session = cookies.find(c => c.name() == RequestAttrs.Session.name()).flatMap{c =>
-    Json.parseBase64URL(c.value()).asOpt[Map[String, String]].map(Session(_))
-  }.getOrElse(Session.newSession)
+    val sessionJwt: JsValue = Json.parseBase64URL(c.value())
+    println(s"Request sessionJwt = ${sessionJwt}, cookie = ${c.value}")
+    sessionJwt.asOpt[Map[String, String]].map(Session(_))
+  }.getOrElse(Session())
 
-  def flash: Flash = cookies.find(c => c.name() == RequestAttrs.Flash.name()).flatMap{c =>
+  val flash: Flash = cookies.find(c => c.name() == RequestAttrs.Flash.name()).flatMap{c =>
     Json.parseBase64URL(c.value()).asOpt[Map[String, String]].map(Flash(_))
-  }.getOrElse(Flash.empty)
+  }.getOrElse(Flash())
 
   @deprecated("use remoteAddress instead")
   def getRealIP: String = "FIXME"
@@ -94,7 +96,7 @@ trait Request(val requestContext: ServiceRequestContext, val aggregatedHttpReque
       .aggregate()
       .thenApply(mp => MultipartFormData(mp))
     
-  def asMultipartFormData(fn: MultipartFormData => HttpResponse): HttpResponse =
+  def asMultipartFormData(fn: MultipartFormData => Result): Result =
     asMultipartFormData.thenApply(fn(_)).get
 
   //Raw Buffer - TODO - testcase needed and check for conformance

@@ -1,7 +1,6 @@
 package com.greenfossil.webserver
 
 object Session {
-  def newSession: Session = new Session(Map.empty) 
 }
 
 /**
@@ -10,7 +9,7 @@ object Session {
  * Session data are encoded into an HTTP cookie, and can only contain simple String values.
  * @param data
  */
-case class Session(data: Map[String, String]) {
+case class Session(data: Map[String, String] = Map.empty) {
   export data.{- as _, apply as  _, *}
 
   def apply(key: String): String = data(key)
@@ -30,6 +29,12 @@ case class Session(data: Map[String, String]) {
     require(kv._2 != null, s"Session value for ${kv._1} cannot be null")
     copy(data + kv)
   }
+  
+  def +(name: String, value: String): Session =
+    this.+((name, value))
+
+  def +(newSession: Session): Session =
+    copy(data = data ++ newSession.data)
 
   /**
    * Returns a new session with elements added from the given `Iterable`.
