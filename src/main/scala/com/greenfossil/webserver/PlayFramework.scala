@@ -5,22 +5,6 @@ import com.linecorp.armeria.server.ServiceRequestContext
 
 import java.util.Locale.LanguageRange
 
-
-//class Headers(var _headers: Seq[(String, String)]) {
-//  def headers: Seq[(String, String)] = _headers
-//
-//  /**
-//   * Optionally returns the first header value associated with a key.
-//   */
-//  def get(key: String): Option[String] = ???
-//}
-//
-//trait Cookie {
-//  def name: String
-//}
-
-case class DiscardingCookie(name: String)
-
 object Call {
 //  def apply(url: String): Call = Call(url)
 

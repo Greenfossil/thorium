@@ -39,7 +39,11 @@ case class WebServer(_port: Int,
 
   private def buildServer: Server =
     val sb = Server.builder()
-    if _port > 0 then sb.http(_port)
+    if _port > 0 then {
+      sb.http(_port)
+//      sb.https(_port)
+//      sb.tlsSelfSigned()
+    }
 
     routes.foreach{route => sb.service(route._1, route._2) }
     annotatedServices.foreach{s => sb.annotatedService(s)}

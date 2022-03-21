@@ -89,7 +89,7 @@ private def createSessionCookie(session: Session): Option[Cookie] =
   else
     val jwt = Json.toJson(session.data).encodeBase64URL
     println(s"Response Session jwt = ${jwt} ${session.data}")
-    Some(Cookie.ofSecure(RequestAttrs.Session.name(),jwt))
+    Some(Result.bakeCookie(RequestAttrs.Session.name(),jwt))
 
 
 private def createFlashCookie(flash: Flash): Option[Cookie] =
@@ -97,7 +97,7 @@ private def createFlashCookie(flash: Flash): Option[Cookie] =
   else
     val jwt = Json.toJson(flash.data).encodeBase64URL
     println(s"Response Flash jwt = ${jwt} ${flash.data}")
-    Some(Cookie.ofSecure(RequestAttrs.Flash.name(),jwt))
+    Some(Result.bakeCookie(RequestAttrs.Flash.name(),jwt))
 
 object Action {
 
@@ -149,7 +149,7 @@ def InternalServerError[C](body: C)(using w: Writeable[C]): Result =
 def Unauthorized[C](body: C)(using w: Writeable[C]): Result = ???
 
 private def toResult[C](status: HttpStatus, body: C)(using w: Writeable[C]): Result =
-  if (status == HttpStatus.SEE_OTHER)
+  if /*Redirect*/ status.code() >= 300 && status.code() <= 308
   then
     Result(HttpResponse.ofRedirect(status, body.asInstanceOf[String]))
   else
