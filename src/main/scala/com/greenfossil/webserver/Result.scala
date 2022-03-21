@@ -1,6 +1,7 @@
 package com.greenfossil.webserver
 
-import com.linecorp.armeria.common.{Cookie, HttpResponse, HttpStatus}
+import com.greenfossil.commons.json.Json
+import com.linecorp.armeria.common.{Cookie, HttpRequest, HttpResponse, HttpStatus}
 
 import java.time.{ZoneOffset, ZonedDateTime}
 import java.time.format.DateTimeFormatter
@@ -44,15 +45,15 @@ object Result {
     new Result(ResponseHeader(Map.empty), body, None, None, Nil)
 
   def bakeCookie(name: String,
-                   value: String,
-                   secure: Boolean,
-                   maxAgeOption: Option[Long],
-                   pathOpt: Option[String],
-                   domainOpt: Option[String]
+                 value: String,
+                 secure: Boolean,
+                 maxAgeOpt: Option[Long],
+                 pathOpt: Option[String],
+                 domainOpt: Option[String]
                   ): Cookie =
     val cookieBuilder = if secure then Cookie.secureBuilder(name, value) else Cookie.builder(name, value)
     pathOpt.map(cookieBuilder.path)
-    maxAgeOption.map(cookieBuilder.maxAge)
+    maxAgeOpt.map(cookieBuilder.maxAge)
     domainOpt.map(cookieBuilder.domain)
     cookieBuilder.build()
 
@@ -67,17 +68,32 @@ object Result {
 
   def bakeCookie(name: String, value: String, maxAge: Long, secure: Boolean): Cookie =
     bakeCookie(name , value, secure, Some(maxAge), None, None)
-    
-}
 
+  def bakeDiscardCookie(name: String): Cookie =
+    bakeDiscardCookie(name, false)
+
+  def bakeDiscardCookie(name: String, secure: Boolean): Cookie =
+    bakeCookie(name , "", secure, maxAgeOpt = Some(0L), None, None)
+
+  def bakeSessionCookie(session: Session): Option[Cookie] =
+    bakeBase64URLEncodedCookie(RequestAttrs.Session.name(), session.data)
+
+  def bakeFlashCookie(flash: Flash): Option[Cookie] =
+    bakeBase64URLEncodedCookie(RequestAttrs.Flash.name(),flash.data)
+
+  def bakeBase64URLEncodedCookie(name:String, data: Map[String, String]): Option[Cookie] =
+    if data.isEmpty then None
+    else
+      val jwt = Json.toJson(data).encodeBase64URL
+      Option(bakeCookie(name,jwt))
+
+}
 
 case class Result(header: ResponseHeader,
                   body: HttpResponse | String,
                   newSessionOpt: Option[Session] = None,
                   newFlashOpt: Option[Flash] = None,
                   newCookies:Seq[Cookie]){
-
-
 
   /**
    * Adds headers to this result.
@@ -255,5 +271,47 @@ case class Result(header: ResponseHeader,
     withSession(new Session(request.session.data -- keys))
 
   override def toString = s"Result(${header})"
+
+  def toHttpResponse(req: Request): HttpResponse =
+    val httpResp = body match
+      case httpResponse: HttpResponse => httpResponse
+      case string: String => HttpResponse.of(string)
+
+    //Forward Session
+    val sessionCookieOption: Option[Cookie] = newSessionOpt match {
+      case None =>
+        //Forward Request session
+        Result.bakeSessionCookie(req.session)
+
+      case Some(newSession) if newSession.isEmpty =>
+        //Request session will not be forwarded
+        None
+
+      case Some(newSession) =>
+        //Request session + new session will be forwarded
+        val session = req.session + newSession
+        Result.bakeSessionCookie(session)
+    }
+
+    //Forward Flash
+    val flashCookieOpt: Option[Cookie] = newFlashOpt match
+      case None =>
+        if req.flash.nonEmpty then Some(Result.bakeDiscardCookie(RequestAttrs.Flash.name()))
+        else None
+      case Some(flash) =>  Result.bakeFlashCookie(flash)
+
+    val httpResp2 = (sessionCookieOption ++ flashCookieOpt).toList ++ newCookies match {
+      case Nil => httpResp
+      case cookies => httpResp.mapHeaders(_.toBuilder.cookies(cookies*).build())
+    }
+
+    val httpResp3 =
+      httpResp2.mapHeaders(_.withMutations{builder =>
+        header.headers.map{header =>
+          builder.set(header._1, header._2)
+        }
+      })
+
+    httpResp3
 
 }

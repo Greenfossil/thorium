@@ -29,7 +29,7 @@ object SessionServices extends Controller {
   }
 }
 
-@main def main2 =
+@main def sessionMain =
     val server = WebServer(8080)
       .addAnnotatedService(SessionServices)
       .start()

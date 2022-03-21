@@ -38,66 +38,12 @@ trait Action(fn: Request => Result | String) extends AnnotatedHttpService:
     val f: CompletableFuture[HttpResponse] = ctx.request().aggregate().thenApply(aggregateRequest => {
       val req = new Request(ctx, aggregateRequest) {}
       fn(req) match {
-        case s: String =>
-          createSessionCookie(req.session) match {
-            case None => HttpResponse.of(s)
-            case Some(cookie) =>
-              HttpResponse.of(s).mapHeaders(_.toBuilder.cookies(cookie).build())
-          }
-
-        case result:Result =>
-          val httpResp = result.body match
-            case httpResponse: HttpResponse => httpResponse
-            case string: String => HttpResponse.of(string)
-
-          //Forward Session
-          val sessionCookieOption: Option[Cookie] = result.newSessionOpt match {
-            case None =>
-              //Forward Request session
-              createSessionCookie(req.session)
-
-            case Some(newSession) if newSession.isEmpty =>
-              //Request session will not be forwarded
-              None
-
-            case Some(newSession) =>
-              //Request session + new session will be forwarded
-              val session = req.session + newSession
-              createSessionCookie(session)
-          }
-
-          //Forward Flash
-          val flashCookieOpt: Option[Cookie] = result.newFlashOpt match  //result.newFlashOpt.flatMap(flash => createFlashCookie(flash))
-            case None =>
-              if req.flash.nonEmpty then Some(Cookie.secureBuilder(RequestAttrs.Flash.name(), "").maxAge(0).build())
-              else None
-            case Some(flash) =>  createFlashCookie(flash)
-
-
-          val xs: HttpResponse =  (sessionCookieOption ++ flashCookieOpt).toList match {
-            case Nil => httpResp
-            case cookies => httpResp.mapHeaders(_.toBuilder.cookies(cookies*).build())
-          }
-
-          xs
+        case s: String => HttpResponse.of(s)
+        case result:Result => result.toHttpResponse(req)
       }
     })
     HttpResponse.from(f)
 
-private def createSessionCookie(session: Session): Option[Cookie] =
-  if session.data.isEmpty then None
-  else
-    val jwt = Json.toJson(session.data).encodeBase64URL
-    println(s"Response Session jwt = ${jwt} ${session.data}")
-    Some(Result.bakeCookie(RequestAttrs.Session.name(),jwt))
-
-
-private def createFlashCookie(flash: Flash): Option[Cookie] =
-  if flash.data.isEmpty then None
-  else
-    val jwt = Json.toJson(flash.data).encodeBase64URL
-    println(s"Response Flash jwt = ${jwt} ${flash.data}")
-    Some(Result.bakeCookie(RequestAttrs.Flash.name(),jwt))
 
 object Action {
 
