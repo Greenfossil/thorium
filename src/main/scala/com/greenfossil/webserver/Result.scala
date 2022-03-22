@@ -277,28 +277,30 @@ case class Result(header: ResponseHeader,
       case httpResponse: HttpResponse => httpResponse
       case string: String => HttpResponse.of(string)
 
-    //Forward Session
-    val sessionCookieOption: Option[Cookie] = newSessionOpt match {
-      case None =>
-        //Forward Request session
-        Result.bakeSessionCookie(req.session)
-
-      case Some(newSession) if newSession.isEmpty =>
-        //Request session will not be forwarded
-        None
-
-      case Some(newSession) =>
-        //Request session + new session will be forwarded
-        val session = req.session + newSession
-        Result.bakeSessionCookie(session)
+    /*
+     * Forward Session, if not new values
+     * Discard session is newSession isEmpty or append new values
+     */
+    val sessionCookieOption: Option[Cookie] = newSessionOpt.map{ newSession =>
+        //If newSession isEmtpy, expire session cookie
+        if newSession.isEmpty then
+          Result.bakeDiscardCookie(RequestAttrs.Session.name())
+        else
+          //Append new session will to session cookie
+          val session = req.session + newSession
+          Result.bakeSessionCookie(session).orNull
     }
 
-    //Forward Flash
-    val flashCookieOpt: Option[Cookie] = newFlashOpt match
-      case None =>
-        if req.flash.nonEmpty then Some(Result.bakeDiscardCookie(RequestAttrs.Flash.name()))
-        else None
-      case Some(flash) =>  Result.bakeFlashCookie(flash)
+
+    val flashCookieOpt: Option[Cookie] = newFlashOpt.flatMap{newFlash =>
+      //Create a new flash cookie
+      Result.bakeFlashCookie(newFlash)
+    }.orElse{
+      //Expire the current flash cookie
+      if req.flash.nonEmpty
+      then Some(Result.bakeDiscardCookie(RequestAttrs.Flash.name()))
+      else None
+    }
 
     val httpResp2 = (sessionCookieOption ++ flashCookieOpt).toList ++ newCookies match {
       case Nil => httpResp
