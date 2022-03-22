@@ -36,6 +36,9 @@ case class Session(data: Map[String, String] = Map.empty) {
   def +(newSession: Session): Session =
     copy(data = data ++ newSession.data)
 
+  def +(newSession: Map[String, String]): Session =
+    copy(data = data ++ newSession)
+
   /**
    * Returns a new session with elements added from the given `Iterable`.
    *
