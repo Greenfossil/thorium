@@ -33,12 +33,13 @@ class WebServerRequestConverter extends RequestConverterFunction:
 @RequestConverter(classOf[WebServerRequestConverter])
 trait Controller extends AnnotatedHttpServiceSet
 
-trait Action(fn: Request => Result | String) extends AnnotatedHttpService:
+trait Action(fn: Request => HttpResponse | Result | String) extends AnnotatedHttpService:
   override def serve(ctx: ServiceRequestContext, req: HttpRequest): HttpResponse =
     val f: CompletableFuture[HttpResponse] = ctx.request().aggregate().thenApply(aggregateRequest => {
       val req = new Request(ctx, aggregateRequest) {}
       fn(req) match {
         case s: String => HttpResponse.of(s)
+        case hr: HttpResponse => hr
         case result:Result => result.toHttpResponse(req)
       }
     })
@@ -47,7 +48,7 @@ trait Action(fn: Request => Result | String) extends AnnotatedHttpService:
 
 object Action {
 
-  def apply(fn: Request => Result | String): Action = new Action(fn){}
+  def apply(fn: Request => HttpResponse | Result | String): Action = new Action(fn){}
 
   //TODO
   def async(fn: Request => Result): Future[Action] =
