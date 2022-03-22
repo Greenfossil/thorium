@@ -1,10 +1,8 @@
 package com.greenfossil.webserver
 
-import scala.jdk.CollectionConverters.*
-
 import java.util.Locale
-import java.util.Locale.LanguageRange
-import java.util.Locale.Builder
+import java.util.Locale.{Builder, LanguageRange}
+import scala.jdk.CollectionConverters.*
 
 trait LocaleUtil {
 

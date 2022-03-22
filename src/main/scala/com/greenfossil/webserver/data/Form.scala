@@ -1,9 +1,9 @@
 package com.greenfossil.webserver.data
 
-import java.time.LocalDate
-
 import com.greenfossil.commons.json.JsValue
 import com.linecorp.armeria.common.HttpMethod
+
+import java.time.LocalDate
 
 object Form {
 

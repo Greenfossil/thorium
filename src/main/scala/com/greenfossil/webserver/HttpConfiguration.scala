@@ -95,7 +95,7 @@ case class SecretConfiguration(secret: String = "changeme", provider: Option[Str
  * @param clockSkew The amount of clock skew to permit for expiration / not before checks
  * @param dataClaim The claim key corresponding to the data map passed in by the user
  */
-import concurrent.duration.*
+import scala.concurrent.duration.*
 case class JWTConfiguration(
                              signatureAlgorithm: String = "HS256",
                              expiresAfter: Option[FiniteDuration] = None,

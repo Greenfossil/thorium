@@ -18,12 +18,26 @@ object HeadersServices extends Controller {
 
 }
 
-@main def headersMain =
-  val server = WebServer(8080)
-    .addAnnotatedService(HeadersServices)
-    .start()
+//@main def headersMain =
+//  val server = WebServer(8080)
+//    .addAnnotatedService(HeadersServices)
+//    .start()
 
 class HeadersSuite extends munit.FunSuite {
+  test("header, session, flash"){
+    val server = WebServer()
+      .addAnnotatedService(HeadersServices)
+      .start()
 
+    import com.linecorp.armeria.client.WebClient
+    val client = WebClient.of(s"http://localhost:${server.port}")
+    val resp = client.get("/headers")
+    resp.aggregate().thenApply{ aggResp =>
+      println(s"aggResp.headers() = ${aggResp.headers()}")
+      assertEquals(aggResp.status(), HttpStatus.OK)
+      assertNoDiff(aggResp.contentUtf8(), "Headers sent")
+    }.join()
+    server.server.stop()
+  }
 
 }
