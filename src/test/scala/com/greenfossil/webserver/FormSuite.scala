@@ -262,4 +262,16 @@ class FormSuite extends munit.FunSuite {
     )
   }
 
+  test("bind tuple 1"){
+    val form = Form("name", text).bind(Map("name" -> "Homer"))
+    assertEquals(form.value, Some("Homer"))
+
+    form.fold(
+      errorForm => fail("Should not have error"),
+      name => {
+        assertNoDiff(name, "Homer")
+      }
+    )
+  }
+
 }
