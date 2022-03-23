@@ -215,6 +215,6 @@ case class Form[T](mappings: Field[_] *: Tuple,
   override def verifying(addConstraints: Constraint[T]*): Form[T] =
     copy(constraints = constraints ++ addConstraints)
 
-  def discardingErrors: Form[T] = ???
+  def discardingErrors: Form[T] = this.copy(errors = Nil)
 
 }

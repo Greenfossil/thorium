@@ -274,4 +274,34 @@ class FormSuite extends munit.FunSuite {
     )
   }
 
+  test("bind optional[String]"){
+    val form = Form.tuple("name" -> optional[String], "age" -> optional[Int])
+    val bindedForm = form.bind(Map("name" -> "Homer", "age" -> "50"))
+    assertEquals(bindedForm.value, Some((Some("Homer"), Some(50))))
+
+    bindedForm.fold(
+      errorForm => fail("should not have error"),
+      {
+        case (nameOpt, ageOpt) =>
+          assertEquals(nameOpt, Some("Homer"))
+          assertEquals(ageOpt, Some(50))
+      }
+    )
+  }
+
+  test("bind optional(text)"){
+    val form = Form.tuple("name" -> optional(text), "age" -> optional(number))
+    val bindedForm = form.bind(Map("name" -> "Homer", "age" -> "50"))
+    assertEquals(bindedForm.value, Some((Some("Homer"), Some(50))))
+
+    bindedForm.fold(
+      errorForm => fail("should not have error"),
+      {
+        case (nameOpt, ageOpt) =>
+          assertEquals(nameOpt, Some("Homer"))
+          assertEquals(ageOpt, Some(50))
+      }
+    )
+  }
+
 }

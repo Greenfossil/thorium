@@ -214,7 +214,7 @@ object Field {
           value match {
             case opt: Option[_] => opt
             case xs: Seq[_] => Option(xs.flatMap(x => toValueOf(opt.tail,x)))
-            case s: String => Option(Seq(toValueOf(opt.tail, s)))
+            case s: String => Option(toValueOf(opt.tail, s))
           }
       }
       optValue.asInstanceOf[Option[A]]
@@ -330,7 +330,7 @@ inline def seq[A](a: Field[A]): Field[Seq[A]] = ???
 inline def set[A] = Field.of[Set[A]]
 inline def vector[A] = Field.of[Vector[A]]
 inline def optional[A] = Field.of[Option[A]]
-inline def optional[A](a: Field[A]): Field[Option[A]] = ??? // Field.of[Option[A]]
+inline def optional[A](a: Field[A]): Field[Option[A]] = Field.of[Option[A]]
 
 inline def uuid = Field.of[java.util.UUID]
 inline def checked(msg: String) = Field.of[Boolean].verifying(msg, _ == true)
