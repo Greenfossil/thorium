@@ -77,12 +77,12 @@ def Redirect(url: String, status: HttpStatus): Result =
 def Redirect(action: Action): Result = ???
 
 def Redirect(url: String, queryString: Map[String, Seq[String]]): Result =
-  ???
+  Redirect(url, queryString, HttpStatus.SEE_OTHER)
 
 def Redirect(url: String, queryString: Map[String, Seq[String]], status: HttpStatus): Result =
   ???
 
-def Redirect(call: Call): Result =  ???
+def Redirect(call: Call): Result =  Redirect(call.url)
 
 def NotFound[C](body: C)(using w: Writeable[C]): Result =
   toResult(HttpStatus.NOT_FOUND, body)

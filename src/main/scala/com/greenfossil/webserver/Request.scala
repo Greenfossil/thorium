@@ -6,6 +6,7 @@ import com.linecorp.armeria.common.stream.StreamMessage
 import com.linecorp.armeria.common.*
 import com.linecorp.armeria.server.ServiceRequestContext
 
+import java.net.SocketAddress
 import java.time.ZoneId
 import java.util.Locale.LanguageRange
 import java.util.concurrent.CompletableFuture
@@ -20,18 +21,22 @@ object RequestAttrs {
 }
 
 trait Request(val requestContext: ServiceRequestContext, val aggregatedHttpRequest: AggregatedHttpRequest) {
-//  export requestContext.*
 
-//Overlap Play and Armeria api  
-//  def path: String
-//  def method: String = ""
-//  def remoteAddress[A <: java.net.SocketAddress]: A /*String*/ = requestContext.remoteAddress()
+  def contentType: MediaType = requestContext.request().contentType()
+
+  def queryParam(param: String): Option[String] = Option(requestContext.queryParam(param))
+
+  def queryParams: QueryParams = requestContext.queryParams()
+
+  def remoteAddress[A <: java.net.SocketAddress]: A = requestContext.remoteAddress()
 
   def uri: java.net.URI  /*String*/ = aggregatedHttpRequest.uri()
 
-  def path(): String = aggregatedHttpRequest.path()
+  def path: String = aggregatedHttpRequest.path()
   
   def headers: RequestHeaders /*Headers*/ = aggregatedHttpRequest.headers()
+
+  def getHeader(name: String): Option[String] = Option(headers.get(name))
 
   //https://www.javatips.net/api/java.util.locale.languagerange
   import scala.jdk.CollectionConverters.*
@@ -62,13 +67,11 @@ trait Request(val requestContext: ServiceRequestContext, val aggregatedHttpReque
   }.getOrElse(Flash())
 
   @deprecated("use remoteAddress instead")
-  def getRealIP: String = "FIXME"
+  def getRealIP: String = remoteAddress.toString
 
-  //  def getReferer: Option[String] =
-//    headers.get("X-Alt-Referer").orElse(headers.get("referer"))
-//
-
-  def refererOpt: Option[String] = ???
+  def refererOpt: Option[String] =
+    getHeader("X-Alt-Referer")
+      .orElse(getHeader("referer"))
 
   def availableLanguages: Seq[Locale] = Seq(Locale.getDefault)
 
