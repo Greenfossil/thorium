@@ -15,7 +15,7 @@ object FormServices extends Controller {
     val bindedForm = form.bindFromRequest()
     bindedForm.fold(
       error => BadRequest("Errors"),
-      value => Ok("HelloWorld!")
+      value => Ok(value.toString)
     )
   }
 

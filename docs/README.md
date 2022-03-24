@@ -16,7 +16,7 @@ Form (Data)
 + transform
 + implements the rest of Field supported types e.g Temporal, String etc
 + implement Field validation error messages
-+ 
++ bindFromRequest - binding of numbers can be null (broken)
 HttpErrorHandler
 ---
 + P1 [DONE - HttpErrorHandler]

@@ -4,6 +4,7 @@ import com.greenfossil.commons.json.JsValue
 import com.linecorp.armeria.common.HttpMethod
 
 import java.time.LocalDate
+import scala.util.Try
 
 object Form {
 
@@ -90,6 +91,7 @@ case class Form[T](mappings: Field[_] *: Tuple,
         case HttpMethod.POST | HttpMethod.PUT | HttpMethod.PATCH => Map.empty
         case _ => Map.empty //FIXME - request.queryString
       }
+    // FIXME improve the validation
     request match {
       case req if req.asFormUrlEncoded.nonEmpty =>
         bind(req.asFormUrlEncoded ++ querydata)
@@ -97,8 +99,11 @@ case class Form[T](mappings: Field[_] *: Tuple,
 //      case req if req.asMultipartFormData.bodyPart.nonEmpty =>
 //        bind(req.asMultipartFormData.asFormUrlEncoded ++ querydata)
 
-      case req if req.asJson.asOpt.isDefined =>
+      case req if Try(req.asJson).isSuccess =>
         bind(req.asJson, querydata)
+
+      case req =>
+        bind(querydata)
     }
 
   def bind(data: Map[String, Any]): Form[T] = {
