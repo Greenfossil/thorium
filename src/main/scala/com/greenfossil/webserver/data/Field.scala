@@ -42,7 +42,7 @@ object Field {
         case "Int" =>
           value match {
             case x: Int => Option(x)
-            case s: String => s.toIntOption
+            case s: String => Option(s).filter(_.nonEmpty).flatMap(_.toIntOption)
             case xs: Seq[_] => xs.headOption.flatMap(_.toString.toIntOption)
             case xs: Option[_] => xs.flatMap(_.toString.toIntOption)
             case _ => None
@@ -51,7 +51,7 @@ object Field {
         case "Long" =>
           value match {
             case x: Long => Option(x)
-            case s: String => s.toLongOption
+            case s: String => Option(s).filter(_.nonEmpty).flatMap(_.toLongOption)
             case s: BigDecimal /* This is to handle JsNumber type */ => Option(s.toLong)
             case xs: Option[_] => xs.flatMap(_.toString.toLongOption)
             case xs: Seq[_] => xs.headOption.flatMap(_.toString.toLongOption)
@@ -69,7 +69,7 @@ object Field {
         case "Double" =>
           value match {
             case x: Double => Option(x)
-            case s: String => s.toDoubleOption
+            case s: String => Option(s).filter(_.nonEmpty).flatMap(_.toDoubleOption)
             case xs: Option[_] => xs.flatMap(_.toString.toDoubleOption)
             case xs: Seq[_] => xs.headOption.flatMap(_.toString.toDoubleOption)
             case _ => None
@@ -78,7 +78,7 @@ object Field {
         case "Float" =>
           value match {
             case x: Float => Option(x)
-            case s: String => s.toFloatOption
+            case s: String => Option(s).filter(_.nonEmpty).flatMap(_.toFloatOption)
             case xs: Option[_] => xs.flatMap(_.toString.toFloatOption)
             case xs: Seq[_] => xs.headOption.flatMap(_.toString.toFloatOption)
             case _ => None
@@ -87,7 +87,7 @@ object Field {
         case "Boolean" =>
           value match {
             case x: Boolean => Option(x)
-            case s: String => s.toBooleanOption
+            case s: String => Option(s).filter(_.nonEmpty).flatMap(_.toBooleanOption)
             case xs: Option[_] => xs.flatMap(_.toString.toBooleanOption)
             case xs: Seq[_] => xs.headOption.flatMap(_.toString.toBooleanOption)
             case _ => None
@@ -186,7 +186,7 @@ object Field {
         case "BigDecimal" =>
           value match {
             case x: BigDecimal => Option(x)
-            case s: String => Option(BigDecimal(s))
+            case s: String => Option(s).filter(_.nonEmpty).map(x => BigDecimal(x))
             case xs: Option[_] => xs.flatMap(x => Option(BigDecimal(x.toString)))
             case xs: Seq[_] => xs.headOption.flatMap(x => Option(BigDecimal(x.toString)))
             case _ => None
@@ -213,7 +213,7 @@ object Field {
         case opt if opt.startsWith("?") =>
           value match {
             case opt: Option[_] => opt
-            case xs: Seq[_] => Option(xs.flatMap(x => toValueOf(opt.tail,x)))
+            case xs: Seq[_] => Option(xs.headOption.flatMap(x => toValueOf(opt.tail,x)))
             case s: String => Option(toValueOf(opt.tail, s))
           }
       }

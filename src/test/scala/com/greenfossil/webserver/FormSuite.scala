@@ -78,6 +78,15 @@ class FormSuite extends munit.FunSuite {
     assertEquals(bindedForm.data.size, 2)
   }
 
+  test("bind tuple 4 - longnumber"){
+    val form = Form.tuple(
+      "l1" -> longNumber,
+      "l2" -> optional[Long]
+    )
+    val bindedForm = form.bind(Map("l1" -> Seq("1"), "l2" -> Seq()))
+    assertEquals(bindedForm.value, Some((1L, None)))
+  }
+
   test("bind as JSON"){
     val form = Form.tuple(
       "name" -> text,
