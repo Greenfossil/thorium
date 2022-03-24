@@ -36,13 +36,13 @@ object Field {
     }
 
   def toValueOf[A](tpe: String, value: Any): Option[A] = {
-    if value == null then None
+    if value == null || value == Some(null) then None
     else {
       val optValue = tpe match {
         case "Int" =>
           value match {
             case x: Int => Option(x)
-            case s: String => Option(s).filter(_.nonEmpty).flatMap(_.toIntOption)
+            case s: String => s.toIntOption
             case xs: Seq[_] => xs.headOption.flatMap(_.toString.toIntOption)
             case xs: Option[_] => xs.flatMap(_.toString.toIntOption)
             case _ => None
@@ -51,7 +51,7 @@ object Field {
         case "Long" =>
           value match {
             case x: Long => Option(x)
-            case s: String => Option(s).filter(_.nonEmpty).flatMap(_.toLongOption)
+            case s: String => s.toLongOption
             case s: BigDecimal /* This is to handle JsNumber type */ => Option(s.toLong)
             case xs: Option[_] => xs.flatMap(_.toString.toLongOption)
             case xs: Seq[_] => xs.headOption.flatMap(_.toString.toLongOption)
@@ -69,7 +69,7 @@ object Field {
         case "Double" =>
           value match {
             case x: Double => Option(x)
-            case s: String => Option(s).filter(_.nonEmpty).flatMap(_.toDoubleOption)
+            case s: String => s.toDoubleOption
             case xs: Option[_] => xs.flatMap(_.toString.toDoubleOption)
             case xs: Seq[_] => xs.headOption.flatMap(_.toString.toDoubleOption)
             case _ => None
@@ -78,7 +78,7 @@ object Field {
         case "Float" =>
           value match {
             case x: Float => Option(x)
-            case s: String => Option(s).filter(_.nonEmpty).flatMap(_.toFloatOption)
+            case s: String => s.toFloatOption
             case xs: Option[_] => xs.flatMap(_.toString.toFloatOption)
             case xs: Seq[_] => xs.headOption.flatMap(_.toString.toFloatOption)
             case _ => None
@@ -87,7 +87,7 @@ object Field {
         case "Boolean" =>
           value match {
             case x: Boolean => Option(x)
-            case s: String => Option(s).filter(_.nonEmpty).flatMap(_.toBooleanOption)
+            case s: String => s.toBooleanOption
             case xs: Option[_] => xs.flatMap(_.toString.toBooleanOption)
             case xs: Seq[_] => xs.headOption.flatMap(_.toString.toBooleanOption)
             case _ => None

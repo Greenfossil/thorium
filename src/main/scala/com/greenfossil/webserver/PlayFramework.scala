@@ -14,7 +14,7 @@ object Call {
 //TODO - should this be Endpoint
 case class Call(url: String) {
   override def toString: String = url
-  def absoluteURL: String = ???
+  def absoluteURL: String = url // FIXME
   def absoluteURL(secure: Boolean): String = ???
 }
 

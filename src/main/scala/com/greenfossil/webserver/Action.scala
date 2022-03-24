@@ -36,6 +36,9 @@ trait Controller extends AnnotatedHttpServiceSet
 trait Action(fn: Request => HttpResponse | Result | String) extends AnnotatedHttpService:
   override def serve(ctx: ServiceRequestContext, req: HttpRequest): HttpResponse =
     val f: CompletableFuture[HttpResponse] = ctx.request().aggregate().thenApply(aggregateRequest => {
+      //Set Class Loader from current thread for Config AppSettings used by DB
+      Thread.currentThread().setContextClassLoader(ClassLoader.getSystemClassLoader)
+
       val req = new Request(ctx, aggregateRequest) {}
       fn(req) match {
         case s: String => HttpResponse.of(s)
