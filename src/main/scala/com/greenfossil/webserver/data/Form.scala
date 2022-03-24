@@ -78,6 +78,8 @@ case class Form[T](mappings: Field[_] *: Tuple,
       case caseclass: Product =>
         val tuple = Tuple.fromProduct(caseclass)
         bindValuesToFields(tuple)
+
+      case value => bindValuesToFields(Tuple1(value))
     }
     val dataMap = bindedFields.toList.collect{
       case f: Field[_] => f.name -> f.value.orNull
