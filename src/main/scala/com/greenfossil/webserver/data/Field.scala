@@ -213,7 +213,7 @@ object Field {
         case opt if opt.startsWith("?") =>
           value match {
             case opt: Option[_] => opt
-            case xs: Seq[_] => Option(xs.flatMap(x => toValueOf(opt.tail,x)))
+            case xs: Seq[_] => Option(xs.headOption.flatMap(x => toValueOf(opt.tail,x)))
             case s: String => Option(toValueOf(opt.tail, s))
           }
       }
