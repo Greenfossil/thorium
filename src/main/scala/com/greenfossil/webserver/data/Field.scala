@@ -324,12 +324,15 @@ inline def sqlTimestamp(pattern: String, timeZone: java.util.TimeZone = java.uti
 //Collection
 inline def indexedSeq[A] = Field.of[IndexedSeq[A]]
 inline def list[A] = Field.of[List[A]]
-inline def list[A](a: Field[A]): Field[List[A]] = ???
+@deprecated("Use list[A]", "")
+inline def list[A](a: Field[A]): Field[List[A]] = Field.of[List[A]]
 inline def seq[A] = Field.of[Seq[A]]
-inline def seq[A](a: Field[A]): Field[Seq[A]] = ???
+@deprecated("Use seq[A]", "")
+inline def seq[A](a: Field[A]): Field[Seq[A]] = Field.of[Seq[A]]
 inline def set[A] = Field.of[Set[A]]
-inline def vector[A] = Field.of[Vector[A]]
+//inline def vector[A] = Field.of[Vector[A]]
 inline def optional[A] = Field.of[Option[A]]
+@deprecated("Use optional[A]", "")
 inline def optional[A](a: Field[A]): Field[Option[A]] = Field.of[Option[A]]
 
 inline def uuid = Field.of[java.util.UUID]

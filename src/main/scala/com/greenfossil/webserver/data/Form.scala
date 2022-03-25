@@ -217,7 +217,7 @@ case class Form[T](mappings: Field[_] *: Tuple,
    */
   def globalErrors: Seq[FormError] = errors.filter(_.key.isEmpty)
   
-  def withGlobalError(errorMsg: String): Form[T] = ???
+  def withGlobalError(errorMsg: String, args: String*): Form[T] = this.copy(errors = this.errors :+ FormError("", errorMsg, args))
 
   override def verifying(addConstraints: Constraint[T]*): Form[T] =
     copy(constraints = constraints ++ addConstraints)
