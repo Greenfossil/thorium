@@ -26,6 +26,11 @@ trait Request(val requestContext: ServiceRequestContext, val aggregatedHttpReque
 
   def queryParam(param: String): Option[String] = Option(requestContext.queryParam(param))
 
+  def isXhr: Boolean = {
+    // Check header key and value if XHR (case insensitive)
+    requestContext.request().headers().contains("X-Requested-With","XMLHttpRequest" )
+  }
+
   def queryParams: QueryParams = requestContext.queryParams()
 
   def remoteAddress[A <: java.net.SocketAddress]: A = requestContext.remoteAddress()
