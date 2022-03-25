@@ -208,6 +208,7 @@ case class Form[T](mappings: Field[_] *: Tuple,
    *
    * @return an error
    */
+  @deprecated("Should use globalErrors", "")
   def globalError: Option[FormError] = globalErrors.headOption
 
   /**
@@ -216,8 +217,27 @@ case class Form[T](mappings: Field[_] *: Tuple,
    * @return all global errors
    */
   def globalErrors: Seq[FormError] = errors.filter(_.key.isEmpty)
-  
-  def withGlobalError(errorMsg: String, args: String*): Form[T] = this.copy(errors = this.errors :+ FormError("", errorMsg, args))
+
+  /**
+    * Adds an error to this form
+    * @param error FormError
+    */
+  def withError(error: FormError): Form[T] = this.copy(errors = this.errors :+ error)
+
+  /**
+    * Adds an error to this form
+    * @param key Error key
+    * @param message Error message
+    * @param args Error message arguments
+    */
+  def withError(key: String, message: String, args: Any*): Form[T] = withError(FormError(key, message, args))
+
+  /**
+    * Adds a global error to this form
+    * @param message Error message
+    * @param args Error message arguments
+    */
+  def withGlobalError(message: String, args: String*): Form[T] = withError("", message, args*)
 
   override def verifying(addConstraints: Constraint[T]*): Form[T] =
     copy(constraints = constraints ++ addConstraints)
