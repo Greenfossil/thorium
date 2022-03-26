@@ -3,7 +3,7 @@ package experiment.macros
 import com.greenfossil.webserver.{*, given}
 import com.linecorp.armeria.server.annotation.*
 
-import experiment.macros.MethodSignatureMacros.*
+import experiment.macros.MethodSignatureMacro.*
 
 object TestActionController extends Controller {
 

@@ -1,6 +1,8 @@
 package com.greenfossil.webserver
 
 import com.linecorp.armeria.client.RequestOptions
+import com.linecorp.armeria.client.cookie.CookieClient
+import com.linecorp.armeria.client.logging.LoggingClient
 import com.linecorp.armeria.common.{HttpMethod, HttpRequest, HttpStatus}
 import com.linecorp.armeria.server.annotation.Get
 
@@ -43,7 +45,13 @@ class SessionSuite extends munit.FunSuite {
       .start()
 
     import com.linecorp.armeria.client.WebClient
-    val client = WebClient.builder(s"http://localhost:${server.port}").followRedirects().build()
+    import com.linecorp.armeria.client.cookie.*
+    val client = WebClient
+      .builder(s"http://localhost:${server.port}")
+      .followRedirects()
+      .decorator(CookieClient.newDecorator(CookiePolicy.acceptAll()))
+      .decorator(LoggingClient.newDecorator())
+      .build()
     val resp = client.get("/s0")
     resp.aggregate().thenApply{ aggResp =>
       println("Response...")

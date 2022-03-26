@@ -1,6 +1,6 @@
 package experiment.macros
 
-object MethodSignatureMacros {
+object MethodSignatureMacro {
 
   import com.greenfossil.webserver.*
   inline def MCall(inline action: Action): String =
@@ -13,19 +13,24 @@ object MethodSignatureMacros {
     val (name, annotationTerms, paramNameValueLookup) = actionExpr.asTerm match {
       case Inlined(_, _, methodOwner @ Select(_, name)) =>
         (name, methodOwner.symbol.annotations, Map.empty[String, Any])
-      case Inlined(a, b, app @ Apply(Select(Ident(_),name ), args)) =>
-        val paramNames: List[String] = app.symbol.paramSymss.head.map(_.name)
-        val paramValues: List[Any] = args.collect{case Literal(c) => c.value}
+      case Inlined(a, b, methodOwner @ Apply(Select(Ident(_), name), args)) =>
+        println(s"a ${a}")
+        println(s"b = ${b}")
+        println(s"args = ${args}")
+        println(s"methodOwner = ${methodOwner}")
+        val paramNames: List[String] = methodOwner.symbol.paramSymss.head.map(_.name)
+        val paramValues: List[Constant] = args.collect{case Literal(c) => c}
+        val paramVals: List[Ident] = args.collect{case valdef: Ident => valdef}
         val paramNameValueLookup: Map[String, Any] = paramNames.zip(paramValues).toMap
-        (name, app.symbol.annotations, paramNameValueLookup)
+        (name, methodOwner.symbol.annotations, paramNameValueLookup)
       case Inlined(_,_, Ident(name)) =>
         report.errorAndAbort("Action must be define as a function not value", actionExpr)
     }
-//    println("name " + name)
-//    println(s"annotations ${annotationTerms.size}")
-//    annotationTerms foreach println
-//    println(s"nvLookup ${paramNameValueLookup.size}")
-//    paramNameValueLookup foreach println
+    println("name " + name)
+    println(s"annotations ${annotationTerms.size}")
+    annotationTerms foreach println
+    println(s"nvLookup ${paramNameValueLookup.size}")
+    paramNameValueLookup foreach println
 
     //(Method, Path) - assume there is a Path - TODO - need to harden this
     val (method, declaredPath): (String, String) = annotationTerms.collect{

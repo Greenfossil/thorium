@@ -6,12 +6,14 @@ object Redirect1Services extends Controller {
 
   @Get("/action1")
   def action1 = Action { implicit request =>
-    Redirect(action2("World!"))
+    //Redirect with Ref and Constant
+    val time = java.time.LocalDate.now.toString
+    Redirect(action2(time, "World!"))
   }
 
-  @Get("/action2/:name")
-  def action2(@Param name: String) = Action { implicit request =>
-    s"Hello $name"
+  @Get("/action2/:name/:msg")
+  def action2(@Param name: String, @Param msg: String) = Action { implicit request =>
+    s"Hello name:$name, msg:$msg"
   }
 }
 
@@ -23,7 +25,9 @@ object Redirect2Services extends Controller {
 
   @Get("/action4")
   def action4 = Action { implicit request =>
-    Redirect(Redirect1Services.action2("Space!"))
+    //Redirect with Ref - name, and inline
+    val name = "Space!"
+    Redirect(Redirect1Services.action2(name, java.time.LocalDateTime.now.toString))
   }
 
 }

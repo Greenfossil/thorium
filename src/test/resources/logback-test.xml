@@ -6,11 +6,11 @@
         </encoder>
     </Appender>
 
-    <root level="info">
+    <root level="warn">
         <appender-ref ref="Console"/>
     </root>
 
-    <logger name="com.linecorp.armeria.common" level="off"/>
+    <logger name="com.linecorp.armeria" level="info"/>
 
 
 </configuration>
