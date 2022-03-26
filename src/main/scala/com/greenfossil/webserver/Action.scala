@@ -81,7 +81,15 @@ def Redirect(url: String, queryString: Map[String, Seq[String]]): Result =
 def Redirect(url: String, queryString: Map[String, Seq[String]], status: HttpStatus): Result =
   ???
 
+@deprecated("to remove")
 def Redirect(call: Call): Result =  Redirect(call.url)
+
+/**
+ * Inline redirect macro
+ * @param action
+ * @return
+ */
+inline def Redirect(inline action: Action): Result = RedirectMcr(action)
 
 def NotFound[C](body: C)(using w: Writeable[C]): Result =
   toResult(HttpStatus.NOT_FOUND, body)
@@ -101,81 +109,3 @@ private def toResult[C](status: HttpStatus, body: C)(using w: Writeable[C]): Res
   else
     val (mediaType, bytes) = w.content(body)
     Result(HttpResponse.of(status, mediaType, bytes))
-
-/**
- * Inline redirect macro
- * @param action
- * @return
- */
-inline def Redirect(inline action: Action): Result =
-  ${ RedirectImpl('action) }
-
-import scala.quoted.*
-def RedirectImpl(actionExpr:Expr[Action])(using Quotes): Expr[Result] =
-  import quotes.reflect.*
-
-  val (methodOwner, paramNameValueLookup) = actionExpr.asTerm match {
-
-    /*
-     * action with arglist
-     */
-    case Inlined(_, _, methodOwner @ Apply(_, paramValues)) =>
-      val paramNames: List[String] = methodOwner.symbol.paramSymss.head.map(_.name)
-      val paramNameValueLookup: Map[String,  Term] = paramNames.zip(paramValues).toMap
-      (methodOwner, paramNameValueLookup)
-
-    /*
-    * action with no arglist
-    */
-    case Inlined(_, _, methodOwner) =>
-      (methodOwner, Map.empty[String, Term])
-  }
-
-  val declaredPathOpt: Option[String] =
-    println(s"MethodOwner ${methodOwner.show(using Printer.TreeAnsiCode)}")
-    methodOwner.symbol.annotations.collectFirst{
-      case Apply(Select(New(annMethod), _), args) =>
-        println(s"Annotation Method ${annMethod.show(using Printer.TreeAnsiCode)}")
-        args.foreach(arg => println(s"Path ${arg.show(using Printer.TreeAnsiCode)}"))
-        args.collectFirst{case Literal(c) => c.value.toString}
-    }.flatten
-
-  declaredPathOpt match {
-    case None =>
-      report.errorAndAbort("No annotated path found", actionExpr)
-
-    case Some(declaredPath) if paramNameValueLookup.isEmpty =>
-      //Constant Path
-      '{Redirect(${Expr(declaredPath)})}
-
-    case Some(declaredPath) =>
-      //Parameterized Path
-      var usedPathParamNames: List[String] = Nil
-      def getPathParamExpr(name: String): Expr[Any] =
-        paramNameValueLookup.get(name) match {
-          case Some(value) =>
-            usedPathParamNames = usedPathParamNames :+ name
-            value.asExpr
-          case None =>
-            report.errorAndAbort(s"Path param [$name] of path [$declaredPath] cannot be found in method's param names [${paramNameValueLookup.keySet.mkString(",")}]  ", actionExpr)
-        }
-
-      val computedPath: List[Expr[Any]] =
-        val parts = declaredPath.split("/:")
-        parts.tail.foldLeft(List[Expr[Any]](Expr(parts.head))) { (accPath, part) =>
-        val newParts = part.split("/") match {
-          case Array(pathParamName, right) => List(getPathParamExpr(pathParamName), Expr(right))
-          case Array(pathParamName) => List(getPathParamExpr(pathParamName))
-        }
-        accPath ++ newParts
-      }
-
-      paramNameValueLookup.keys.toList diff usedPathParamNames match {
-        case Nil =>
-          val computedPathExpr: Expr[List[Any]] = Expr.ofList(computedPath)
-          '{Redirect(${computedPathExpr}.mkString("/"))}
-
-        case mismatchParams =>
-          report.errorAndAbort(s"Params missing [${mismatchParams.mkString(",")}]", actionExpr)
-      }
-  }
