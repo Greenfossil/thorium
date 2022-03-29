@@ -48,6 +48,8 @@ trait Action(fn: Request => HttpResponse | Result | String) extends AnnotatedHtt
     })
     HttpResponse.from(f)
 
+  def endpoint: Endpoint = ???
+
 
 object Action {
 

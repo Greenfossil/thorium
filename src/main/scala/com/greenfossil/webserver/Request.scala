@@ -38,6 +38,8 @@ trait Request(val requestContext: ServiceRequestContext, val aggregatedHttpReque
   def uri: java.net.URI  /*String*/ = aggregatedHttpRequest.uri()
 
   def path: String = aggregatedHttpRequest.path()
+
+  def endpoint: Endpoint = Endpoint(path)
   
   def headers: RequestHeaders /*Headers*/ = aggregatedHttpRequest.headers()
 
