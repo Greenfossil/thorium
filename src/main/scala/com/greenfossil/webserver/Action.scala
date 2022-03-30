@@ -83,8 +83,8 @@ def Redirect(url: String, queryString: Map[String, Seq[String]]): Result =
 def Redirect(url: String, queryString: Map[String, Seq[String]], status: HttpStatus): Result =
   ???
 
-inline def Redirect[A <: Controller](fn: A => Action): Result = 
-  ???
+inline def Redirect[A <: Controller](fn: A => Action): Result =
+  Redirect(Endpoint[A](fn))
 
 @deprecated("to remove")
 def Redirect(call: Call): Result =  Redirect(call.url)
@@ -94,7 +94,10 @@ def Redirect(call: Call): Result =  Redirect(call.url)
  * @param action
  * @return
  */
-inline def Redirect[A <: AnnotatedHttpService](inline action: A): Result = RedirectMcr(action)
+inline def Redirect[A <: AnnotatedHttpService](inline action: A): Result =
+  Redirect(Endpoint(action))
+
+def Redirect(endpoint: Endpoint): Result = Redirect(endpoint.url)
 
 def NotFound[C](body: C)(using w: Writeable[C]): Result =
   toResult(HttpStatus.NOT_FOUND, body)

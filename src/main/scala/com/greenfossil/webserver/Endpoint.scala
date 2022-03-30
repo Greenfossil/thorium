@@ -15,6 +15,10 @@ case class Endpoint(url: String) {
 
 object Endpoint {
 
+  inline def apply(inline action: AnnotatedHttpService): Endpoint = EndpointMcr(action)
+
+  inline def apply[A <: Controller](inline fn: A => Action): Endpoint = ???
+
   inline def path(inline action: AnnotatedHttpService): Endpoint = EndpointMcr(action)
 
 
