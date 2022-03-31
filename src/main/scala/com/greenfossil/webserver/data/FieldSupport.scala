@@ -1,6 +1,6 @@
 package com.greenfossil.webserver.data
 
-import com.greenfossil.webserver.data.Form.FieldConstructor
+import com.greenfossil.webserver.data.Form.{FieldConstructor, FieldTypeExtractor, toNamedFieldTuple}
 
 import java.time.{LocalDate, LocalDateTime, LocalTime, YearMonth}
 import scala.deriving.Mirror
@@ -310,6 +310,13 @@ inline def mappingRepeat[A](using m: Mirror.ProductOf[A])(
 ): Field[Seq[A]] =
   val mappingField =  new Field[A](tpe = s"C-$m", mappings = Form.toNamedFieldTuple(nameValueTuple), mirrorOpt = Some(m))
   new Field[Seq[A]](tpe = s"[C-$m", mappings = mappingField *: EmptyTuple)
+
+inline def tuple[A <: Tuple](nameValueTuple: A): Field[FieldTypeExtractor[A]] =
+  new Field(tpe = s"C-", mappings = toNamedFieldTuple(nameValueTuple))
+
+inline def tupleRepeat[A <: Tuple](nameValueTuple: A): Field[Seq[FieldTypeExtractor[A]]] =
+  val mappingField = new Field[A](tpe = s"C-", mappings = toNamedFieldTuple(nameValueTuple))
+  new Field[Seq[FieldTypeExtractor[A]]]("[C-", mappings = mappingField *: EmptyTuple)
 
 @deprecated("Use seq[A]", "")
 inline def seq[A](a: Field[A]): Field[Seq[A]] = Field.of[Seq[A]]
