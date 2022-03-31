@@ -60,6 +60,9 @@ object Result {
   def bakeCookie(name: String, value: String): Cookie =
     bakeCookie(name, value, false, None, None, None)
 
+  def bakeCookie(name: String, value: String, path: String): Cookie =
+    bakeCookie(name, value, false, None, Option(path), None)
+
   def bakeCookie(name: String, value: String, maxAge: Long): Cookie =
     bakeCookie(name, value, maxAge, false)
 
@@ -81,11 +84,11 @@ object Result {
   def bakeFlashCookie(flash: Flash): Option[Cookie] =
     bakeBase64URLEncodedCookie(RequestAttrs.Flash.name(),flash.data)
 
-  def bakeBase64URLEncodedCookie(name:String, data: Map[String, String]): Option[Cookie] =
+  def bakeBase64URLEncodedCookie(name:String, data: Map[String, String], path: String = "/"): Option[Cookie] =
     if data.isEmpty then None
     else
       val jwt = Json.toJson(data).encodeBase64URL
-      Option(bakeCookie(name,jwt))
+      Option(bakeCookie(name,jwt, path))
 
 }
 
