@@ -2,6 +2,7 @@ package com.greenfossil.webserver
 
 import com.greenfossil.webserver.data.*
 
+import java.time.format.DateTimeFormatter
 import java.time.{LocalDate, LocalDateTime, LocalTime, YearMonth}
 
 class FieldTypeSuite extends munit.FunSuite {
@@ -336,5 +337,16 @@ class FieldTypeSuite extends munit.FunSuite {
     assertEquals(boundField5.value, None)
 
   }
+
+
+  test("LocalDate with pattern field"){
+    val now = LocalDate.now().format(DateTimeFormatter.ofPattern("MMMM d, yyyy"))
+    val form: Form[LocalDate] = Form.apply("localdate", localDate("MMMM d, yyyy"))
+    form.bind(Map("localdate"-> now)).fold(
+      formError=> fail("Should be able to bind base on data pattern provided"),
+      data => assert(data.formatted("MMMM d, yyyy").equalsIgnoreCase(now))
+    )
+  }
+
 
 }
