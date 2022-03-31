@@ -43,10 +43,6 @@ class FormRepeatSuite extends munit.FunSuite {
       )
     )
 
-    form.mappings.toList.map(_.asInstanceOf[Field[?]]) foreach { f =>
-      println("Field type" + f.tpe)
-    }
-
     assertNoDiff(form.apply("id").tpe, "Long")
     assertNoDiff(form.apply("address").tpe, "[C-Address")
 
