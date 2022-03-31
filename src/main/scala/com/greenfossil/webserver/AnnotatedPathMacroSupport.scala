@@ -102,9 +102,8 @@ object AnnotatedPathMacroSupport {
     val computedPath: List[Expr[Any]] =
       val parts = declaredPath.split("/:")
       parts.tail.foldLeft(List[Expr[Any]](Expr(parts.head))) { (accPath, part) =>
-        val newParts = part.split("/") match
-          case Array(pathParamName, right) => List(getPathParamExpr(pathParamName), Expr(right))
-          case Array(pathParamName) => List(getPathParamExpr(pathParamName))
+        val newParts = part.split("/").toList match
+          case pathParamName +: rightParts => getPathParamExpr(pathParamName) +: rightParts.map(p => Expr(p))
 
         accPath ++ newParts
       }

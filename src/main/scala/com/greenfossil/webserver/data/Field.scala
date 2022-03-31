@@ -39,7 +39,7 @@ object Field {
     }
 
   def toValueOf[A](tpe: String, value: Any): Option[A] = {
-    if value == null || value == Some(null) then None
+    if value == null || value == Some(null) || value == "" then None
     else {
       val optValue = tpe match {
 
