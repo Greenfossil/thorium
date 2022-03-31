@@ -44,6 +44,11 @@ object Result {
   def apply(body: HttpResponse | String): Result =
     new Result(ResponseHeader(Map.empty), body, None, None, Nil)
 
+  /*
+   * Cookie's path must be set to an appropriate uri
+   * Defaults to "/" so cookie will follow to all sub-directories
+   * https://www.rfc-editor.org/rfc/rfc6265#section-5.1.4
+   */
   def bakeCookie(name: String,
                  value: String,
                  secure: Boolean,
