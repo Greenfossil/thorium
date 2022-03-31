@@ -1,8 +1,11 @@
 package com.greenfossil.webserver.data
 
 import com.greenfossil.commons.json.JsValue
+import com.greenfossil.webserver.data.Field.fieldType
+import com.greenfossil.webserver.data.Form.{FieldConstructor, FieldTypeExtractor, toNamedFieldTuple}
 
 import java.time.*
+import scala.deriving.Mirror
 
 object Field {
   import scala.compiletime.*
@@ -39,48 +42,56 @@ object Field {
     if value == null || value == Some(null) then None
     else {
       val optValue = tpe match {
+
+        case "String" =>
+          value match {
+            case s: String => Option(s)
+            case opt: Option[_] => opt.flatMap{toValueOf(tpe, _)}
+            case xs: Seq[_] => xs.headOption.flatMap{toValueOf(tpe, _)}
+            case _ => None
+          }
+
         case "Int" =>
           value match {
             case x: Int => Option(x)
+            case x: Long => Option(x.toInt)
+            case x: BigDecimal => Option(x.toInt)
             case s: String => s.toIntOption
-            case xs: Seq[_] => xs.headOption.flatMap(_.toString.toIntOption)
-            case xs: Option[_] => xs.flatMap(_.toString.toIntOption)
+            case opt: Option[_] => opt.flatMap{toValueOf(tpe, _)}
+            case xs: Seq[_] => xs.headOption.flatMap{toValueOf(tpe, _)}
             case _ => None
           }
 
         case "Long" =>
           value match {
-            case x: Long => Option(x)
-            case s: String => s.toLongOption
+            case x: Int => Option(x.toLong)
+            case x: Long  => Option(x)
             case s: BigDecimal /* This is to handle JsNumber type */ => Option(s.toLong)
-            case xs: Option[_] => xs.flatMap(_.toString.toLongOption)
-            case xs: Seq[_] => xs.headOption.flatMap(_.toString.toLongOption)
-            case _ => None
-          }
-
-        case "String" =>
-          value match {
-            case s: String => Option(s)
-            case xs: Option[_] => xs.map(_.toString)
-            case xs: Seq[_] => xs.headOption.map(_.toString)
+            case s: String => s.toLongOption
+            case opt: Option[_] => opt.flatMap{toValueOf(tpe, _)}
+            case xs: Seq[_] => xs.headOption.flatMap{toValueOf(tpe, _)}
             case _ => None
           }
 
         case "Double" =>
           value match {
             case x: Double => Option(x)
+            case x: Float => Option(x.toDouble)
+            case x: BigDecimal => Option(x.toDouble)
             case s: String => s.toDoubleOption
-            case xs: Option[_] => xs.flatMap(_.toString.toDoubleOption)
-            case xs: Seq[_] => xs.headOption.flatMap(_.toString.toDoubleOption)
+            case opt: Option[_] => opt.flatMap{toValueOf(tpe, _)}
+            case xs: Seq[_] => xs.headOption.flatMap{toValueOf(tpe, _)}
             case _ => None
           }
 
         case "Float" =>
           value match {
             case x: Float => Option(x)
+            case x: Double => Option(x.toFloat)
+            case x: BigDecimal => Option(x.toFloat)
             case s: String => s.toFloatOption
-            case xs: Option[_] => xs.flatMap(_.toString.toFloatOption)
-            case xs: Seq[_] => xs.headOption.flatMap(_.toString.toFloatOption)
+            case opt: Option[_] => opt.flatMap{toValueOf(tpe, _)}
+            case xs: Seq[_] => xs.headOption.flatMap{toValueOf(tpe, _)}
             case _ => None
           }
 
@@ -88,8 +99,8 @@ object Field {
           value match {
             case x: Boolean => Option(x)
             case s: String => s.toBooleanOption
-            case xs: Option[_] => xs.flatMap(_.toString.toBooleanOption)
-            case xs: Seq[_] => xs.headOption.flatMap(_.toString.toBooleanOption)
+            case opt: Option[_] => opt.flatMap{toValueOf(tpe, _)}
+            case xs: Seq[_] => xs.headOption.flatMap{toValueOf(tpe, _)}
             case _ => None
           }
 
@@ -97,8 +108,8 @@ object Field {
           value match {
             case x: LocalDate => Option(x)
             case s: String => Option(LocalDate.parse(s))
-            case xs: Option[_] => xs.flatMap(x => Option(LocalDate.parse(x.toString)))
-            case xs: Seq[_] => xs.headOption.flatMap(x => Option(LocalDate.parse(x.toString)))
+            case opt: Option[_] => opt.flatMap{toValueOf(tpe, _)}
+            case xs: Seq[_] => xs.headOption.flatMap{toValueOf(tpe, _)}
             case _ => None
           }
 
@@ -106,8 +117,8 @@ object Field {
           value match {
             case x: LocalTime => Option(x)
             case s: String => Option(LocalTime.parse(s))
-            case xs: Option[_] => xs.flatMap(x => Option(LocalTime.parse(x.toString)))
-            case xs: Seq[_] => xs.headOption.flatMap(x => Option(LocalTime.parse(x.toString)))
+            case opt: Option[_] => opt.flatMap{toValueOf(tpe, _)}
+            case xs: Seq[_] => xs.headOption.flatMap{toValueOf(tpe, _)}
             case _ => None
           }
 
@@ -115,8 +126,8 @@ object Field {
           value match {
             case x: YearMonth => Option(x)
             case s: String => Option(YearMonth.parse(s))
-            case xs: Option[_] => xs.flatMap(x => Option(YearMonth.parse(x.toString)))
-            case xs: Seq[_] => xs.headOption.flatMap(x => Option(YearMonth.parse(x.toString)))
+            case opt: Option[_] => opt.flatMap{toValueOf(tpe, _)}
+            case xs: Seq[_] => xs.headOption.flatMap{toValueOf(tpe, _)}
             case _ => None
           }
 
@@ -124,8 +135,8 @@ object Field {
           value match {
             case x: java.sql.Date => Option(x)
             case s: String => Option(java.sql.Date.valueOf(s))
-            case xs: Option[_] => xs.flatMap(x => Option(java.sql.Date.valueOf(x.toString)))
-            case xs: Seq[_] => xs.headOption.flatMap(x => Option(java.sql.Date.valueOf(x.toString)))
+            case opt: Option[_] => opt.flatMap{toValueOf(tpe, _)}
+            case xs: Seq[_] => xs.headOption.flatMap{toValueOf(tpe, _)}
             case _ => None
           }
 
@@ -133,8 +144,8 @@ object Field {
           value match {
             case x: java.util.Date => Option(x)
             case s: String => Option(java.util.Date.parse(s))
-            case xs: Option[_] => xs.flatMap(x => Option(java.util.Date.parse(x.toString)))
-            case xs: Seq[_] => xs.headOption.flatMap(x => Option(java.util.Date.parse(x.toString)))
+            case opt: Option[_] => opt.flatMap{toValueOf(tpe, _)}
+            case xs: Seq[_] => xs.headOption.flatMap{toValueOf(tpe, _)}
             case _ => None
           }
 
@@ -142,8 +153,8 @@ object Field {
           value match {
             case x: java.sql.Timestamp => Option(x)
             case s: String => Option(java.sql.Timestamp.valueOf(s))
-            case xs: Option[_] => xs.flatMap(x => Option(java.sql.Timestamp.valueOf(x.toString)))
-            case xs: Seq[_] => xs.headOption.flatMap(x => Option(java.sql.Timestamp.valueOf(x.toString)))
+            case opt: Option[_] => opt.flatMap{toValueOf(tpe, _)}
+            case xs: Seq[_] => xs.headOption.flatMap{toValueOf(tpe, _)}
             case _ => None
           }
 
@@ -151,8 +162,8 @@ object Field {
           value match {
             case x: LocalDateTime => Option(x)
             case s: String => Option(LocalDateTime.parse(s))
-            case xs: Option[_] => xs.flatMap(x => Option(LocalDateTime.parse(x.toString)))
-            case xs: Seq[_] => xs.headOption.flatMap(x => Option(LocalDateTime.parse(x.toString)))
+            case opt: Option[_] => opt.flatMap{toValueOf(tpe, _)}
+            case xs: Seq[_] => xs.headOption.flatMap{toValueOf(tpe, _)}
             case _ => None
           }
 
@@ -160,8 +171,8 @@ object Field {
           value match {
             case x: java.util.UUID => Option(x)
             case s: String => Option(java.util.UUID.fromString(s))
-            case xs: Option[_] => xs.flatMap(x => Option(java.util.UUID.fromString(x.toString)))
-            case xs: Seq[_] => xs.headOption.flatMap(x => Option(java.util.UUID.fromString(x.toString)))
+            case opt: Option[_] => opt.flatMap{toValueOf(tpe, _)}
+            case xs: Seq[_] => xs.headOption.flatMap{toValueOf(tpe, _)}
             case _ => None
           }
 
@@ -169,8 +180,8 @@ object Field {
           value match {
             case x: Byte => Option(x)
             case s: String => Option(s.toByte)
-            case xs: Option[_] => xs.flatMap(x => Option(x.toString.toByte))
-            case xs: Seq[_] => xs.headOption.flatMap(x => Option(x.toString.toByte))
+            case opt: Option[_] => opt.flatMap{toValueOf(tpe, _)}
+            case xs: Seq[_] => xs.headOption.flatMap{toValueOf(tpe, _)}
             case _ => None
           }
 
@@ -178,8 +189,8 @@ object Field {
           value match {
             case x: Short => Option(x)
             case s: String => Option(s.toShort)
-            case xs: Option[_] => xs.flatMap(x => Option(x.toString.toShort))
-            case xs: Seq[_] => xs.headOption.flatMap(x => Option(x.toString.toShort))
+            case opt: Option[_] => opt.flatMap{toValueOf(tpe, _)}
+            case xs: Seq[_] => xs.headOption.flatMap{toValueOf(tpe, _)}
             case _ => None
           }
 
@@ -187,8 +198,8 @@ object Field {
           value match {
             case x: BigDecimal => Option(x)
             case s: String => Option(s).filter(_.nonEmpty).map(x => BigDecimal(x))
-            case xs: Option[_] => xs.flatMap(x => Option(BigDecimal(x.toString)))
-            case xs: Seq[_] => xs.headOption.flatMap(x => Option(BigDecimal(x.toString)))
+            case opt: Option[_] => opt.flatMap{toValueOf(tpe, _)}
+            case xs: Seq[_] => xs.headOption.flatMap{toValueOf(tpe, _)}
             case _ => None
           }
 
@@ -196,25 +207,27 @@ object Field {
           value match {
             case x: Char => Option(x)
             case s: String => s.headOption
-            case xs: Option[_] => xs.flatMap(_.toString.headOption)
-            case xs: Seq[_] => xs.headOption.flatMap(_.toString.headOption)
+            case opt: Option[_] => opt.flatMap{toValueOf(tpe, _)}
+            case xs: Seq[_] => xs.headOption.flatMap{toValueOf(tpe, _)}
             case _ => None
           }
 
-        case seq if seq.startsWith("[") =>
+        case seqType if tpe.startsWith("[") =>
           value match {
+            case opt: Option[_] =>
+              //Seq is wrapped in Opt, unwrap it first and bind as Seq
+              opt.flatMap(toValueOf(tpe, _))
             case xs: Seq[_] =>
-              Option(xs.flatMap(x => toValueOf(seq.tail,x)))
-            case xs: Option[_] =>
-              xs.flatMap(x => toValueOf(seq, x))
+              Option(xs.flatMap(toValueOf(tpe.tail,_)))
             case s: String =>
-              Option(Seq(toValueOf(seq.tail, s)))
+              Option(Seq(toValueOf(tpe.tail, s)))
           }
-        case opt if opt.startsWith("?") =>
+
+        case optType if tpe.startsWith("?") =>
           value match {
-            case opt: Option[_] => opt
-            case xs: Seq[_] => Option(xs.headOption.flatMap(x => toValueOf(opt.tail,x)))
-            case s: String => Option(toValueOf(opt.tail, s))
+            case opt: Option[_] => opt.map{toValueOf(tpe.tail, _)}
+            case xs: Seq[_] => xs.headOption.map{toValueOf(tpe.tail, _)}
+            case s: String => toValueOf(tpe.tail, s)
           }
       }
       optValue.asInstanceOf[Option[A]]
@@ -223,22 +236,115 @@ object Field {
 
 }
 
-case class Field[A](tpe: String, 
+case class Field[A](tpe: String,
                     form: Form[_] = null,
                     name: String = null,
                     constraints:Seq[Constraint[A]] = Nil,
                     format: Option[(String, Seq[Any])] = None,
                     errors: Seq[FormError] = Nil,
-                    value: Option[A] = None) extends ConstraintVerifier[Field, A](name, constraints) {
+                    value: Option[A] = None,
+
+                    /*
+                     * these params are meant for use in embedded class use
+                     */
+                    mappings: Field[_] *: Tuple = null,
+                    mirrorOpt: Option[scala.deriving.Mirror.ProductOf[A]] = None) extends ConstraintVerifier[Field, A](name, constraints) {
+
+  def isOptional: Boolean = tpe.startsWith("?")
+  def isSeq: Boolean = tpe.startsWith("[") && !isSeqProduct
+  def isProduct: Boolean = tpe.startsWith("C-")
+  def isSeqProduct: Boolean = tpe.startsWith("[C-")
+
+  def rawValue: Any = if isOptional then value else value.orNull
 
   def fill(newValue: A):Field[A] = copy(value = Option(newValue))
 
-  def bind(value: Any): Field[A] = {
-    val newValueOpt = value match {
-      case js: JsValue => Field.toValueOf[A](tpe, js.asOpt[Any])
-      case any => Field.toValueOf[A](tpe, any)
+  def fill(newValueOpt: Option[?]): Field[A] = copy(value = newValueOpt.asInstanceOf[Option[A]])
+
+  def bind(any: Any): Field[A] =
+   any match {
+      case data: Seq[(String, Any)] =>
+        //Seq - name-value pair where name can have duplicates
+        bindDataMapObj(data.groupMap(_._1)(_._2))
+      case data: Map[String, Any] =>
+        bindDataMapObj(data)
+      case value: Any =>
+        bindValueToField(Field.toValueOf[A](tpe, value))
     }
-    //Check constraints here
+
+  def bindDataMapObj(data:Map[String, Any]): Field[A] = {
+    if isSeqProduct then
+      bindSeqClass(data)
+    else if isProduct then
+      bindClass(name, data)
+    else
+      bindDataMapValue(data)
+  }
+
+  private def bindDataMapValue(data: Map[String, Any]): Field[A] =
+    val value =  if tpe.startsWith("[")
+    then
+      /*
+       * Attempt to get keys that matches f.name + '['
+       * if fail then use f.name as key to retrieve value from data
+       */
+      data.toList.filter((key: String, value: Any) => key.startsWith(s"${name}[")).map(_._2) match {
+        case Nil =>
+          data.getOrElse(name, None)
+        case values =>
+          //flatten the values
+          values.foldLeft(Seq.empty){(res, v) =>
+            v match {
+              case xs: Seq[_] => res ++ xs
+              case x => res :+ x
+            }
+          }
+      }
+    else data.getOrElse(name, None)
+
+    val newValueOpt =  Field.toValueOf[A](tpe, value)
+    bindValueToField(newValueOpt)
+
+  private def bindSeqClass(data: Map[String, Any]): Field[A] =
+    /*
+      * Filter all name-value list that matches 'field.name' + '.'
+      */
+    val keyMatchRegex = s"$name\\[\\d+]\\..+"
+    val keyReplaceRegex = s"$name\\[(\\d+)]"
+    //Group name-value pairs by index
+    val valueList: Seq[(Int, (String, Any))] = data.toList.collect{ case (key, x) if key.matches(keyMatchRegex) =>
+      key.replaceAll(keyReplaceRegex, "$1").split("\\.",2) match {
+        case Array(index, fieldKey) =>
+          index.toInt -> (fieldKey, x)
+      }
+    }
+    val nvPairsByIndex = valueList.groupMap(_._1)(_._2)
+    val sortedIndices = nvPairsByIndex.keys.toList.sorted
+    val value = sortedIndices.flatMap{index =>
+      val map = nvPairsByIndex(index).map((n, v) => name+"." + n -> v).toMap
+      bindClass(name, map).value
+    }
+    copy(value = Some(value.asInstanceOf[A]))
+
+  private def bindClass(classname: String, data: Map[String, Any]): Field[A] = {
+    /*
+     * Filter all name-value list that matches 'field.name' + '.'
+     */
+    val xs: Map[String, Any] = data.collect { case (key, value) if key.startsWith(classname + ".") =>
+      key.replace(s"${classname}.", "") -> value
+    }
+    println(s"xs = ${xs}")
+    val newMappings = bindDataToMappings(mappings, xs)
+    bindedFieldsToValue(newMappings, mirrorOpt,
+      (newData, newMappings, newValue, newErrors) =>
+        copy(mappings = newMappings, value = Option(newValue), errors = newErrors))
+  }
+
+  def bindJsValue(jsValue: JsValue): Field[A] =
+    val newValueOpt =  Field.toValueOf[A](tpe, jsValue.asOpt[Any])
+    bindValueToField(newValueOpt)
+
+  def bindValueToField(newValueOpt: Option[A]) : Field[A] =
     newValueOpt match {
       case Some(value: A) =>
         val formErrors = applyConstraints(value)
@@ -247,7 +353,6 @@ case class Field[A](tpe: String,
       case None =>
         copy(value = None)
     }
-  }
 
   override def verifying(newConstraints: Constraint[A]*): Field[A] =
     copy(constraints = constraints ++ newConstraints)
@@ -256,7 +361,6 @@ case class Field[A](tpe: String,
   //Transform should start before the verifying
   inline def transform[B](fn: A => B, fn2: B => A): Field[B] =
     Field.of[B](name).copy(form = this.form)
-
 
 }
 
@@ -326,7 +430,19 @@ inline def indexedSeq[A] = Field.of[IndexedSeq[A]]
 inline def list[A] = Field.of[List[A]]
 @deprecated("Use list[A]", "")
 inline def list[A](a: Field[A]): Field[List[A]] = Field.of[List[A]]
-inline def seq[A] = Field.of[Seq[A]]
+inline def seq[A]: Field[Seq[A]] = Field.of[Seq[A]]
+
+inline def mapping[A](using m: Mirror.ProductOf[A])(
+  nameValueTuple: Tuple.Zip[m.MirroredElemLabels, FieldConstructor[m.MirroredElemTypes]]
+): Field[A] =
+  new Field(tpe = s"C-${m}", mappings = Form.toNamedFieldTuple(nameValueTuple), mirrorOpt = Some(m))
+
+inline def mappingRepeat[A](using m: Mirror.ProductOf[A])(
+  nameValueTuple: Tuple.Zip[m.MirroredElemLabels, FieldConstructor[m.MirroredElemTypes]]
+): Field[Seq[A]] =
+  val aField =  new Field[A](tpe = s"C-$m", mappings = Form.toNamedFieldTuple(nameValueTuple), mirrorOpt = Some(m))
+  new Field[Seq[A]](tpe = s"[C-$m", mappings = aField *: EmptyTuple)
+
 @deprecated("Use seq[A]", "")
 inline def seq[A](a: Field[A]): Field[Seq[A]] = Field.of[Seq[A]]
 inline def set[A] = Field.of[Set[A]]

@@ -45,9 +45,9 @@ object Form {
    * @return - Form[A]
    */
   def mapping[A](using m: Mirror.ProductOf[A])(nameValueTuple: Tuple.Zip[m.MirroredElemLabels, FieldConstructor[m.MirroredElemTypes]]): Form[A] =
-    new Form[A](toNamedFieldTuple(nameValueTuple), mirrorrOpt = Some(m))
+    new Form[A](toNamedFieldTuple(nameValueTuple), mirrorOpt = Some(m))
 
-  private def toNamedFieldTuple(tuple: Tuple): Field[_] *: Tuple =
+  def toNamedFieldTuple(tuple: Tuple): Field[_] *: Tuple =
     tuple.map[[X] =>> Field[_]]([X] => (x: X) =>
       x match
         case (name: String, f: Field[_]) => f.copy(name = name)
@@ -68,18 +68,18 @@ case class Form[T](mappings: Field[_] *: Tuple,
                    errors: Seq[FormError] = Nil,
                    value: Option[T] = None,
                    constraints: Seq[Constraint[T]] = Nil,
-                   mirrorrOpt: Option[scala.deriving.Mirror.ProductOf[T]] = None) extends ConstraintVerifier[Form, T]("", constraints) {
+                   mirrorOpt: Option[scala.deriving.Mirror.ProductOf[T]] = None) extends ConstraintVerifier[Form, T]("", constraints) {
 
   def fill(values: T): Form[T] =
     val bindedFields  = values match {
       case _values: Tuple =>
-        bindValuesToFields(_values)
+        fillValuesToFields(_values)
 
       case caseclass: Product =>
         val tuple = Tuple.fromProduct(caseclass)
-        bindValuesToFields(tuple)
+        fillValuesToFields(tuple)
 
-      case value => bindValuesToFields(Tuple1(value))
+      case value => fillValuesToFields(Tuple1(value))
     }
     val dataMap = bindedFields.toList.collect{
       case f: Field[_] => f.name -> f.value.orNull
@@ -108,65 +108,29 @@ case class Form[T](mappings: Field[_] *: Tuple,
         bind(querydata)
     }
 
-  def bind(data: Map[String, Any]): Form[T] = {
-    val bindedFields = mappings.map[[A] =>> Field[_]] {
-      [X] => (x: X) => x match
-        /*
-         * For Seq[_] field type, the type param can have a square bracket "[" after the key.
-         * e.g. "foo[]", "foo[0]", "foo"
-         */
-        case f: Field[t] if f.tpe.startsWith("[") =>
-          val values = data.getOrElse(f.name,
-            /*
-             * If the data is a array form param, concatenate all values that matches the key.
-             */
-            data.filter(_._1.startsWith(f.name + "[")).values.flatMap{
-              case s: Seq[_] => s
-              case s => Seq(s)
-            }
-          )
-          f.bind(values)
-
-        case f: Field[t] => f.bind(data.get(f.name).orNull)
-    }
-
+  def bind(data: Any): Form[T] = {
+    val bindedFields = bindDataToMappings(mappings, data)
     updateBindedFields(bindedFields)
   }
 
   def bind(js: JsValue, query: Map[String, Any]): Form[T] = {
-    val bindedFields = mappings.map[[A] =>> Field[_]] {
-      [X] => (x: X) => x match
-        case f: Field[t] => f.bind(js \ f.name)
-    }
+    val bindedFields = bindJsValueToMappings(mappings, js, query)
     updateBindedFields(bindedFields)
   }
 
   private def updateBindedFields(newMappings: Field[_] *: Tuple): Form[T] = {
-
-    val newData = newMappings.toList.collect{ case f: Field[_] => f.name -> f.value.orNull }.toMap
-
-    val fieldsErrors =  newMappings.toList.collect{ case f: Field[t] => f.errors }.flatten
-
-    val bindedFieldValues = newMappings.map[[A] =>> Any]{
-      [X] => (x: X) => x match
-        case f: Field[t] => f.value.orNull
-    }
-    
-    val bindedValue: T =
-      // This is to handle Form with single field to return the actual type of the field [T]
-      if newMappings.size == 1 then bindedFieldValues(0).asInstanceOf[T]
-      else mirrorrOpt.map(m => m.fromProduct(bindedFieldValues)).getOrElse(bindedFieldValues.asInstanceOf[T])
-
-    val formConstraintsErrors = applyConstraints(bindedValue)
-
-    copy(data= newData, mappings = newMappings, value = Option(bindedValue), errors = formConstraintsErrors ++ fieldsErrors)
+    bindedFieldsToValue(newMappings, mirrorOpt,
+      (newData, newMappings, newValue, newErrors) =>
+        copy(data= newData, mappings = newMappings, value = Option(newValue), errors = newErrors)
+    )
   }
 
-  private def bindValuesToFields(values: Product): Field[_] *: Tuple = {
+  private def fillValuesToFields(values: Product): Field[_] *: Tuple = {
     val valuesIter = values.productIterator
     val bindedFields = mappings.map[[F] =>> Field[_]](
       [F] => (f: F) => f match {
-        case f: Field[_] => f.bind(valuesIter.nextOption())
+        case f: Field[_] =>
+          f.fill(valuesIter.nextOption())
       })
     bindedFields
   }

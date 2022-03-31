@@ -59,7 +59,6 @@ class FormSuite extends munit.FunSuite {
     assertEquals[Any, Any](bindedForm.data.get("text"), Option("hello"))
     assertEquals[Any, Any](bindedForm.data.get("seq"), Option(Seq(1,2)))
 
-
     assertEquals(bindedForm.value, Option((1L, "hello", Seq(1, 2))))
   }
 
@@ -312,30 +311,5 @@ class FormSuite extends munit.FunSuite {
       }
     )
   }
-
-  // FIXME: This test case has been commented out since there is no implementation to cater for this scenario.
-//  test("bind list[Tuple]"){
-//    case class Address(postalCode: String, country: String)
-//    val form = Form.tuple(
-//      "id" -> longNumber,
-//      "addresses" -> seq(
-//        tuple(
-//          "postalCode" -> text,
-//          "country" -> text,
-//        )
-//      )
-//    )
-//
-//    val bindedForm = form.bind(
-//      Map(
-//        "id" -> Seq("1"),
-//        "address[0].postalCode" -> Seq("123456"),
-//        "address[0].country" -> Seq("Singapore"),
-//      )
-//    )
-//
-//    assertEquals(bindedForm.value, Some((1L, Seq(("123456", "Singapore")))))
-//
-//  }
 
 }
