@@ -52,7 +52,7 @@ object AnnotatedPathMacroSupport {
             successCallback("POST", computedPathExpr)
 
           case (_, mismatchParams) =>
-            report.errorAndAbort(s"Params missing [${mismatchParams.mkString(",")}]", actionExpr)
+            report.errorAndAbort(s"Annotated endpoint has params missing [${mismatchParams.mkString(",")}]", actionExpr)
         }
     }
 
