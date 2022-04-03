@@ -1,6 +1,4 @@
-package com.greenfossil.webserver
-
-import com.greenfossil.webserver.data.*
+package com.greenfossil.commons.data
 
 class BugFormSuite extends munit.FunSuite {
 

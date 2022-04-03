@@ -1,30 +1,30 @@
 TODO 
 ---
 Request
-+ Session and APIs - P1
-+ Flash - P1
++ Session and APIs - P1 - done
++ Flash - P1 - done
 + Parser - Not required
-+ MultiFormData - implementation verification
-+ Request.locale
++ MultiFormData 
++ Request.locale - done
 
 Form (Data)
 ---
 + Form[A], Field - P1 [Done]
 + Form creation - P1 [Done]
 + validation - P1  [Done]
-+ Nested form field
-+ transform
++ Nested form field - done
++ transform 
 + implements the rest of Field supported types e.g Temporal, String etc
-+ implement Field validation error messages
++ implement Field validation error messages - Partial
 + bindFromRequest - binding of numbers can be null (broken)
-HttpErrorHandler
+HttpErrorHandler - done
 ---
 + P1 [DONE - HttpErrorHandler]
 + 
 Routes
 ---
-+ Route declaration - P1
-+ Call / Endpoint - P1
++ Route declaration - P1 - done
++ Call / Endpoint - P1 - done
 
 
 Bootstrap
@@ -39,3 +39,9 @@ Configuration
 Headers
 ---
 + Removed, now is part of Request
+
+[error] 	com.greenfossil.commons.data.FieldTypeSuite
+[error] 	com.greenfossil.commons.data.FormSuite
+[error] 	com.greenfossil.commons.data.FormErrorSuite
+[error] 	com.greenfossil.webserver.FormBindingSuite
+[error] 	com.greenfossil.commons.data.FieldConstraintsSuite

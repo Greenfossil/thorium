@@ -48,12 +48,11 @@ trait Action(fn: Request => HttpResponse | Result | String) extends AnnotatedHtt
     })
     HttpResponse.from(f)
 
-  def endpoint: Endpoint = ???
-
 
 object Action {
 
-  def apply(fn: Request => HttpResponse | Result | String): Action = new Action(fn){}
+  def apply(fn: Request => HttpResponse | Result | String): Action = 
+    new Action(fn){}
 
   //TODO
   def async(fn: Request => Result): Future[Action] =
@@ -86,9 +85,6 @@ def Redirect(url: String, queryString: Map[String, Seq[String]], status: HttpSta
 inline def Redirect[A <: Controller](fn: A => Action): Result =
   Redirect(Endpoint[A](fn))
 
-@deprecated("to remove")
-def Redirect(call: Call): Result =  Redirect(call.url)
-
 /**
  * Inline redirect macro
  * @param action
@@ -108,7 +104,8 @@ def Forbidden[C](body: C)(using w: Writeable[C]): Result =
 def InternalServerError[C](body: C)(using w: Writeable[C]): Result =
   toResult(HttpStatus.INTERNAL_SERVER_ERROR, body)
 
-def Unauthorized[C](body: C)(using w: Writeable[C]): Result = ???
+def Unauthorized[C](body: C)(using w: Writeable[C]): Result = 
+  toResult(HttpStatus.UNAUTHORIZED, body)
 
 private def toResult[C](status: HttpStatus, body: C)(using w: Writeable[C]): Result =
   if /*Redirect*/ status.code() >= 300 && status.code() <= 308

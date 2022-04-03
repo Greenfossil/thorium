@@ -1,8 +1,6 @@
-package com.greenfossil.webserver
+package com.greenfossil.commons.data
 
-class FormRepeatSuite extends munit.FunSuite {
-
-  import com.greenfossil.webserver.data.{*, given}
+class FormNestedFieldsSuite extends munit.FunSuite {
 
   test("bind case-class field") {
     case class Address(postalCode: String, country: String)
@@ -15,11 +13,11 @@ class FormRepeatSuite extends munit.FunSuite {
     )
 
     assertNoDiff(form.apply("id").tpe, "Long")
-    assertNoDiff(form.apply("address").tpe, "C-Address")
+    assertNoDiff(form.apply("address").tpe, "P+Address")
 
-    val bindedForm = form.bind(
+    val bindedForm = form.bind2(
       Map(
-        "id" -> Seq("1"),
+        "id" -> "1",
         "address.postalCode" -> "123456",
         "address.country" -> "Singapore"
       )
@@ -33,18 +31,18 @@ class FormRepeatSuite extends munit.FunSuite {
     case class Address(postalCode: String, country: String)
     val form: Form[(Long, Seq[Address])] = Form.tuple(
       "id" -> longNumber,
-      "address" -> mappingRepeat[Address](
+      "address" -> repeatedMapping[Address](
         "postalCode" -> text,
         "country" -> text
       )
     )
 
     assertNoDiff(form.apply("id").tpe, "Long")
-    assertNoDiff(form.apply("address").tpe, "[C-Address")
+    assertNoDiff(form.apply("address").tpe, "[P+")
 
-    val bindedForm = form.bind(
+    val bindedForm = form.bind2(
       Map(
-        "id" -> Seq("1"),
+        "id" -> "1",
         "address[0].postalCode" -> "123456",
         "address[0].country" -> "Singapore"
       )
@@ -54,7 +52,7 @@ class FormRepeatSuite extends munit.FunSuite {
 
   }
 
-  test("bind tuple field".only) {
+  test("bind tuple field") {
     val form: Form[(Long, (String, String))] = Form.tuple(
       "id" -> longNumber,
       "address" -> tuple(
@@ -64,11 +62,11 @@ class FormRepeatSuite extends munit.FunSuite {
     )
 
     assertNoDiff(form.apply("id").tpe, "Long")
-    assertNoDiff(form.apply("address").tpe, "C-")
+    assertNoDiff(form.apply("address").tpe, "P-")
 
-    val bindedForm = form.bind(
+    val bindedForm = form.bind2(
       Map(
-        "id" -> Seq("1"),
+        "id" -> "1",
         "address.postalCode" -> "123456",
         "address.country" -> "Singapore"
       )
@@ -78,17 +76,17 @@ class FormRepeatSuite extends munit.FunSuite {
 
   }
 
-  test("bind repeat tuple field".only) {
+  test("bind repeat tuple field") {
     val form: Form[(Long, Seq[(String, String)])] = Form.tuple(
       "id" -> longNumber,
-      "address" -> tupleRepeat(
+      "address" -> repeatedTuple(
         "postalCode" -> text,
         "country" -> text
       )
     )
 
     assertNoDiff(form.apply("id").tpe, "Long")
-    assertNoDiff(form.apply("address").tpe, "[C-")
+    assertNoDiff(form.apply("address").tpe, "[P-")
 
     val bindedForm = form.bind(
       Map(

@@ -1,8 +1,6 @@
-package com.greenfossil.webserver
+package com.greenfossil.commons.data
 
 class FormConstraintsSuite extends munit.FunSuite {
-
-  import com.greenfossil.webserver.data.{*, given}
 
   case class UserData(name: String, age: Int)
 
