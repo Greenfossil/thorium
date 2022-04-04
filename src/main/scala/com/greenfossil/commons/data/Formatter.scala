@@ -67,7 +67,7 @@ object Formatter {
   /**
    * Default formatter for the `Char` type.
    */
-  implicit def charFormat: Formatter[Char] = new Formatter[Char] {
+  def charFormat: Formatter[Char] = new Formatter[Char] {
 
     override val tpe: String = "Char"
 
@@ -120,32 +120,32 @@ object Formatter {
   /**
    * Default formatter for the `Long` type.
    */
-  implicit def longFormat: Formatter[Long] = numberFormatter(_.toLong)
+  def longFormat: Formatter[Long] = numberFormatter(_.toLong)
 
   /**
    * Default formatter for the `Int` type.
    */
-  implicit def intFormat: Formatter[Int] = numberFormatter(_.toInt)
+  def intFormat: Formatter[Int] = numberFormatter(_.toInt)
 
   /**
    * Default formatter for the `Short` type.
    */
-  implicit def shortFormat: Formatter[Short] = numberFormatter(_.toShort)
+  def shortFormat: Formatter[Short] = numberFormatter(_.toShort)
 
   /**
    * Default formatter for the `Byte` type.
    */
-  implicit def byteFormat: Formatter[Byte] = numberFormatter(_.toByte)
+  def byteFormat: Formatter[Byte] = numberFormatter(_.toByte)
 
   /**
    * Default formatter for the `Float` type.
    */
-  implicit def floatFormat: Formatter[Float] = numberFormatter(_.toFloat, real = true)
+  def floatFormat: Formatter[Float] = numberFormatter(_.toFloat, real = true)
 
   /**
    * Default formatter for the `Double` type.
    */
-  implicit def doubleFormat: Formatter[Double] = numberFormatter(_.toDouble, real = true)
+  def doubleFormat: Formatter[Double] = numberFormatter(_.toDouble, real = true)
 
   /**
    * Default formatter for the `BigDecimal` type.
@@ -203,7 +203,7 @@ object Formatter {
   /**
    * Default formatter for the `Boolean` type.
    */
-  implicit def booleanFormat: Formatter[Boolean] = new Formatter[Boolean] {
+  def booleanFormat: Formatter[Boolean] = new Formatter[Boolean] {
 
     override val tpe: String = "Boolean"
 
@@ -418,7 +418,7 @@ object Formatter {
   /**
    * Default formatter for the `java.util.UUID` type.
    */
-  implicit def uuidFormat: Formatter[UUID] = new Formatter[UUID] {
+  def uuidFormat: Formatter[UUID] = new Formatter[UUID] {
 
 
     override val tpe: String = "java.util.UUID"

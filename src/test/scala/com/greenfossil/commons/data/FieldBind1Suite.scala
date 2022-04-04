@@ -62,7 +62,7 @@ class FieldBind1Suite extends munit.FunSuite {
   }
 
   test("local time"){
-    val now = LocalTime.now() 
+    val now = LocalTime.now()
     val field = Field.of[LocalTime]("field")
     val boundField = field.bind(Map("field" -> now.toString))
     assertEquals(boundField.errors, Nil)
@@ -108,7 +108,7 @@ class FieldBind1Suite extends munit.FunSuite {
   test("sql time stamp"){
     val milli: Long = System.currentTimeMillis()
     val now: java.sql.Timestamp = new java.sql.Timestamp(milli)
-    
+
     val field = Field.of[java.sql.Timestamp]("field")
     val boundField = field.bind(Map("field" -> now.toString))
     assertEquals(boundField.errors, Nil)
@@ -162,7 +162,7 @@ class FieldBind1Suite extends munit.FunSuite {
 
     val field =
       ignored[Long](0L)
-        .copy(name = "field") //Assign a name to the ignore field
+        .name("field") //Assign a name to the ignore field
 
     val boundField = field.bind(Map("field" -> "2"))
     assertEquals(boundField.value, Option(0L))
@@ -171,7 +171,7 @@ class FieldBind1Suite extends munit.FunSuite {
   test("default type"){
     val field  =
       default[String](text, "Foo")
-        .copy(name = "field") // Assigned a name to the default field
+        .name("field") // Assigned a name to the default field
 
     assertEquals(field.value, Option("Foo"))
 
@@ -189,7 +189,7 @@ class FieldBind1Suite extends munit.FunSuite {
   test("checked type"){
     val field: Field[Boolean] =
       checked("Please check this field")
-        .copy(name = "field") //Assign name to field
+        .name("field") //Assign name to field
 
     assertEquals(field.bind(Map("field" -> "true")).value, Option(true))
     assertEquals(field.bind(Map("field" -> "true")).errors.size, 0)
@@ -221,7 +221,7 @@ class FieldBind1Suite extends munit.FunSuite {
     val nowValue = now.format(DateTimeFormatter.ofPattern(format))
     val field =
       localDate(format)
-        .copy(name = "field")
+        .name("field")
 
     val boundField = field.bind(Map("field"-> nowValue))
     assertEquals(boundField.errors, Nil)

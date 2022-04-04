@@ -27,7 +27,7 @@ class FieldBind3Suite extends munit.FunSuite {
     assertEquals(boundField.value, Some(Option(("Hello World!", 123))))
   }
 
-  test("Option[Mapping]".only) {
+  test("Option[Mapping]") {
     case class Contact(name: String, contact: Int)
     val tupleField: Field[Option[Contact]] = optionalMapping[Contact](
       "name" -> Field.of[String],

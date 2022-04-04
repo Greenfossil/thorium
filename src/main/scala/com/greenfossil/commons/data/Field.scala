@@ -10,40 +10,44 @@ import scala.deriving.Mirror
 
 object Field {
 
-  inline def of[A]: Field[A] = new Field(fieldType[A], binder = binderOf[A])
+  inline def of[A]: Field[A] =
+    fieldOf[A]
 
-  inline def of[A](binder: Formatter[A]) : Field[A] = new Field(fieldType[A], binder)
+  inline def of[A](binder: Formatter[A]) : Field[A] =
+    fieldOf[A].binder(binder) //new Field(fieldType[A], binder)
 
-  inline def of[A](name: String): Field[A] = new Field(fieldType[A], binder= binderOf[A], name = name)
+  inline def of[A](name: String): Field[A] =
+    fieldOf[A].name(name)  //new Field(fieldType[A], binder= binderOf[A], name = name)
 
-  inline def of[A](name: String, binder: Formatter[A]): Field[A] = new Field(fieldType[A], binder= binder, name = name)
+  inline def of[A](name: String, binder: Formatter[A]): Field[A] =
+    fieldOf[A].name(name).binder(binder) //new Field(fieldType[A], binder= binder, name = name)
 
   import scala.compiletime.*
 
-  inline def fieldType[A]: String =
+  inline def fieldOf[A]: Field[A] =
     inline erasedValue[A] match {
-      case _: String             => "String"
-      case _: Int                => "Int"
-      case _: Long               => "Long"
-      case _: Double             => "Double"
-      case _: Float              => "Float"
-      case _: Boolean            => "Boolean"
-      case _: LocalDateTime      => "LocalDateTime"
-      case _: LocalDate          => "LocalDate"
-      case _: LocalTime          => "LocalTime"
-      case _: YearMonth          => "YearMonth"
-      case _: java.sql.Timestamp => "SqlTimestamp"
-      case _: java.sql.Date      => "SqlDate"
-      case _: java.util.Date     => "Date"
-      case _: java.util.UUID     => "UUID"
-      case _: Byte               => "Byte"
-      case _: Short              => "Short"
-      case _: BigDecimal         => "BigDecimal"
-      case _: Char               => "Char"
-      case _: Option[a]          => "?" + fieldType[a]
-      case _: Seq[a]             => "[" + fieldType[a]
-      case _: Tuple              => "P-"
-      case _: Product            => "P+" //Product must be tested last
+      case _: String             => ScalarField("String", binder = binderOf[A])
+      case _: Int                => ScalarField("Int", binder = binderOf[A])
+      case _: Long               => ScalarField("Long", binder = binderOf[A])
+      case _: Double             => ScalarField("Double", binder = binderOf[A])
+      case _: Float              => ScalarField("Float", binder = binderOf[A])
+      case _: Boolean            => ScalarField("Boolean", binder = binderOf[A])
+      case _: LocalDateTime      => ScalarField("LocalDateTime", binder = binderOf[A])
+      case _: LocalDate          => ScalarField("LocalDate", binder = binderOf[A])
+      case _: LocalTime          => ScalarField("LocalTime", binder = binderOf[A])
+      case _: YearMonth          => ScalarField("YearMonth", binder = binderOf[A])
+      case _: java.sql.Timestamp => ScalarField("SqlTimestamp", binder = binderOf[A])
+      case _: java.sql.Date      => ScalarField("SqlDate", binder = binderOf[A])
+      case _: java.util.Date     => ScalarField("Date", binder = binderOf[A])
+      case _: java.util.UUID     => ScalarField("UUID", binder = binderOf[A])
+      case _: Byte               => ScalarField("Byte", binder = binderOf[A])
+      case _: Short              => ScalarField("Short", binder = binderOf[A])
+      case _: BigDecimal         => ScalarField("BigDecimal", binder = binderOf[A])
+      case _: Char               => ScalarField("Char", binder = binderOf[A])
+      case _: Option[a]          => OptionField[a]("?", elemField = fieldOf[a]).asInstanceOf[Field[A]] // fieldType[a]
+      case _: Seq[a]             => SeqField[a]("[", elemField = fieldOf[a]).asInstanceOf[Field[A]]  //"[" + fieldType[a]
+      case _: Tuple              => ProductField("P-") // "P-"
+      case _: Product            => ProductField("P+") //"P+" //Product must be tested last
     }
 
   inline def binderOf[A]: Formatter[A] =
@@ -70,64 +74,102 @@ object Field {
 
 }
 
-case class Field[A](tpe: String,
-                    binder: Formatter[A],
-                    form: Form[_] = null,
-                    name: String = null,
-                    constraints:Seq[Constraint[A]] = Nil,
-                    format: Option[(String, Seq[Any])] = None,
-                    errors: Seq[FormError] = Nil,
-                    value: Option[A] = None,
+trait Field[A] extends ConstraintVerifier[Field, A]{
+  val tpe: String
+  val name: String
+  val form: Form[_]
+  val value: Option[A]
+  val errors: Seq[FormError]
 
-                    /*
-                     * these params are meant for use in embedded class use
-                     */
-                    mappings: Field[_] *: Tuple = null,
-                    mirrorOpt: Option[scala.deriving.Mirror.ProductOf[A]] = None) extends ConstraintVerifier[Field, A](name, constraints) {
+  def name(name: String): Field[A]
+  def mappings(mappings: Field[_] *: Tuple, mirror: Mirror.ProductOf[A]): Field[A]
+  def binder(binder: Formatter[A]): Field[A]
+  def bind(data:Map[String, String]): Field[A]
 
-
-  override def toString: String = s"name:$name type:$tpe binder:${if binder != null then binder.tpe else null} value:$value"
-
-  def isOptional: Boolean = tpe.startsWith("?")
-  def isSeq: Boolean = tpe.startsWith("[")
-  def isProduct: Boolean = tpe.startsWith("P")
-
-  def name(name: String): Field[A] = copy(name = name)
-
-  def rawValue: Any = if isOptional then value else value.orNull
-
-  def fill(newValue: A):Field[A] = copy(value = Option(newValue))
-
-  def fill(newValueOpt: Option[?]): Field[A] = copy(value = newValueOpt.asInstanceOf[Option[A]])
-
-  def bind(data:Map[String, String]): Field[A] = {
-    if isProduct then bindToProduct("", data)
-    else if isOptional then bindToOptional("", data)
-    else if isSeq then bindToSeq("", data)
-    else bindUsingPrefix("", data)
-  }
-
-  private def getPathName(prefix: String, name: String): String = {
+  protected def getPathName(prefix: String, name: String): String = {
     (prefix, name) match
       case (prefix, null) => prefix
       case ("", _) => name
       case (_, _) => s"$prefix.$name"
   }
 
+  def bindUsingPrefix(prefix: String, data: Map[String, String]): Field[A]
 
-  def bindUsingPrefix(prefix: String, data: Map[String, String]): Field[A] = {
-    if binder != null
-    then
-      val pathName = getPathName(prefix, name)
-      binder.bind(pathName, data) match {
-        case Left(errors) => copy(errors = errors)
-        case Right(value) =>
-          val errors = applyConstraints(value)
-          copy(value = Option(value), errors = errors)
-      }
-    else
-      bindToProduct(prefix, data)
+  def bindJsValue(jsValue: JsValue): Field[A] = ???
+
+  def fill(newValue: A):Field[A] = ??? //copy(value = Option(newValue))
+
+  def fill(newValueOpt: Option[?]): Field[A] = ???
+
+  override def toString: String = s"name:$name type:$tpe value:$value"
+
+}
+
+case class ScalarField[A](tpe: String,
+                       name: String = null,
+                       form: Form[_] = null,
+                       value: Option[A] = None,
+                       binder: Formatter[A],
+                       constraints:Seq[Constraint[A]] = Nil,
+                       format: Option[(String, Seq[Any])] = None,
+                       errors: Seq[FormError] = Nil) extends Field[A] {
+
+  override def toString: String = s"name:$name type:$tpe binder:${if binder != null then binder.tpe else null} value:$value"
+
+  override def name(name: String): Field[A] = copy(name = name)
+
+  override def binder(binder: Formatter[A]): Field[A] = copy(binder = binder)
+
+  override def mappings(mappings: Field[_] *: Tuple, mirror: Mirror.ProductOf[A]): Field[A] =
+    throw new UnsupportedOperationException("ScalarField does not support mappings")
+
+  override def fill(newValue: A):Field[A] = copy(value = Option(newValue))
+
+  override def fill(newValueOpt: Option[?]): Field[A] = copy(value = newValueOpt.asInstanceOf[Option[A]])
+
+  override def bind(data:Map[String, String]): Field[A] =
+    bindUsingPrefix("", data)
+
+  override def bindUsingPrefix(prefix: String, data: Map[String, String]): Field[A] = {
+    val pathName = getPathName(prefix, name)
+    binder.bind(pathName, data) match {
+      case Left(errors) => copy(errors = errors)
+      case Right(value) =>
+        val errors = applyConstraints(value)
+        copy(value = Option(value), errors = errors)
+    }
   }
+
+  override def bindJsValue(jsValue: JsValue): Field[A] =
+  //    val newValueOpt =  Field.toValueOf[A](tpe, jsValue.asOpt[Any])
+    ???
+
+  override def verifying(newConstraints: Constraint[A]*): Field[A] =
+    copy(constraints = constraints ++ newConstraints)
+
+}
+
+
+case class ProductField[A](tpe: String,
+                           name: String = null,
+                           form: Form[_] = null,
+                           value: Option[A] = null,
+                           constraints:Seq[Constraint[A]] = Nil,
+                           format: Option[(String, Seq[Any])] = None,
+                           errors: Seq[FormError] = Nil,
+                           mappings: Field[_] *: Tuple = null,
+                           mirrorOpt: Option[Mirror.ProductOf[A]] = None) extends Field[A] {
+  override def name(name: String): Field[A] =
+    copy(name = name)
+
+  override def mappings(mappings: Field[_] *: Tuple, mirror: Mirror.ProductOf[A]): Field[A] =
+    copy(mappings = mappings, mirrorOpt = Option(mirror))
+
+  override def binder(binder: Formatter[A]): Field[A] =
+    throw new UnsupportedOperationException("Product field does not support setting of binder")
+
+  override def bind(data: Map[String, String]): Field[A] =
+    bindToProduct("", data)
 
   private def bindToProduct(prefix: String, data: Map[String, String]): Field[A] = {
     val pathName = getPathName(prefix, name)
@@ -142,22 +184,68 @@ case class Field[A](tpe: String,
         copy(mappings = newMappings, value = Option(newValue), errors = newErrors))
   }
 
-  private def bindToIndexedProduct(pathName: String, data: Map[String, String]): Field[A] = {
-    val newMappings =
-      mappings.map[[A] =>> Field[_]]{
-        [X] => (x: X) => x match
-          case f: Field[t] => f.bindUsingPrefix(pathName, data)
-      }
+  override def bindUsingPrefix(prefix: String, data: Map[String, String]): Field[A] =
+    throw new UnsupportedOperationException("Product Field does not support this action")
 
-    bindedFieldsToValue(newMappings, mirrorOpt,
-      (newData, newMappings, newValue, newErrors) =>
-        copy(mappings = newMappings, value = Option(newValue), errors = newErrors))
-  }
+  override def verifying(newConstraints: Constraint[A]*): ProductField[A] =
+    copy(constraints = constraints ++ newConstraints)
+}
 
-  private def bindToOptional(prefix: String, data: Map[String, String]): Field[A] = {
-    val boundField = bindToProduct(prefix, data)
-    copy(value = boundField.value.map(Option(_)).asInstanceOf[Option[A]], errors = boundField.errors)
-  }
+case class OptionField[A](tpe: String,
+                          name: String = null,
+                          form: Form[_] = null,
+                          value: Option[A] = null,
+                          errors: Seq[FormError] = Nil,
+                          elemField: Field[A]) extends Field[A] {
+
+  override def name(name: String): Field[A] =
+    copy(name = name, elemField = elemField.name(name))
+
+  override def mappings(mappings: Field[_] *: Tuple, mirror: Mirror.ProductOf[A]): Field[A] =
+    copy(elemField = elemField.mappings(mappings = mappings, mirror))
+
+  override def binder(binder: Formatter[A]): Field[A] =
+    copy(elemField= elemField.binder(binder))
+
+  override def bind(data: Map[String, String]): Field[A] =
+    val bindedField = elemField.bind(data)
+    copy(value = bindedField.value, errors = bindedField.errors, elemField = bindedField)
+
+  override def bindUsingPrefix(prefix: String, data: Map[String, String]): Field[A] =
+    elemField.bindUsingPrefix(prefix, data)
+
+  override def verifying(error: String, constraintPredicate: A => Boolean): Field[A] =
+    val verifiedField = elemField.verifying(error, constraintPredicate)
+    copy(errors = verifiedField.errors, elemField = verifiedField)
+
+  override val constraints: Seq[Constraint[A]] =
+    elemField.constraints
+
+  override def verifying(newConstraints: Constraint[A]*): Field[A] =
+    elemField.verifying(newConstraints*)
+}
+
+case class SeqField[A](tpe: String,
+                       name: String = null,
+                       form: Form[_] = null,
+                       value: Option[A] = null,
+                       errors: Seq[FormError] = Nil,
+                       elemField: Field[A]) extends Field[A] {
+
+  override def name(name: String): Field[A] =
+    copy(name = name, elemField = elemField.name(name))
+
+  override def mappings(mappings: Field[_] *: Tuple, mirror: Mirror.ProductOf[A]): Field[A] =
+    copy(elemField = elemField.mappings(mappings = mappings, mirror))
+
+  override def binder(binder: Formatter[A]): Field[A] =
+    copy(elemField = elemField.binder(binder))
+
+  override def bind(data: Map[String, String]): Field[A] =
+    bindToSeq("", data)
+
+  override def bindUsingPrefix(prefix: String, data: Map[String, String]): Field[A] =
+    elemField.bindUsingPrefix(prefix, data)
 
   private def bindToSeq(prefix: String, data: Map[String, String]): Field[A] = {
     /*
@@ -179,9 +267,8 @@ case class Field[A](tpe: String,
       }.sortBy(_._1).distinct
 
     val bindedFields: Seq[Field[_]] = sortedIndexKeyTupList.map { (index, key) =>
-      if binder != null
-      then bindUsingPrefix(key, data)
-      else bindToIndexedProduct(key, data)
+      //set elemField as Indexed name []
+      elemField.name(key).bind(data)
     }
 
     val values = bindedFields.collect{case f: Field[_] if f.value.isDefined => f.value.get}
@@ -189,17 +276,9 @@ case class Field[A](tpe: String,
     copy(value = Option(values).asInstanceOf[Option[A]], errors = errors)
   }
 
-  def bindJsValue(jsValue: JsValue): Field[A] =
-//    val newValueOpt =  Field.toValueOf[A](tpe, jsValue.asOpt[Any])
-    ???
-  
+  override val constraints: Seq[Constraint[A]] =
+    elemField.constraints
 
   override def verifying(newConstraints: Constraint[A]*): Field[A] =
-    copy(constraints = constraints ++ newConstraints)
-
-  //If same type, retain all settings, if, if not same all constraints will be dropped
-  //Transform should start before the verifying
-  inline def transform[B](fn: A => B, fn2: B => A): Field[B] =
-    Field.of[B](name).copy(form = this.form)
-
+    elemField.verifying(newConstraints*)
 }

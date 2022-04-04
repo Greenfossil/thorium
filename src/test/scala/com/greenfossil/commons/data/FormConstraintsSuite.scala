@@ -43,10 +43,10 @@ class FormConstraintsSuite extends munit.FunSuite {
         "age"  -> number
       ).verifying("Bad data", userData => true)
 
-    val tuple = Form.tuple(
-      "name" -> text.transform[Int](s => s.toInt, int => int.toString),
+    val tuple:Form[(String, Int)] = Form.tuple(
+      "name" -> text, //FIXME .transform[Int](s => s.toInt, int => int.toString),
       "age"  -> number
-    ).verifying("Bad data", (x: Int, y: Int) => true)
+    ).verifying("Bad data", tuple => true)
 
   }
 

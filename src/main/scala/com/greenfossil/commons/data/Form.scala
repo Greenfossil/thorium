@@ -25,7 +25,8 @@ object Form {
     case t *: ts => Field[t] *: FieldConstructor[ts]
   }
 
-  def apply[A](name: String,  f: Field[A]): Form[A] = new Form[A](mappings = f.copy(name = name) *: EmptyTuple)
+  def apply[A](name: String,  f: Field[A]): Form[A] = 
+    new Form[A](mappings = f.name(name) *: EmptyTuple)
 
   /**
    *
@@ -50,7 +51,7 @@ object Form {
   def toNamedFieldTuple(tuple: Tuple): Field[_] *: Tuple =
     tuple.map[[X] =>> Field[_]]([X] => (x: X) =>
       x match
-        case (name: String, f: Field[_]) => f.copy(name = name)
+        case (name: String, f: Field[_]) => f.name(name)
     ).asInstanceOf[Field[_] *: Tuple]
 
 }
@@ -68,7 +69,9 @@ case class Form[T](mappings: Field[_] *: Tuple,
                    errors: Seq[FormError] = Nil,
                    value: Option[T] = None,
                    constraints: Seq[Constraint[T]] = Nil,
-                   mirrorOpt: Option[scala.deriving.Mirror.ProductOf[T]] = None) extends ConstraintVerifier[Form, T]("", constraints) {
+                   mirrorOpt: Option[scala.deriving.Mirror.ProductOf[T]] = None) extends ConstraintVerifier[Form, T] {
+
+  val name = ""
 
   def fill(values: T): Form[T] =
     val bindedFields  = values match {
@@ -110,8 +113,7 @@ case class Form[T](mappings: Field[_] *: Tuple,
 
   @deprecated("to be removed")
   def bind(data: Any): Form[T] = {
-    val bindedFields = bindDataToMappings(mappings, data)
-    updateBindedFields(bindedFields)
+    ???
   }
   
   def bind2(data: Map[String, String]): Form[T] =
@@ -150,12 +152,13 @@ case class Form[T](mappings: Field[_] *: Tuple,
   }
 
   def apply[A](key: String): Field[A] =
-    mappings
-      .productIterator
-      .find(_.asInstanceOf[Field[A]].name == key)
-      .map(_.asInstanceOf[Field[A]])
-      .getOrElse(Field.of[Nothing].copy(name = key))
-      .asInstanceOf[Field[A]]
+//    mappings
+//      .productIterator
+//      .find(_.asInstanceOf[Field[A]].name == key)
+//      .map(_.asInstanceOf[Field[A]])
+//      .getOrElse(Field.of[Nothing].copy(name = key))
+//      .asInstanceOf[Field[A]]
+    ???
 
   /**
    * Returns `true` if there is an error related to this form.

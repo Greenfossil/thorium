@@ -114,44 +114,30 @@ inline def sqlTimestamp(pattern: String, timeZone: java.util.TimeZone = java.uti
   Field.of[java.sql.Timestamp]
 
 inline def tuple[A <: Tuple](nameValueTuple: A): Field[FieldTypeExtractor[A]] =
-  new Field(tpe = Field.fieldType[A], binder = null, mappings = toNamedFieldTuple(nameValueTuple))
+  Field.of[FieldTypeExtractor[A]].mappings(toNamedFieldTuple(nameValueTuple), null)
 
-inline def mapping[A](using m: Mirror.ProductOf[A])(
-  nameValueTuple: Tuple.Zip[m.MirroredElemLabels, FieldConstructor[m.MirroredElemTypes]]
-): Field[A] =
-  new Field(tpe = Field.fieldType[A] + s"$m", binder = null,  mappings = Form.toNamedFieldTuple(nameValueTuple), mirrorOpt = Some(m))
+inline def mapping[A](using m: Mirror.ProductOf[A])(nameValueTuple: Tuple.Zip[m.MirroredElemLabels, FieldConstructor[m.MirroredElemTypes]]): Field[A] =
+  Field.of[A].mappings(toNamedFieldTuple(nameValueTuple), m)
 
 inline def optional[A] =
-  val elemField = Field.of[A]
-  type B = Option[A]
-  new Field[B](tpe = Field.fieldType[B], null, mappings = elemField *: EmptyTuple)
+  Field.of[Option[A]]
 
-inline def optionalTuple[A <: Tuple](nameValueTuple: A) =
-  val elemField = new Field[A](tpe = Field.fieldType[A], binder = null , mappings = toNamedFieldTuple(nameValueTuple))
-  type B = Option[FieldTypeExtractor[A]]
-  new Field[B](tpe = Field.fieldType[B], binder = null, mappings = elemField *: EmptyTuple)
+inline def optionalTuple[A <: Tuple](nameValueTuple: A): Field[Option[FieldTypeExtractor[A]]] =
+  Field.of[Option[FieldTypeExtractor[A]]].mappings(toNamedFieldTuple(nameValueTuple), null)
 
-inline def optionalMapping[A](using m: Mirror.ProductOf[A])(
-  nameValueTuple: Tuple.Zip[m.MirroredElemLabels, FieldConstructor[m.MirroredElemTypes]]) =
-  val elemField =  new Field[A](tpe = Field.fieldType[A] + s"$m", binder = null, mappings = Form.toNamedFieldTuple(nameValueTuple), mirrorOpt = Some(m))
-  type B = Option[A]
-  new Field[B](tpe = Field.fieldType[B], binder = null, mappings = elemField *: EmptyTuple)
+inline def optionalMapping[A](using m: Mirror.ProductOf[A])(nameValueTuple: Tuple.Zip[m.MirroredElemLabels, FieldConstructor[m.MirroredElemTypes]]) =
+  val elemField = mapping[A](nameValueTuple)
+  OptionField(tpe = "?", elemField = elemField).asInstanceOf[Field[Option[A]]]
 
 inline def seq[A] =
-  val elemField = Field.of[A]
-  type B = Seq[A]
-  new Field[B](tpe = Field.fieldType[B], null, mappings = elemField *: EmptyTuple)
-
-inline def repeatedMapping[A](using m: Mirror.ProductOf[A])(
-  nameValueTuple: Tuple.Zip[m.MirroredElemLabels, FieldConstructor[m.MirroredElemTypes]]) =
-  val elemField =  new Field[A](tpe = Field.fieldType[A] + s"$m", binder = null, mappings = Form.toNamedFieldTuple(nameValueTuple), mirrorOpt = Some(m))
-  type B = Seq[A]
-  new Field[B](tpe = Field.fieldType[B], binder = null, mappings = elemField *: EmptyTuple)
+  Field.of[Seq[A]]
 
 inline def repeatedTuple[A <: Tuple](nameValueTuple: A) =
-  val elemField = new Field[A](tpe = Field.fieldType[A], binder = null, mappings = toNamedFieldTuple(nameValueTuple))
-  type B = Seq[FieldTypeExtractor[A]]
-  new Field[B](Field.fieldType[B], binder = null, mappings = elemField *: EmptyTuple)
+  val elemField = tuple[A](nameValueTuple)
+  SeqField(tpe = "[", elemField = elemField).asInstanceOf[Field[Seq[FieldTypeExtractor[A]]]]
+
+inline def repeatedMapping[A](using m: Mirror.ProductOf[A])(nameValueTuple: Tuple.Zip[m.MirroredElemLabels, FieldConstructor[m.MirroredElemTypes]]) =
+  new SeqField[A](tpe="[", elemField = mapping[A](nameValueTuple)).asInstanceOf[Field[Seq[A]]]
 
 inline def uuid =
   Field.of[java.util.UUID]
