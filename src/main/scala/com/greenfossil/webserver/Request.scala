@@ -10,6 +10,7 @@ import java.net.SocketAddress
 import java.time.ZoneId
 import java.util.Locale.LanguageRange
 import java.util.concurrent.CompletableFuture
+import java.util.stream.Collectors
 import java.util.{Base64, Locale}
 import scala.util.Try
 
@@ -33,6 +34,14 @@ trait Request(val requestContext: ServiceRequestContext, val aggregatedHttpReque
 
   def queryParams: QueryParams = requestContext.queryParams()
 
+  import scala.jdk.CollectionConverters.*
+  def queryParamsList: List[(String, String)] = 
+    queryParams.stream()
+      .map(e => e.getKey -> e.getValue)
+      .collect(Collectors.toList[(String, String)])
+      .asScala
+      .toList
+  
   def remoteAddress[A <: java.net.SocketAddress]: A = requestContext.remoteAddress()
 
   def uri: java.net.URI  /*String*/ = aggregatedHttpRequest.uri()
@@ -46,8 +55,8 @@ trait Request(val requestContext: ServiceRequestContext, val aggregatedHttpReque
   def getHeader(name: String): Option[String] = Option(headers.get(name))
 
   //https://www.javatips.net/api/java.util.locale.languagerange
-  import scala.jdk.CollectionConverters.*
-  def acceptLanguages: Seq[LanguageRange] = aggregatedHttpRequest.acceptLanguages().asScala.toSeq
+  def acceptLanguages: Seq[LanguageRange] = 
+    aggregatedHttpRequest.acceptLanguages().asScala.toSeq
 
   def cookies: Set[Cookie] =
     aggregatedHttpRequest.headers().cookies().asInstanceOf[java.util.Set[Cookie]].asScala.toSet

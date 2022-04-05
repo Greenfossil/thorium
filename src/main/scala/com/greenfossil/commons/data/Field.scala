@@ -44,7 +44,7 @@ object Field {
       case _: Short              => ScalarField("Short", binder = binderOf[A])
       case _: BigDecimal         => ScalarField("BigDecimal", binder = binderOf[A])
       case _: Char               => ScalarField("Char", binder = binderOf[A])
-      case _: Option[a]          => OptionField[a]("?", elemField = fieldOf[a]).asInstanceOf[Field[A]] // fieldType[a]
+      case _: Option[a]          => OptionalField[a]("?", elemField = fieldOf[a]).asInstanceOf[Field[A]] // fieldType[a]
       case _: Seq[a]             => SeqField[a]("[", elemField = fieldOf[a]).asInstanceOf[Field[A]]  //"[" + fieldType[a]
       case _: Tuple              => ProductField("P-") // "P-"
       case _: Product            => ProductField("P+") //"P+" //Product must be tested last
@@ -82,9 +82,16 @@ trait Field[A] extends ConstraintVerifier[Field, A]{
   val errors: Seq[FormError]
 
   def name(name: String): Field[A]
+
   def mappings(mappings: Field[_] *: Tuple, mirror: Mirror.ProductOf[A]): Field[A]
+
   def binder(binder: Formatter[A]): Field[A]
+
   def bind(data:Map[String, String]): Field[A]
+
+  def fill(newValue: A):Field[A] = fill(Option(newValue))
+
+  def fill(newValueOpt: Option[A]): Field[A]
 
   protected def getPathName(prefix: String, name: String): String = {
     (prefix, name) match
@@ -96,10 +103,6 @@ trait Field[A] extends ConstraintVerifier[Field, A]{
   def bindUsingPrefix(prefix: String, data: Map[String, String]): Field[A]
 
   def bindJsValue(jsValue: JsValue): Field[A] = ???
-
-  def fill(newValue: A):Field[A] = ??? //copy(value = Option(newValue))
-
-  def fill(newValueOpt: Option[?]): Field[A] = ???
 
   override def toString: String = s"name:$name type:$tpe value:$value"
 
@@ -123,9 +126,11 @@ case class ScalarField[A](tpe: String,
   override def mappings(mappings: Field[_] *: Tuple, mirror: Mirror.ProductOf[A]): Field[A] =
     throw new UnsupportedOperationException("ScalarField does not support mappings")
 
-  override def fill(newValue: A):Field[A] = copy(value = Option(newValue))
-
-  override def fill(newValueOpt: Option[?]): Field[A] = copy(value = newValueOpt.asInstanceOf[Option[A]])
+  override def fill(newValueOpt: Option[A]): Field[A] =
+    require(newValueOpt != null, "value cannot be null")
+    newValueOpt.fold(this){newValue =>
+      copy(value = newValueOpt, errors = applyConstraints(newValue))
+    }
 
   override def bind(data:Map[String, String]): Field[A] =
     bindUsingPrefix("", data)
@@ -148,7 +153,6 @@ case class ScalarField[A](tpe: String,
     copy(constraints = constraints ++ newConstraints)
 
 }
-
 
 case class ProductField[A](tpe: String,
                            name: String = null,
@@ -187,18 +191,23 @@ case class ProductField[A](tpe: String,
   override def bindUsingPrefix(prefix: String, data: Map[String, String]): Field[A] =
     throw new UnsupportedOperationException("Product Field does not support this action")
 
+  override def fill(newValueOpt: Option[A]): Field[A] =
+    newValueOpt.fold(this)(newValue =>
+      copy(value = newValueOpt, errors = applyConstraints(newValue))
+    )
+
   override def verifying(newConstraints: Constraint[A]*): ProductField[A] =
     copy(constraints = constraints ++ newConstraints)
 }
 
-case class OptionField[A](tpe: String,
-                          name: String = null,
-                          form: Form[_] = null,
-                          value: Option[A] = null,
-                          errors: Seq[FormError] = Nil,
-                          elemField: Field[A]) extends Field[A] {
+case class OptionalField[A](tpe: String,
+                            name: String = null,
+                            form: Form[_] = null,
+                            value: Option[A] = null,
+                            errors: Seq[FormError] = Nil,
+                            elemField: Field[A]) extends Field[A] {
 
-  override def name(name: String): Field[A] =
+  override def name(name: String): OptionalField[A] =
     copy(name = name, elemField = elemField.name(name))
 
   override def mappings(mappings: Field[_] *: Tuple, mirror: Mirror.ProductOf[A]): Field[A] =
@@ -217,6 +226,10 @@ case class OptionField[A](tpe: String,
   override def verifying(error: String, constraintPredicate: A => Boolean): Field[A] =
     val verifiedField = elemField.verifying(error, constraintPredicate)
     copy(errors = verifiedField.errors, elemField = verifiedField)
+
+  override def fill(newValueOpt: Option[A]): Field[A] =
+    val filledField = elemField.fill(newValueOpt)
+    copy(value = elemField.value , elemField = filledField, errors = filledField.errors)
 
   override val constraints: Seq[Constraint[A]] =
     elemField.constraints
@@ -281,4 +294,10 @@ case class SeqField[A](tpe: String,
 
   override def verifying(newConstraints: Constraint[A]*): Field[A] =
     elemField.verifying(newConstraints*)
+
+  override def fill(newValueOpt: Option[A]): Field[A] =
+    val filledField = elemField.fill(newValueOpt)
+    copy(value = filledField.value, errors = filledField.errors)
+
+  def fill(newValues: A*): Field[A] = ???
 }

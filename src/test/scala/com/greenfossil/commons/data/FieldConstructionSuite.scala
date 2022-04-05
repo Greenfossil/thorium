@@ -48,19 +48,19 @@ class FieldConstructionSuite extends munit.FunSuite{
    *  check optional scalar
    */
 
-  checkOptional("Int", Field.of[Option[Int]])
+  checkOptional("Int", optional[Int])
 
   /**
    * check optional tuple
    */
 
-  val optTuple: Field[Option[(String, Int)]] = optionalTuple(
+  val optTuple: OptionalField[(String, Int)] = optionalTuple(
     "f1" -> Field.of[String],
     "f2" -> Field.of[Int]
   )
   checkOptional("P-", optTuple)
 
-  val tupleElemField = optTuple.asInstanceOf[OptionField[_]].elemField
+  val tupleElemField = optTuple.asInstanceOf[OptionalField[_]].elemField
   checkTuple("", tupleElemField, "String", "Int")
 
   /**
@@ -72,7 +72,7 @@ class FieldConstructionSuite extends munit.FunSuite{
   )
   checkOptional("P+", optMapping)
 
-  val mappingElemField = optMapping.asInstanceOf[OptionField[?]].elemField
+  val mappingElemField = optMapping.asInstanceOf[OptionalField[?]].elemField
   checkMapping("", mappingElemField,"Address", "String", "Int" )
 
   /**
@@ -144,10 +144,8 @@ class FieldConstructionSuite extends munit.FunSuite{
     }
   }
 
-  def checkOptional(elemTypeName: String, f: Field[?])(using munit.Location): Unit =  {
+  def checkOptional(elemTypeName: String, optF: OptionalField[?])(using munit.Location): Unit =  {
     test(s"Option[${elemTypeName}]"){
-      assert(f.isInstanceOf[OptionField[?]], s"Field is not an OptionField $elemTypeName")
-      val optF = f.asInstanceOf[OptionField[?]]
       assertNoDiff(optF.tpe, "?")
       assertNoDiff(optF.elemField.tpe, elemTypeName)
     }

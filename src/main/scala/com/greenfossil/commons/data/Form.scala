@@ -124,7 +124,7 @@ case class Form[T](mappings: Field[_] *: Tuple,
         }
     updateBindedFields(bindedFields)
 
-  def bind(js: JsValue, query: Map[String, Any]): Form[T] = {
+  def bind(js: JsValue, query: List[(String, String)]): Form[T] = {
     val bindedFields = bindJsValueToMappings(mappings, js, query)
     updateBindedFields(bindedFields)
   }
@@ -140,8 +140,8 @@ case class Form[T](mappings: Field[_] *: Tuple,
     val valuesIter = values.productIterator
     val bindedFields = mappings.map[[F] =>> Field[_]](
       [F] => (f: F) => f match {
-        case f: Field[_] =>
-          f.fill(valuesIter.nextOption())
+        case f: Field[a] =>
+          f.fill(valuesIter.nextOption().asInstanceOf[Option[a]])
       })
     bindedFields
   }
@@ -152,13 +152,10 @@ case class Form[T](mappings: Field[_] *: Tuple,
   }
 
   def apply[A](key: String): Field[A] =
-//    mappings
-//      .productIterator
-//      .find(_.asInstanceOf[Field[A]].name == key)
-//      .map(_.asInstanceOf[Field[A]])
-//      .getOrElse(Field.of[Nothing].copy(name = key))
-//      .asInstanceOf[Field[A]]
-    ???
+    mappings
+      .toList
+      .collectFirst{case f : Field[A]  if f.name == key => f}
+      .orNull
 
   /**
    * Returns `true` if there is an error related to this form.

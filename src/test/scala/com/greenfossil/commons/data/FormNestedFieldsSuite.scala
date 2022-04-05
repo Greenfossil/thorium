@@ -13,7 +13,7 @@ class FormNestedFieldsSuite extends munit.FunSuite {
     )
 
     assertNoDiff(form.apply("id").tpe, "Long")
-    assertNoDiff(form.apply("address").tpe, "P+Address")
+    assertNoDiff(form.apply("address").tpe, "P+")
 
     val bindedForm = form.bind2(
       Map(
@@ -38,7 +38,7 @@ class FormNestedFieldsSuite extends munit.FunSuite {
     )
 
     assertNoDiff(form.apply("id").tpe, "Long")
-    assertNoDiff(form.apply("address").tpe, "[P+")
+    assertNoDiff(form.apply("address").tpe, "[")
 
     val bindedForm = form.bind2(
       Map(
@@ -86,11 +86,11 @@ class FormNestedFieldsSuite extends munit.FunSuite {
     )
 
     assertNoDiff(form.apply("id").tpe, "Long")
-    assertNoDiff(form.apply("address").tpe, "[P-")
+    assertNoDiff(form.apply("address").tpe, "[")
 
-    val bindedForm = form.bind(
+    val bindedForm = form.bind2(
       Map(
-        "id" -> Seq("1"),
+        "id" -> "1",
         "address[0].postalCode" -> "123456",
         "address[0].country" -> "Singapore"
       )

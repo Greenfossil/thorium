@@ -119,15 +119,21 @@ inline def tuple[A <: Tuple](nameValueTuple: A): Field[FieldTypeExtractor[A]] =
 inline def mapping[A](using m: Mirror.ProductOf[A])(nameValueTuple: Tuple.Zip[m.MirroredElemLabels, FieldConstructor[m.MirroredElemTypes]]): Field[A] =
   Field.of[A].mappings(toNamedFieldTuple(nameValueTuple), m)
 
-inline def optional[A] =
-  Field.of[Option[A]]
+inline def optional[A]: OptionalField[A] =
+  Field.of[Option[A]].asInstanceOf[OptionalField[A]]
 
-inline def optionalTuple[A <: Tuple](nameValueTuple: A): Field[Option[FieldTypeExtractor[A]]] =
-  Field.of[Option[FieldTypeExtractor[A]]].mappings(toNamedFieldTuple(nameValueTuple), null)
+inline def optional[A](field: Field[A]): OptionalField[A] =
+  OptionalField[A]("?", elemField = field)
 
-inline def optionalMapping[A](using m: Mirror.ProductOf[A])(nameValueTuple: Tuple.Zip[m.MirroredElemLabels, FieldConstructor[m.MirroredElemTypes]]) =
+inline def optionalTuple[A <: Tuple](nameValueTuple: A): OptionalField[FieldTypeExtractor[A]] =
+  Field.of[Option[FieldTypeExtractor[A]]]
+    .mappings(toNamedFieldTuple(nameValueTuple), null)
+    .asInstanceOf[OptionalField[FieldTypeExtractor[A]]]
+
+inline def optionalMapping[A](using m: Mirror.ProductOf[A])
+                             (nameValueTuple: Tuple.Zip[m.MirroredElemLabels, FieldConstructor[m.MirroredElemTypes]]): OptionalField[A] =
   val elemField = mapping[A](nameValueTuple)
-  OptionField(tpe = "?", elemField = elemField).asInstanceOf[Field[Option[A]]]
+  OptionalField(tpe = "?", elemField = elemField).asInstanceOf[OptionalField[A]]
 
 inline def seq[A] =
   Field.of[Seq[A]]

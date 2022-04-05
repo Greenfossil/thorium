@@ -30,7 +30,7 @@ class FieldModifierSuite extends munit.FunSuite{
     val f1 =
       Field.of[Option[Int]]
         .name("f1")
-        .asInstanceOf[OptionField[Int]]
+        .asInstanceOf[OptionalField[Int]]
 
     assertNoDiff(f1.name, "f1")
     assertNoDiff(f1.elemField.name, "f1")

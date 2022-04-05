@@ -6,36 +6,37 @@ package com.greenfossil.commons.data
 class FieldBind3Suite extends munit.FunSuite {
 
   test("Option[Int]") {
-    val optIntField: Field[Option[Int]] =  optional[Int].name("optInt")
+    val optIntField: OptionalField[Int] =  optional[Int].name("optInt")
+    optIntField.fill(None)
     val boundField = optIntField.bind(Map("optInt" -> "1"))
-    assertEquals(boundField.value, Some(Option(1)))
+    assertEquals(boundField.value, Option(1))
   }
 
   test("Option[String]") {
     val optIntField = optional[String].name("optString")
     val boundField = optIntField.bind(Map("optString" -> "Hello World!"))
-    assertEquals(boundField.value, Some(Option("Hello World!")))
+    assertEquals(boundField.value, Option("Hello World!"))
   }
 
   test("Option[Tuple]") {
-    val tupleField: Field[Option[(String, Int)]] = optionalTuple(
+    val tupleField: OptionalField[(String, Int)] = optionalTuple(
       "name" -> Field.of[String],
       "contact" -> Field.of[Int]
     ).name("tupleField")
 
     val boundField = tupleField.bind(Map("tupleField.name" -> "Hello World!", "tupleField.contact" -> "123"))
-    assertEquals(boundField.value, Some(Option(("Hello World!", 123))))
+    assertEquals(boundField.value, Option(("Hello World!", 123)))
   }
 
   test("Option[Mapping]") {
     case class Contact(name: String, contact: Int)
-    val tupleField: Field[Option[Contact]] = optionalMapping[Contact](
+    val tupleField: OptionalField[Contact] = optionalMapping[Contact](
       "name" -> Field.of[String],
       "contact" -> Field.of[Int]
     ).name("tupleField")
 
     val boundField = tupleField.bind(Map("tupleField.name" -> "Hello World!", "tupleField.contact" -> "123"))
-    assertEquals(boundField.value, Some(Option(Contact("Hello World!", 123))))
+    assertEquals(boundField.value, Option(Contact("Hello World!", 123)))
   }
 
 }
