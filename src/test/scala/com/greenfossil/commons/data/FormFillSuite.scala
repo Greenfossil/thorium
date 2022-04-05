@@ -49,7 +49,7 @@ class FormFillSuite extends munit.FunSuite {
     assertEquals(filledForm[LocalDate]("birthday").value, Some(LocalDate.parse("1990-01-01")))
   }
 
-  test("bind as JSON".fail){
+  test("bind as JSON"){
     val form = Form.tuple(
       "name" -> text,
       "age" -> number,
@@ -64,7 +64,7 @@ class FormFillSuite extends munit.FunSuite {
       "remaining" -> 100.00, "birthday" -> LocalDate.parse("1990-01-01")
     )
 
-    val bindedForm = form.bind(jsonObject, Map.empty)
+    val bindedForm = form.bind(jsonObject)
     assertEquals[Any, Any](bindedForm.data.get("name"), Some("Homer"))
     assertEquals[Any, Any](bindedForm.data.get("age"), Some(50))
     assertEquals[Any, Any](bindedForm.data.get("isActive"), Some(true))
@@ -129,7 +129,7 @@ class FormFillSuite extends munit.FunSuite {
     assertEquals[Any, Any](filledForm.data.get("xs"), Some(Seq(1L, 2L)))
   }
 
-  test("valid default, checked type".fail){
+  test("valid default, checked type"){
     val form: Form[(String, Boolean)] = Form.tuple(
       "s" ->  default(text, "Foo"),
       "xs" -> checked("this should be checked")
@@ -139,7 +139,7 @@ class FormFillSuite extends munit.FunSuite {
       "xs" -> "true",
     )
 
-    val filledForm = form.bind2(data)
+    val filledForm = form.bind(data)
     filledForm.fold(
       errorForm=> fail("should not have errors"),
       data=> {

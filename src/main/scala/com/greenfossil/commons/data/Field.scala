@@ -102,7 +102,7 @@ trait Field[A] extends ConstraintVerifier[Field, A]{
 
   def bindUsingPrefix(prefix: String, data: Map[String, String]): Field[A]
 
-  def bindJsValue(jsValue: JsValue): Field[A] = ???
+  def bindJsValue(jsValue: JsValue): Field[A]
 
   override def toString: String = s"name:$name type:$tpe value:$value"
 
@@ -146,8 +146,12 @@ case class ScalarField[A](tpe: String,
   }
 
   override def bindJsValue(jsValue: JsValue): Field[A] =
-  //    val newValueOpt =  Field.toValueOf[A](tpe, jsValue.asOpt[Any])
-    ???
+    (jsValue \ name).asOpt[Any] match {
+      case Some(value) =>
+        bind(Map(name -> value.toString))
+      case None =>
+        bind(Map.empty)
+    }
 
   override def verifying(newConstraints: Constraint[A]*): Field[A] =
     copy(constraints = constraints ++ newConstraints)
@@ -198,6 +202,14 @@ case class ProductField[A](tpe: String,
 
   override def verifying(newConstraints: Constraint[A]*): ProductField[A] =
     copy(constraints = constraints ++ newConstraints)
+
+  //FIXME - need a test case and implement code
+  override def bindJsValue(jsValue: JsValue): Field[A] =
+    (jsValue \ name).asOpt[Map[String, Any]] match {
+      case Some(value) =>
+        ???
+      case None => bindToProduct("", Map.empty)
+    }
 }
 
 case class OptionalField[A](tpe: String,
@@ -236,6 +248,13 @@ case class OptionalField[A](tpe: String,
 
   override def verifying(newConstraints: Constraint[A]*): Field[A] =
     elemField.verifying(newConstraints*)
+
+  override def bindJsValue(jsValue: JsValue): Field[A] =
+    (jsValue \ name).asOpt[Any] match {
+      case Some(value) => bind(Map(name -> value.toString))
+      case None => bind(Map.empty)
+    }
+
 }
 
 case class SeqField[A](tpe: String,
@@ -300,4 +319,13 @@ case class SeqField[A](tpe: String,
     copy(value = filledField.value, errors = filledField.errors)
 
   def fill(newValues: A*): Field[A] = ???
+
+  override def bindJsValue(jsValue: JsValue): Field[A] =
+    (jsValue \ name).asOpt[Seq[Any]] match {
+      case Some(xs) =>
+        val map =  xs.zipWithIndex.map(x => s"$name[${x._2}]" -> x._1.toString).toMap
+        bindToSeq("", map)
+      case None =>
+        bindToSeq("", Map.empty)
+    }
 }

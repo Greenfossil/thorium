@@ -69,7 +69,7 @@ trait ConstraintVerifier[T[_], V] {
   def bindJsValueToMappings(mappings: Field[_] *: Tuple, js: JsValue, query: List[(String, String)]): Field[_] *: Tuple =
     mappings.map[[A] =>> Field[_]] {
       [X] => (x: X) => x match
-        case f: Field[t] => f.bindJsValue(js \ f.name)
+        case f: Field[t] => f.bindJsValue(js)
     }
 
 }

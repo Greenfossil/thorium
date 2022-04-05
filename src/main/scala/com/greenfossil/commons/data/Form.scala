@@ -91,15 +91,15 @@ case class Form[T](mappings: Field[_] *: Tuple,
     copy(mappings = bindedFields, value = Option(values), data = dataMap)
 
   def bindFromRequest()(using request: com.greenfossil.webserver.Request): Form[T] =
-    val querydata: Map[String, Seq[String]] =
+    val querydata: List[(String, String)] =
       request.method() match {
-        case HttpMethod.POST | HttpMethod.PUT | HttpMethod.PATCH => Map.empty
-        case _ => Map.empty //FIXME - request.queryString
+        case HttpMethod.POST | HttpMethod.PUT | HttpMethod.PATCH => Nil
+        case _ => request.queryParamsList
       }
     // FIXME improve the validation
     request match {
       case req if req.asFormUrlEncoded.nonEmpty =>
-        bind(req.asFormUrlEncoded ++ querydata)
+        bind(req.asFormUrlEncoded, querydata)
 
 //      case req if req.asMultipartFormData.bodyPart.nonEmpty =>
 //        bind(req.asMultipartFormData.asFormUrlEncoded ++ querydata)
@@ -108,15 +108,14 @@ case class Form[T](mappings: Field[_] *: Tuple,
         bind(req.asJson, querydata)
 
       case req =>
-        bind(querydata)
+        ???
     }
 
-  @deprecated("to be removed")
-  def bind(data: Any): Form[T] = {
+  def bind(data: Map[String, Seq[String]], queryData: List[(String, String)]): Form[T] =
+    val list = data.collect{case (key, xs) =>  xs.map( key -> _) }.flatten.toList
     ???
-  }
-  
-  def bind2(data: Map[String, String]): Form[T] =
+
+  def bind(data: Map[String, String]): Form[T] =
     val bindedFields = 
         mappings.map[[A] =>> Field[_]]{
           [X] => (x: X) => x match
@@ -124,7 +123,7 @@ case class Form[T](mappings: Field[_] *: Tuple,
         }
     updateBindedFields(bindedFields)
 
-  def bind(js: JsValue, query: List[(String, String)]): Form[T] = {
+  def bind(js: JsValue, query: List[(String, String)] = Nil): Form[T] = {
     val bindedFields = bindJsValueToMappings(mappings, js, query)
     updateBindedFields(bindedFields)
   }
