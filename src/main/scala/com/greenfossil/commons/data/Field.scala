@@ -7,6 +7,7 @@ import com.greenfossil.webserver.data.Form.{FieldConstructor, FieldTypeExtractor
 
 import java.time.*
 import scala.deriving.Mirror
+import scala.deriving.Mirror.ProductOf
 
 object Field {
 
@@ -103,6 +104,9 @@ trait Field[A] extends ConstraintVerifier[Field, A]{
   def bindUsingPrefix(prefix: String, data: Map[String, String]): Field[A]
 
   def bindJsValue(jsValue: JsValue): Field[A]
+
+  def transform[B](fn: A => B): Field[B] =
+    MappingField(tpe = "#", delegate = this, delegateMapping = fn)
 
   override def toString: String = s"name:$name type:$tpe value:$value"
 
@@ -328,4 +332,46 @@ case class SeqField[A](tpe: String,
       case None =>
         bindToSeq("", Map.empty)
     }
+}
+
+case class MappingField[A, B](tpe: String,
+                              name: String = null,
+                              form: Form[_] = null,
+                              value: Option[B] = None,
+                              errors: Seq[FormError] = Nil,
+                              constraints: Seq[Constraint[B]] = Nil,
+                              mappings: Field[_] *: Tuple = null,
+                              mirrorOpt: Option[Mirror.ProductOf[A]] = None,
+                              delegate: Field[A],
+                              delegateMapping: A => B) extends Field[B] {
+
+  override def name(name: String): Field[B] =
+    copy(name = name, delegate = delegate.name(name))
+
+  override def mappings(mappings: Field[_] *: Tuple, mirror: ProductOf[B]): Field[B] =
+    ???
+
+  override def binder(binder: Formatter[B]): Field[B] =
+    ???
+
+  override def bind(data: Map[String, String]): Field[B] =
+    val bindedDelegate = delegate.bind(data)
+    val _value = bindedDelegate.value.map(v => delegateMapping(v)).orElse(value)
+    val _errors = _value.map(v => applyConstraints(v)).getOrElse(Nil)
+    copy(value =  _value , errors =_errors)
+
+  override def fill(newValueOpt: Option[B]): Field[B] =
+    val filledDelegate = newValueOpt.map(v => delegate.fill(v.asInstanceOf[A]))
+    val _value = filledDelegate.flatMap(f => f.value.map(delegateMapping)).orElse(value)
+    val _errors = _value.map(v => applyConstraints(v)).getOrElse(Nil)
+    copy(value =  _value , errors =_errors)
+
+  override def bindUsingPrefix(prefix: String, data: Map[String, String]): Field[B] =
+    ???
+
+  override def bindJsValue(jsValue: JsValue): Field[B] =
+    ???
+
+  override def verifying(newConstraints: Constraint[B]*): Field[B] =
+    copy(constraints = newConstraints)
 }

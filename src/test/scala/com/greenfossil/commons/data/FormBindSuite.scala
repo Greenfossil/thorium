@@ -174,12 +174,13 @@ class FormBindSuite extends munit.FunSuite {
       "s" ->  default(text, "Foo"),
       "xs" -> checked("this should be checked")
     )
-    val data = Map("xs" -> "true")
+    val data = Map("s" -> "Bar", "xs" -> "true")
 
     val bindedForm = form.bind(data)
     bindedForm.fold(
-      errorForm=> assertEquals(errorForm.errors.size, 1),
-      data=> fail("Should not give invalid data")
+      errorForm=> fail("Should not have error"),
+      data=>
+        assertEquals(data, ("Bar", true))
     )
   }
 
@@ -197,7 +198,6 @@ class FormBindSuite extends munit.FunSuite {
     bindedForm.fold(
       errorForm=> fail("should not have errors"),
       data=> {
-        println(s"data = ${data}")
         assertEquals(data, ("Foo", true))
       }
     )

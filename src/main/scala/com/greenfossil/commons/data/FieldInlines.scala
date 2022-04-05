@@ -55,11 +55,13 @@ inline def char =
 inline def text:Field[String] =
   Field.of[String]
 
-inline def text(minLength: Int, maxLength: Int, trim: Boolean): Field[String] = (minLength, maxLength)  match {
-  case (min, Int.MaxValue) => text.verifying(Constraints.minLength(min))
-  case (0, max)            => text.verifying(Constraints.maxLength(max))
-  case (min, max)          => text.verifying(Constraints.minLength(min), Constraints.maxLength(max))
-}
+inline def text(minLength: Int, maxLength: Int, trim: Boolean): Field[String] = 
+  val _text = if trim then text.transform[String](_.trim) else text
+  (minLength, maxLength)  match {
+    case (min, Int.MaxValue) => _text.transform[String](_.trim).verifying(Constraints.minLength(min))
+    case (0, max)            => _text.verifying(Constraints.maxLength(max))
+    case (min, max)          => _text.verifying(Constraints.minLength(min), Constraints.maxLength(max))
+  }
 
 inline def nonEmptyText =
   Field.of[String].verifying(Constraints.nonEmpty)
@@ -152,7 +154,7 @@ inline def checked(msg: String) =
   Field.of[Boolean].verifying(msg, _ == true)
 
 inline def default[A](mapping: Field[A], value: A): Field[A] =
-  ???
+  MappingField[A, A](tpe = "#", value = Option(value), delegate =  mapping, a => Option(a).getOrElse(value))
 
 inline def ignored[A](value: A): Field[A] =
   Field.of[A](binder = Formatter.ignoredFormat(value))

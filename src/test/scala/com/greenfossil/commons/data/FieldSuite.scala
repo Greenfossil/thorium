@@ -9,12 +9,13 @@ class FieldSuite extends munit.FunSuite {
     assertNoDiff(boundField.errors.head.messages.head , "Int must be greater than 10")
   }
 
-//  test("transform".fail) {
-//    val f1 = Field.of[Int]("f1")
-//      .transform[Int](_ * 2, _ * 2)
-//      .verifying("X must be 8", x => x == 8)
-//    val boundField = f1.bind(4)
-//    assert(boundField.errors.isEmpty)
-//  }
+  test("transform") {
+    val f1 = Field.of[Int]("f1")
+      .transform[Int](_ * 2)
+      .verifying("X must be 8", x => x == 8)
+    val bindedField = f1.bind(Map("f1" -> "4"))
+    assertEquals(bindedField.value, Some(8))
+    assert(bindedField.errors.isEmpty)
+  }
 
 }

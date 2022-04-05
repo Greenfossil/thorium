@@ -152,8 +152,7 @@ class FieldFillSuite extends munit.FunSuite {
     assertEquals(filledField.errors, Nil)
     assertEquals(filledField.value, Some(value))
   }
-
-
+  
   test("ignored"){
 
     val field =
