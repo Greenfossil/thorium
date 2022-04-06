@@ -30,11 +30,10 @@ trait ConstraintVerifier[T[_], V] {
     })
 
   def applyConstraints(value: V): Seq[FormError] = {
-    val xs = constraints
+    constraints
       .map(_.apply(value))
       .collect{case Invalid(ve) => ve}
-
-    xs.flatten
+      .flatten
       .map(ve => FormError(name, ve.messages, ve.args))
   }
 
@@ -44,13 +43,13 @@ trait ConstraintVerifier[T[_], V] {
                            fn: (Map[String, Any],  Field[_] *: Tuple, V, Seq[FormError]) => T[V]
                          ): T[V] =
 
-    val newData: Map[String, Any] = newMappings.toList.collect{ case f: Field[_] => f.name -> f.value.orNull }.toMap
+    val newData: Map[String, Any] = newMappings.toList.collect{ case f: Field[_] => f.name -> f.safeValue }.toMap
 
     val fieldsErrors: List[FormError] =  newMappings.toList.collect{ case f: Field[t] => f.errors }.flatten
 
     val bindedFieldValues: Any *: Tuple = newMappings.map[[A] =>> Any]{
       [X] => (x: X) => x match
-        case f: Field[t] => f.value.orNull
+        case f: Field[t] => f.safeValue
     }
 
     val bindedValue: V =

@@ -58,7 +58,7 @@ inline def text:Field[String] =
 inline def text(minLength: Int, maxLength: Int, trim: Boolean): Field[String] = 
   val _text = if trim then text.transform[String](_.trim) else text
   (minLength, maxLength)  match {
-    case (min, Int.MaxValue) => _text.transform[String](_.trim).verifying(Constraints.minLength(min))
+    case (min, Int.MaxValue) => _text.verifying(Constraints.minLength(min))
     case (0, max)            => _text.verifying(Constraints.maxLength(max))
     case (min, max)          => _text.verifying(Constraints.minLength(min), Constraints.maxLength(max))
   }
@@ -153,11 +153,12 @@ inline def uuid =
 inline def checked(msg: String) =
   Field.of[Boolean].verifying(msg, _ == true)
 
-inline def default[A](mapping: Field[A], value: A): Field[A] =
-  MappingField[A, A](tpe = "#", value = Option(value), delegate =  mapping, a => Option(a).getOrElse(value))
+inline def default[A](mapping: Field[A], defaultValue: A): Field[A] =
+  //Need to initialize value to defaultValue
+  MappingField[A, A](tpe = "#", value = Option(defaultValue), delegate =  mapping, a => Option(a).getOrElse(defaultValue))
 
 inline def ignored[A](value: A): Field[A] =
-  Field.of[A](binder = Formatter.ignoredFormat(value))
+  Field.of[A].transform[A](_ => value)
 
 
 //Collection

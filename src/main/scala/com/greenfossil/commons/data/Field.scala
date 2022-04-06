@@ -77,12 +77,18 @@ object Field {
 
 trait Field[A] extends ConstraintVerifier[Field, A]{
   val tpe: String
+
   val name: String
+
   val form: Form[_]
+
   val value: Option[A]
+
   val errors: Seq[FormError]
 
   def name(name: String): Field[A]
+
+  def safeValue: A | None.type =  if value.isDefined then value.get else None
 
   def mappings(mappings: Field[_] *: Tuple, mirror: Mirror.ProductOf[A]): Field[A]
 
@@ -105,8 +111,8 @@ trait Field[A] extends ConstraintVerifier[Field, A]{
 
   def bindJsValue(jsValue: JsValue): Field[A]
 
-  def transform[B](fn: A => B): Field[B] =
-    MappingField(tpe = "#", delegate = this, delegateMapping = fn)
+  def transform[B](mappingFn: A => B): Field[B] =
+    MappingField(tpe = "#", delegate = this, delegateMapping = mappingFn)
 
   override def toString: String = s"name:$name type:$tpe value:$value"
 
@@ -150,12 +156,9 @@ case class ScalarField[A](tpe: String,
   }
 
   override def bindJsValue(jsValue: JsValue): Field[A] =
-    (jsValue \ name).asOpt[Any] match {
-      case Some(value) =>
-        bind(Map(name -> value.toString))
-      case None =>
-        bind(Map.empty)
-    }
+    (jsValue \ name).asOpt[Any] match
+      case Some(value) => bind(Map(name -> value.toString))
+      case None => bind(Map.empty)
 
   override def verifying(newConstraints: Constraint[A]*): Field[A] =
     copy(constraints = constraints ++ newConstraints)
@@ -171,6 +174,7 @@ case class ProductField[A](tpe: String,
                            errors: Seq[FormError] = Nil,
                            mappings: Field[_] *: Tuple = null,
                            mirrorOpt: Option[Mirror.ProductOf[A]] = None) extends Field[A] {
+
   override def name(name: String): Field[A] =
     copy(name = name)
 
@@ -254,10 +258,9 @@ case class OptionalField[A](tpe: String,
     elemField.verifying(newConstraints*)
 
   override def bindJsValue(jsValue: JsValue): Field[A] =
-    (jsValue \ name).asOpt[Any] match {
+    (jsValue \ name).asOpt[Any] match
       case Some(value) => bind(Map(name -> value.toString))
       case None => bind(Map.empty)
-    }
 
 }
 
@@ -294,12 +297,11 @@ case class SeqField[A](tpe: String,
     //Group name-value pairs by index
     val sortedIndexKeyTupList: Seq[(Int, String)] =
       data.toList.collect { case (key, x) if key.matches(keyMatchRegex) =>
-        key.replaceAll(keyReplaceRegex, "$1").split("\\.", 2) match {
+        key.replaceAll(keyReplaceRegex, "$1").split("\\.", 2) match
           case Array(index, fieldKey) =>
             index.toInt -> key.take( key.lastIndexOf("."+fieldKey)) //drop the "dot"fieldKey part from the 'key'
           case Array(index) =>
             index.toInt -> key
-        }
       }.sortBy(_._1).distinct
 
     val bindedFields: Seq[Field[_]] = sortedIndexKeyTupList.map { (index, key) =>
