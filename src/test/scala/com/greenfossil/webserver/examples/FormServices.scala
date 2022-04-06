@@ -1,6 +1,6 @@
 package com.greenfossil.webserver.examples
 
-import com.greenfossil.webserver.data.*
+import com.greenfossil.commons.data.*
 import com.greenfossil.webserver.{*, given}
 import com.linecorp.armeria.server.annotation.Get
 

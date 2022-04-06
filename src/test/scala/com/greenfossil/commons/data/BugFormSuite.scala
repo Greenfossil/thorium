@@ -14,7 +14,7 @@ class BugFormSuite extends munit.FunSuite {
     )
 
     val filledForm = sampleForm.fill(
-      "Homer Simpson", 21, "Male", Seq("Singapore"), "Married", true,
+      "Homer Simpson", 21, "Male", Seq("Singapore"), "Married", Some(true),
       Seq("Marge Simpson", "Bart Simpson", "Lisa Simpson")
     )
     assertEquals[Any, Any](filledForm("name").value, Option("Homer Simpson"))

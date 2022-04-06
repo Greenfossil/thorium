@@ -144,8 +144,9 @@ class FieldConstructionSuite extends munit.FunSuite{
     }
   }
 
-  def checkOptional(elemTypeName: String, optF: OptionalField[?])(using munit.Location): Unit =  {
+  def checkOptional(elemTypeName: String, f: Field[?])(using munit.Location): Unit =  {
     test(s"Option[${elemTypeName}]"){
+      val optF = f.asInstanceOf[OptionalField[?]]
       assertNoDiff(optF.tpe, "?")
       assertNoDiff(optF.elemField.tpe, elemTypeName)
     }

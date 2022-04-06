@@ -2,8 +2,7 @@ package com.greenfossil.commons.data
 
 import com.greenfossil.commons.data.Formatter.*
 import com.greenfossil.commons.json.JsValue
-import com.greenfossil.webserver.data.Field.fieldType
-import com.greenfossil.webserver.data.Form.{FieldConstructor, FieldTypeExtractor, toNamedFieldTuple}
+import com.greenfossil.commons.data.Form.{FieldConstructor, FieldTypeExtractor, toNamedFieldTuple}
 
 import java.time.*
 import scala.deriving.Mirror
@@ -49,6 +48,7 @@ object Field {
       case _: Seq[a]             => SeqField[a]("[", elemField = fieldOf[a]).asInstanceOf[Field[A]]  //"[" + fieldType[a]
       case _: Tuple              => ProductField("P-") // "P-"
       case _: Product            => ProductField("P+") //"P+" //Product must be tested last
+      case _: Any                => ScalarField("Any", binder = null)
     }
 
   inline def binderOf[A]: Formatter[A] =
@@ -88,7 +88,7 @@ trait Field[A] extends ConstraintVerifier[Field, A]{
 
   def name(name: String): Field[A]
 
-  def safeValue: A | None.type =  if value.isDefined then value.get else None
+  def safeValue: Any =  if value.isDefined then value.get else None
 
   def mappings(mappings: Field[_] *: Tuple, mirror: Mirror.ProductOf[A]): Field[A]
 
@@ -239,6 +239,8 @@ case class OptionalField[A](tpe: String,
   override def bind(data: Map[String, String]): Field[A] =
     val bindedField = elemField.bind(data)
     copy(value = bindedField.value, errors = bindedField.errors, elemField = bindedField)
+
+  override def safeValue: Any =  value 
 
   override def bindUsingPrefix(prefix: String, data: Map[String, String]): Field[A] =
     elemField.bindUsingPrefix(prefix, data)

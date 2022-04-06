@@ -6,16 +6,16 @@ package com.greenfossil.commons.data
 class FieldBind3Suite extends munit.FunSuite {
 
   test("Option[Int]") {
-    val optIntField: OptionalField[Int] =  optional[Int].name("optInt")
-    optIntField.fill(None)
+    val optIntField: Field[Option[Int]] =  optional[Int].name("optInt")
+//    optIntField.fill(None)
     val boundField = optIntField.bind(Map("optInt" -> "1"))
-    assertEquals(boundField.value, Option(1))
+    assertEquals[Any, Any](boundField.value, Option(1))
   }
 
   test("Option[String]") {
     val optIntField = optional[String].name("optString")
     val boundField = optIntField.bind(Map("optString" -> "Hello World!"))
-    assertEquals(boundField.value, Option("Hello World!"))
+    assertEquals[Any, Any](boundField.value, Option("Hello World!"))
   }
 
   test("Option[Tuple]") {

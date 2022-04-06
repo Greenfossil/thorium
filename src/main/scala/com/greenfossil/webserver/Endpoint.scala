@@ -15,6 +15,10 @@ case class Endpoint(url: String, method: String = "POST") {
 
 object Endpoint {
 
+  val Login = Endpoint("/login")
+
+  val Logout = Endpoint("/logout")
+
   inline def apply(inline action: AnnotatedHttpService): Endpoint = EndpointMcr(action)
 
   inline def apply[A <: Controller](inline fn: A => AnnotatedHttpService): Endpoint = ???
