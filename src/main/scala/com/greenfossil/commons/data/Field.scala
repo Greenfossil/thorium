@@ -201,7 +201,7 @@ case class ProductField[A](tpe: String,
   }
 
   override def bindUsingPrefix(prefix: String, data: Map[String, String]): Field[A] =
-    throw new UnsupportedOperationException("Product Field does not support this action")
+    bindToProduct(prefix, data)
 
   override def fill(newValueOpt: Option[A]): Field[A] =
     newValueOpt.fold(this)(newValue =>

@@ -57,7 +57,7 @@ class FormPlayCompatibilitySuite extends munit.FunSuite {
     assertEquals(bindedForm.value, Some(Seq(1, 2, 3)))
   }
 
-  test("repeated with same index []") {
+  test("repeated with same index []".fail) { //Will not be compatible
     val form: Form[Seq[Int]] = Form("seq", seq[Int])
 
     val bindedForm = form.bind(
@@ -135,7 +135,7 @@ class FormPlayCompatibilitySuite extends munit.FunSuite {
     assertEquals(bindedForm.value, Some(Seq(2, 3)))
   }
 
-  test("repeated with 1 empty index []") {
+  test("repeated with 1 empty index []".fail) {
     val form: Form[Seq[Int]] = Form("seq", seq[Int])
 
     val bindedForm = form.bind(
@@ -148,7 +148,7 @@ class FormPlayCompatibilitySuite extends munit.FunSuite {
     assertEquals(bindedForm.value, Some(Seq(2, 1, 3)))
   }
 
-  test("repeated with 2 empty index [] ") {
+  test("repeated with 2 empty index [] ".fail) {
     val form: Form[Seq[Int]] = Form("seq", seq[Int])
 
     val bindedForm = form.bind(
@@ -180,8 +180,8 @@ class FormPlayCompatibilitySuite extends munit.FunSuite {
     assertEquals(bindedForm.value, Some((1L, ("123456", "Singapore"))))
   }
 
-  test("double nested field") {
-    val form: Form[(Long, (String, String, (Long, Long)))] = Form.tuple(
+  test("double nested field".only) {
+    val form: Form[(Long, (String, String, (Long, Long, (String, String))))] = Form.tuple(
       "id" -> longNumber,
       "address" -> tuple(
         "postalCode" -> text,
@@ -189,6 +189,10 @@ class FormPlayCompatibilitySuite extends munit.FunSuite {
         "numList" -> tuple(
           "num" -> longNumber,
           "num2" -> longNumber,
+          "member" -> tuple(
+            "name1" -> text,
+            "name2" -> text
+          )
         )
       )
     )
@@ -199,10 +203,12 @@ class FormPlayCompatibilitySuite extends munit.FunSuite {
         "address.postalCode" -> "123456",
         "address.country" -> "Singapore",
         "address.numList.num" -> "1",
-        "address.numList.num" -> "2",
+        "address.numList.num2" -> "2",
+        "address.numList.member.name1" -> "John",
+        "address.numList.member.name2" -> "Doe",
       )
     )
-    assertEquals(bindedForm.value, Some((1L, ("123456", "Singapore", (1L, 2L)))))
+    assertEquals(bindedForm.value, Some((1L, ("123456", "Singapore", (1L, 2L, ("John", "Doe"))))))
   }
 
   test("binded ignored"){

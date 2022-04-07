@@ -21,12 +21,12 @@ trait ConstraintVerifier[T[_], V] {
   /**
    *
    * @param error
-   * @param constraintPredicate -  true implies no error, false implies error
+   * @param successConstraintPredicate -  true implies no error, false implies error
    * @return
    */
-  def verifying(error: String, constraintPredicate: V => Boolean): T[V] =
+  def verifying(error: String, successConstraintPredicate: V => Boolean): T[V] =
     verifying(Constraint{ (a: V) =>
-      if constraintPredicate(a) then Valid else Invalid(Seq(ValidationError(error)))
+      if successConstraintPredicate(a) then Valid else Invalid(Seq(ValidationError(error)))
     })
 
   def applyConstraints(value: V): Seq[FormError] = {
