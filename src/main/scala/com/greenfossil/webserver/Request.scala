@@ -111,7 +111,7 @@ trait Request(val requestContext: ServiceRequestContext, val aggregatedHttpReque
   import com.linecorp.armeria.common.multipart.Multipart
   import com.linecorp.armeria.scala.implicits.*
   def asMultipartFormData: CompletableFuture[MultipartFormData] =
-    Multipart.from(requestContext.request())
+    Multipart.from(aggregatedHttpRequest.toHttpRequest)
       .aggregate()
       .thenApply(mp => MultipartFormData(mp))
     

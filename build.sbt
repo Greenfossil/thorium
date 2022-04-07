@@ -1,6 +1,6 @@
 val scala3Version = "3.1.1"
 
-lazy val armeriaVersion = "1.14.1"
+lazy val armeriaVersion = "1.15.0"
 lazy val logbackVersion = "1.2.10"
 lazy val munitVersion = "0.7.29"
 

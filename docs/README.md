@@ -6,6 +6,8 @@ Request
 + Parser - Not required
 + MultiFormData 
 + Request.locale - done
++ Form - I18N support
++ Implements HttpConfiguration -
 
 Form (Data)
 ---
