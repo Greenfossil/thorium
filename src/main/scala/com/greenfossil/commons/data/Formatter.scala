@@ -174,7 +174,7 @@ object Formatter {
     override val format = Some(("format.boolean", Nil))
 
     override def bind(key: String, data: Map[String, Seq[String]]) = {
-      Right(data.getOrElse(key, "false")).flatMap {
+      Right(data.getOrElse(key, Seq("false")).head).flatMap {
         case "true"  => Right(true)
         case "false" => Right(false)
         case _       => Left(Seq(FormError(key, "error.boolean", Nil)))
