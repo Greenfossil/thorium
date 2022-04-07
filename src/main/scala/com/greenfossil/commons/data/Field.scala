@@ -14,64 +14,46 @@ object Field {
     fieldOf[A]
 
   inline def of[A](binder: Formatter[A]) : Field[A] =
-    fieldOf[A].binder(binder) //new Field(fieldType[A], binder)
+    fieldOf[A].binder(binder)
 
   inline def of[A](name: String): Field[A] =
-    fieldOf[A].name(name)  //new Field(fieldType[A], binder= binderOf[A], name = name)
+    fieldOf[A].name(name)
 
   inline def of[A](name: String, binder: Formatter[A]): Field[A] =
-    fieldOf[A].name(name).binder(binder) //new Field(fieldType[A], binder= binder, name = name)
+    fieldOf[A].name(name).binder(binder)
 
   import scala.compiletime.*
 
   inline def fieldOf[A]: Field[A] =
     inline erasedValue[A] match {
-      case _: String             => ScalarField("String", binder = binderOf[A])
-      case _: Int                => ScalarField("Int", binder = binderOf[A])
-      case _: Long               => ScalarField("Long", binder = binderOf[A])
-      case _: Double             => ScalarField("Double", binder = binderOf[A])
-      case _: Float              => ScalarField("Float", binder = binderOf[A])
-      case _: Boolean            => ScalarField("Boolean", binder = binderOf[A])
-      case _: LocalDateTime      => ScalarField("LocalDateTime", binder = binderOf[A])
-      case _: LocalDate          => ScalarField("LocalDate", binder = binderOf[A])
-      case _: LocalTime          => ScalarField("LocalTime", binder = binderOf[A])
-      case _: YearMonth          => ScalarField("YearMonth", binder = binderOf[A])
-      case _: java.sql.Timestamp => ScalarField("SqlTimestamp", binder = binderOf[A])
-      case _: java.sql.Date      => ScalarField("SqlDate", binder = binderOf[A])
-      case _: java.util.Date     => ScalarField("Date", binder = binderOf[A])
-      case _: java.util.UUID     => ScalarField("UUID", binder = binderOf[A])
-      case _: Byte               => ScalarField("Byte", binder = binderOf[A])
-      case _: Short              => ScalarField("Short", binder = binderOf[A])
-      case _: BigDecimal         => ScalarField("BigDecimal", binder = binderOf[A])
-      case _: Char               => ScalarField("Char", binder = binderOf[A])
-      case _: Option[a]          => OptionalField[a]("?", elemField = fieldOf[a]).asInstanceOf[Field[A]] // fieldType[a]
-      case _: Seq[a]             => SeqField[a]("[", elemField = fieldOf[a]).asInstanceOf[Field[A]]  //"[" + fieldType[a]
+      case _: String             => ScalarField("String", binder = stringFormat.asInstanceOf[Formatter[A]])
+      case _: Int                => ScalarField("Int", binder = intFormat.asInstanceOf[Formatter[A]])
+      case _: Long               => ScalarField("Long", binder = longFormat.asInstanceOf[Formatter[A]])
+      case _: Double             => ScalarField("Double", binder = doubleFormat.asInstanceOf[Formatter[A]])
+      case _: Float              => ScalarField("Float", binder = floatFormat.asInstanceOf[Formatter[A]])
+      case _: Boolean            => ScalarField("Boolean", binder = booleanFormat.asInstanceOf[Formatter[A]])
+      case _: LocalDateTime      => ScalarField("LocalDateTime", binder = localDateTimeFormat.asInstanceOf[Formatter[A]])
+      case _: LocalDate          => ScalarField("LocalDate", binder = localDateFormat.asInstanceOf[Formatter[A]])
+      case _: LocalTime          => ScalarField("LocalTime", binder = localTimeFormat.asInstanceOf[Formatter[A]])
+      case _: YearMonth          => ScalarField("YearMonth", binder = yearMonthFormat.asInstanceOf[Formatter[A]])
+      case _: java.sql.Timestamp => ScalarField("SqlTimestamp", binder = sqlTimestampFormat.asInstanceOf[Formatter[A]])
+      case _: java.sql.Date      => ScalarField("SqlDate", binder = sqlDateFormat.asInstanceOf[Formatter[A]])
+      case _: java.util.Date     => ScalarField("Date", binder = dateFormat.asInstanceOf[Formatter[A]])
+      case _: java.util.UUID     => ScalarField("UUID", binder = uuidFormat.asInstanceOf[Formatter[A]])
+      case _: Byte               => ScalarField("Byte", binder = byteFormat.asInstanceOf[Formatter[A]])
+      case _: Short              => ScalarField("Short", binder =shortFormat.asInstanceOf[Formatter[A]])
+      case _: BigDecimal         => ScalarField("BigDecimal", binder = bigDecimalFormat.asInstanceOf[Formatter[A]])
+      case _: Char               => ScalarField("Char", binder = charFormat.asInstanceOf[Formatter[A]])
+      case _: Option[a]          => OptionalField[a]("?", elemField = fieldOf[a]).asInstanceOf[Field[A]]
+      case _: Set[a]             => SeqField[a]("[Set", elemField = fieldOf[a]).asInstanceOf[Field[A]]
+      case _: IndexedSeq[a]      => SeqField[a]("[IndexSeq", elemField = fieldOf[a]).asInstanceOf[Field[A]]
+      case _: Vector[a]          => SeqField[a]("[Vector", elemField = fieldOf[a]).asInstanceOf[Field[A]]
+      case _: List[a]            => SeqField[a]("[List", elemField = fieldOf[a]).asInstanceOf[Field[A]]
+      case _: Seq[a]             => SeqField[a]("[Seq", elemField = fieldOf[a]).asInstanceOf[Field[A]]
       case _: Tuple              => ProductField("P-") // "P-"
       case _: Product            => ProductField("P+") //"P+" //Product must be tested last
       case _: Any                => ScalarField("Any", binder = null)
     }
-
-  inline def binderOf[A]: Formatter[A] =
-    inline erasedValue[A] match
-      case _: String             => stringFormat.asInstanceOf[Formatter[A]]
-      case _: Int                => intFormat.asInstanceOf[Formatter[A]]
-      case _: Long               => longFormat.asInstanceOf[Formatter[A]]
-      case _: Double             => doubleFormat.asInstanceOf[Formatter[A]]
-      case _: Float              => floatFormat.asInstanceOf[Formatter[A]]
-      case _: Boolean            => booleanFormat.asInstanceOf[Formatter[A]]
-      case _: LocalDateTime      => localDateTimeFormat.asInstanceOf[Formatter[A]]
-      case _: LocalDate          => localDateFormat.asInstanceOf[Formatter[A]]
-      case _: LocalTime          => localTimeFormat.asInstanceOf[Formatter[A]]
-      case _: YearMonth          => yearMonthFormat.asInstanceOf[Formatter[A]]
-      case _: java.sql.Timestamp => sqlTimestampFormat.asInstanceOf[Formatter[A]]
-      case _: java.sql.Date      => sqlDateFormat.asInstanceOf[Formatter[A]]
-      case _: java.util.Date     => dateFormat.asInstanceOf[Formatter[A]]
-      case _: java.util.UUID     => uuidFormat.asInstanceOf[Formatter[A]]
-      case _: Byte               => byteFormat.asInstanceOf[Formatter[A]]
-      case _: Short              => shortFormat.asInstanceOf[Formatter[A]]
-      case _: BigDecimal         => bigDecimalFormat.asInstanceOf[Formatter[A]]
-      case _: Char               => charFormat.asInstanceOf[Formatter[A]]
-      case _                     => null
 
 }
 
@@ -115,6 +97,9 @@ trait Field[A] extends ConstraintVerifier[Field, A]{
   def bindJsValue(jsValue: JsValue): Field[A]
 
   def transform[B](mappingFn: A => B): Field[B] =
+    MappingField(tpe = "#", delegate = this, delegateMapping = mappingFn)
+
+  def map[B](mappingFn: A => B): Field[B] =
     MappingField(tpe = "#", delegate = this, delegateMapping = mappingFn)
 
   override def toString: String = s"name:$name type:$tpe value:$value"

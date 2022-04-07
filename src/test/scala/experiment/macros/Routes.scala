@@ -1,5 +1,5 @@
-//package com.greenfossil.examples
-//
+package experiment.macros
+
 //import com.greenfossil.webserver.*
 //
 //case class BooksFromYear(genre: String, year: Int)

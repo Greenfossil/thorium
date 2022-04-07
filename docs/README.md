@@ -41,13 +41,3 @@ Configuration
 Headers
 ---
 + Removed, now is part of Request
-
-Caused by: munit.ComparisonFailException: /home/chungonn/development/scala3/web-server/src/test/scala/com/greenfossil/webserver/FormBindingSuite.scala:18
-17:      println(s"aggResp.contentUtf8() = ${aggResp.contentUtf8()}")
-18:      assertEquals(aggResp.status(), HttpStatus.BAD_REQUEST) // FIXME binding of the longnumber can be null
-
-
-[error] 	com.greenfossil.commons.data.FormBindSuite
-[error] 	com.greenfossil.webserver.FormBindingSuite
-[error] 	com.greenfossil.commons.data.FormFillSuite
-[error] 	com.greenfossil.commons.data.FieldBind1Suite

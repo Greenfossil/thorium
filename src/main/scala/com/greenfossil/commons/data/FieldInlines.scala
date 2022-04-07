@@ -115,6 +115,19 @@ inline def sqlTimestamp =
 inline def sqlTimestamp(pattern: String, timeZone: java.util.TimeZone = java.util.TimeZone.getDefault) =
   Field.of[java.sql.Timestamp]
 
+inline def uuid =
+  Field.of[java.util.UUID]
+
+inline def checked(msg: String) =
+  Field.of[Boolean].verifying(msg, _ == true)
+
+inline def default[A](mapping: Field[A], defaultValue: A): Field[A] =
+//Need to initialize value to defaultValue
+  MappingField[A, A](tpe = "#", value = Option(defaultValue), delegate =  mapping, a => Option(a).getOrElse(defaultValue))
+
+inline def ignored[A](value: A): Field[A] =
+  Field.of[A].transform[A](_ => value)
+
 inline def tuple[A <: Tuple](nameValueTuple: A): Field[FieldTypeExtractor[A]] =
   Field.of[FieldTypeExtractor[A]].mappings(toNamedFieldTuple(nameValueTuple), null)
 
@@ -147,32 +160,17 @@ inline def repeatedTuple[A <: Tuple](nameValueTuple: A) =
 inline def repeatedMapping[A](using m: Mirror.ProductOf[A])(nameValueTuple: Tuple.Zip[m.MirroredElemLabels, FieldConstructor[m.MirroredElemTypes]]) =
   new SeqField[A](tpe="[", elemField = mapping[A](nameValueTuple)).asInstanceOf[Field[Seq[A]]]
 
-inline def uuid =
-  Field.of[java.util.UUID]
-
-inline def checked(msg: String) =
-  Field.of[Boolean].verifying(msg, _ == true)
-
-inline def default[A](mapping: Field[A], defaultValue: A): Field[A] =
-  //Need to initialize value to defaultValue
-  MappingField[A, A](tpe = "#", value = Option(defaultValue), delegate =  mapping, a => Option(a).getOrElse(defaultValue))
-
-inline def ignored[A](value: A): Field[A] =
-  Field.of[A].transform[A](_ => value)
-
-
 //Collection
-//inline def indexedSeq[A] =
-//  Field.of[IndexedSeq[A]]
-//
-//inline def list[A] =
-//  Field.of[List[A]]
-//
-//@deprecated("Use list[A]", "")
-//inline def list[A](a: Field[A]): Field[List[A]] =
-//  Field.of[List[A]]
-//
-//inline def set[A] =
-//  Field.of[Set[A]]
-//
-//inline def vector[A] = Field.of[Vector[A]]
+inline def indexedSeq[A] =
+  Field.of[IndexedSeq[A]]
+
+inline def list[A] =
+  Field.of[List[A]]
+
+inline def list[A](a: Field[A]): Field[List[A]] =
+  ???
+
+inline def set[A] =
+  Field.of[Set[A]]
+
+inline def vector[A] = Field.of[Vector[A]]
