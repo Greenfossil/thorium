@@ -13,7 +13,7 @@ Form (Data)
 + Form creation - P1 [Done]
 + validation - P1  [Done]
 + Nested form field - done
-+ transform 
++ transform - done
 + implements the rest of Field supported types e.g Temporal, String etc
 + implement Field validation error messages - Partial
 + bindFromRequest - binding of numbers can be null (broken)

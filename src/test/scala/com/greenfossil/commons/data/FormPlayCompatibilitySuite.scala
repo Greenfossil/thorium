@@ -2,6 +2,9 @@ package com.greenfossil.commons.data
 
 class FormPlayCompatibilitySuite extends munit.FunSuite {
 
+  /*
+   * Html form-url-encoded
+   */
   test("valid default value") {
     val form: Form[(String, Boolean)] = Form.tuple(
       "s" -> default(text, "Foo"),
@@ -202,13 +205,19 @@ class FormPlayCompatibilitySuite extends munit.FunSuite {
     assertEquals(bindedForm.value, Some((1L, ("123456", "Singapore", (1L, 2L)))))
   }
 
-  //  test("ignored"){
-  //    val form: Form[String] = Form("s", ignored(text, "Foo"))
-  //    val data = Map(
-  //      "s" -> "Bar"
-  //    )
-  //    val bindedForm = form.bind(data)
-  //    assertEquals(bindedForm.value, Some("Foo"))
-  //  }
+  test("binded ignored"){
+    val form = Form("s", ignored("Foo"))
+    val data = Map(
+      "s" -> "Bar"
+    )
+    val bindedForm = form.bind(data)
+    assertEquals(bindedForm.value, Some("Foo"))
+  }
+
+  test("filled ignored"){
+    val form: Form[String] = Form("s", ignored("Foo"))
+    val bindedForm = form.fill("Bar")
+    assertEquals(bindedForm.value, Some("Foo"))
+  }
 
 }

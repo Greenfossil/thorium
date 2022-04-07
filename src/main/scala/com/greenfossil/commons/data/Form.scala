@@ -25,7 +25,7 @@ object Form {
     case t *: ts => Field[t] *: FieldConstructor[ts]
   }
 
-  def apply[A](name: String,  f: Field[A]): Form[A] = 
+  def apply[A](name: String,  f: Field[A]): Form[A] =
     new Form[A](mappings = f.name(name) *: EmptyTuple)
 
   /**
