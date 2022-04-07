@@ -21,7 +21,7 @@ trait Formatter[T] {
    * @param data the submitted data
    * @return Either a concrete value of type T or a set of error if the binding failed.
    */
-  def bind(key: String, data: Map[String, String]): Either[Seq[FormError], T]
+  def bind(key: String, data: Map[String, Seq[String]]): Either[Seq[FormError], T]
 
   override def toString: String = s"Binder: ${tpe}"
 }
@@ -36,8 +36,8 @@ object Formatter {
 
     override val tpe: String = "String"
 
-    def bind(key: String, data: Map[String, String]) =
-      data.get(key).toRight(Seq(FormError(key, "error.required", Nil)))
+    override def bind(key: String, data: Map[String, Seq[String]]) =
+      data.get(key).flatMap(_.headOption).toRight(Seq(FormError(key, "error.required", Nil)))
   }
 
   /**
@@ -47,9 +47,9 @@ object Formatter {
 
     override val tpe: String = "Char"
 
-    def bind(key: String, data: Map[String, String]) =
+    override def bind(key: String, data: Map[String, Seq[String]]) =
       data
-        .get(key)
+        .get(key).flatMap(_.headOption)
         .filter(s => s.length == 1 && s != " ")
         .map(s => Right(s.charAt(0)))
         .getOrElse(Left(Seq(FormError(key, "error.required", Nil))))
@@ -64,7 +64,7 @@ object Formatter {
    */
   def parsing[T](parse: String => T, errMsg: String, errArgs: Seq[Any])(
     key: String,
-    data: Map[String, String]
+    data: Map[String, Seq[String]]
   ): Either[Seq[FormError], T] = {
     stringFormat.bind(key, data).flatMap { s =>
       scala.util.control.Exception
@@ -84,7 +84,7 @@ object Formatter {
 
       override val format = Some(formatString -> Nil)
 
-      def bind(key: String, data: Map[String, String]) =
+      override def bind(key: String, data: Map[String, Seq[String]]) =
         parsing(convert, errorString, Nil)(key, data)
 
     }
@@ -129,7 +129,7 @@ object Formatter {
 
     override val format = Some(("format.real", Nil))
 
-    def bind(key: String, data: Map[String, String]) = {
+    override def bind(key: String, data: Map[String, Seq[String]]) = {
       stringFormat.bind(key, data).flatMap { s =>
         scala.util.control.Exception
           .allCatch[BigDecimal]
@@ -173,7 +173,7 @@ object Formatter {
 
     override val format = Some(("format.boolean", Nil))
 
-    def bind(key: String, data: Map[String, String]) = {
+    override def bind(key: String, data: Map[String, Seq[String]]) = {
       Right(data.getOrElse(key, "false")).flatMap {
         case "true"  => Right(true)
         case "false" => Right(false)
@@ -205,7 +205,8 @@ object Formatter {
 
     override val format = Some(("format.date", Seq(pattern)))
 
-    def bind(key: String, data: Map[String, String]) = parsing(dateParse, "error.date", Nil)(key, data)
+    override def bind(key: String, data: Map[String, Seq[String]]) =
+      parsing(dateParse, "error.date", Nil)(key, data)
 
   }
 
@@ -227,7 +228,7 @@ object Formatter {
 
     override val format = Some(("format.date", Seq(pattern)))
 
-    def bind(key: String, data: Map[String, String]) =
+    override def bind(key: String, data: Map[String, Seq[String]]) =
       dateFormatter.bind(key, data).map(d => java.sql.Date.valueOf(d))
 
   }
@@ -256,7 +257,7 @@ object Formatter {
 
       override val format = Some(("format.timestamp", Seq(pattern)))
 
-      override def bind(key: String, data: Map[String, String]): Either[Seq[FormError], Timestamp] =
+      override def bind(key: String, data: Map[String, Seq[String]]): Either[Seq[FormError], Timestamp] =
         parsing(timestampParse, "error.timestamp", Nil)(key, data)
 
     }
@@ -280,7 +281,8 @@ object Formatter {
 
     override val format = Some(("format.date", Seq(pattern)))
 
-    def bind(key: String, data: Map[String, String]) = parsing(localDateParse, "error.date", Nil)(key, data)
+    override def bind(key: String, data: Map[String, Seq[String]]) =
+      parsing(localDateParse, "error.date", Nil)(key, data)
 
   }
 
@@ -308,7 +310,7 @@ object Formatter {
 
     override val format = Some(("format.localDateTime", Seq(pattern)))
 
-    def bind(key: String, data: Map[String, String]) =
+    override def bind(key: String, data: Map[String, Seq[String]]) =
       parsing(localDateTimeParse, "error.localDateTime", Nil)(key, data)
 
   }
@@ -337,7 +339,7 @@ object Formatter {
 
     override val format = Some(("format.localTime", Seq(pattern)))
 
-    def bind(key: String, data: Map[String, String]) =
+    override def bind(key: String, data: Map[String, Seq[String]]) =
       parsing(localTimeParse, "error.localTime", Nil)(key, data)
 
   }
@@ -355,7 +357,7 @@ object Formatter {
     def yearMonthParse(data: String): YearMonth =
       if pattern.isEmpty then YearMonth.parse(data) else YearMonth.parse(data, formatter)
 
-    override def bind(key: String, data: Map[String, String]) =
+    override def bind(key: String, data: Map[String, Seq[String]]) =
       parsing(yearMonthParse, "error.yearMonth", Nil)(key, data)
   }
 
@@ -370,7 +372,8 @@ object Formatter {
 
     override val format = Some(("format.uuid", Nil))
 
-    override def bind(key: String, data: Map[String, String]) = parsing(UUID.fromString, "error.uuid", Nil)(key, data)
+    override def bind(key: String, data: Map[String, Seq[String]]) =
+      parsing(UUID.fromString, "error.uuid", Nil)(key, data)
 
   }
   

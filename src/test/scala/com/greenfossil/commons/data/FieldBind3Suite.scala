@@ -8,13 +8,13 @@ class FieldBind3Suite extends munit.FunSuite {
   test("Option[Int]") {
     val optIntField: Field[Option[Int]] =  optional[Int].name("optInt")
 //    optIntField.fill(None)
-    val boundField = optIntField.bind(Map("optInt" -> "1"))
+    val boundField = optIntField.bind("optInt" -> "1")
     assertEquals[Any, Any](boundField.value, Option(1))
   }
 
   test("Option[String]") {
     val optIntField = optional[String].name("optString")
-    val boundField = optIntField.bind(Map("optString" -> "Hello World!"))
+    val boundField = optIntField.bind("optString" -> "Hello World!")
     assertEquals[Any, Any](boundField.value, Option("Hello World!"))
   }
 
@@ -24,7 +24,7 @@ class FieldBind3Suite extends munit.FunSuite {
       "contact" -> Field.of[Int]
     ).name("tupleField")
 
-    val boundField = tupleField.bind(Map("tupleField.name" -> "Hello World!", "tupleField.contact" -> "123"))
+    val boundField = tupleField.bind("tupleField.name" -> "Hello World!", "tupleField.contact" -> "123")
     assertEquals(boundField.value, Option(("Hello World!", 123)))
   }
 
@@ -35,7 +35,7 @@ class FieldBind3Suite extends munit.FunSuite {
       "contact" -> Field.of[Int]
     ).name("tupleField")
 
-    val boundField = tupleField.bind(Map("tupleField.name" -> "Hello World!", "tupleField.contact" -> "123"))
+    val boundField = tupleField.bind("tupleField.name" -> "Hello World!", "tupleField.contact" -> "123")
     assertEquals(boundField.value, Option(Contact("Hello World!", 123)))
   }
 

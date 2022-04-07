@@ -111,11 +111,13 @@ case class Form[T](mappings: Field[_] *: Tuple,
         ???
     }
 
-  def bind(data: Map[String, Seq[String]], queryData: List[(String, String)]): Form[T] =
-    val list = data.collect{case (key, xs) =>  xs.map( key -> _) }.flatten.toList
-    ???
+  def bind(data: (String, String)*): Form[T] =
+    bind(Map.empty,  data)
 
-  def bind(data: Map[String, String]): Form[T] =
+  def bind(data: Map[String, Seq[String]], queryData: Seq[(String, String)]): Form[T] =
+    bind(data ++ queryData.groupMap(_._1)(_._2))
+
+  def bind(data: Map[String, Seq[String]]): Form[T] =
     val bindedFields = 
         mappings.map[[A] =>> Field[_]]{
           [X] => (x: X) => x match

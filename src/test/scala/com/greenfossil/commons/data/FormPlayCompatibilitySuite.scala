@@ -10,12 +10,12 @@ class FormPlayCompatibilitySuite extends munit.FunSuite {
       "s" -> default(text, "Foo"),
       "xs" -> checked("this should be checked")
     )
-    val data = Map(
+
+    val filledForm = form.bind(
       "s" -> "chicken",
-      "xs" -> "true",
+      "xs" -> "true"
     )
 
-    val filledForm = form.bind(data)
     filledForm.fold(
       errorForm => fail("should not have errors"),
       data => {
@@ -30,11 +30,8 @@ class FormPlayCompatibilitySuite extends munit.FunSuite {
       "s" -> default(text, "Foo"),
       "xs" -> checked("this should be checked")
     )
-    val data = Map(
-      "xs" -> "true",
-    )
 
-    val filledForm = form.bind(data)
+    val filledForm = form.bind("xs" -> "true")
     filledForm.fold(
       errorForm => fail("should not have errors"),
       data => {
@@ -48,11 +45,9 @@ class FormPlayCompatibilitySuite extends munit.FunSuite {
     val form: Form[Seq[Int]] = Form("seq", seq[Int])
 
     val bindedForm = form.bind(
-      Map(
-        "seq[1]" -> "1",
-        "seq[2]" -> "2",
-        "seq[3]" -> "3",
-      )
+      "seq[1]" -> "1",
+      "seq[2]" -> "2",
+      "seq[3]" -> "3",
     )
     assertEquals(bindedForm.value, Some(Seq(1, 2, 3)))
   }
@@ -61,11 +56,9 @@ class FormPlayCompatibilitySuite extends munit.FunSuite {
     val form: Form[Seq[Int]] = Form("seq", seq[Int])
 
     val bindedForm = form.bind(
-      Map(
-        "seq[1]" -> "1",
-        "seq[1]" -> "2",
-        "seq[1]" -> "3",
-      )
+      "seq[1]" -> "1",
+      "seq[1]" -> "2",
+      "seq[1]" -> "3",
     )
     assertEquals(bindedForm.value, Some(Seq(1)))
   }
@@ -74,11 +67,9 @@ class FormPlayCompatibilitySuite extends munit.FunSuite {
     val form: Form[Seq[Int]] = Form("seq", seq[Int])
 
     val bindedForm = form.bind(
-      Map(
-        "seq[3]" -> "1",
-        "seq[2]" -> "2",
-        "seq[1]" -> "3",
-      )
+      "seq[3]" -> "1",
+      "seq[2]" -> "2",
+      "seq[1]" -> "3",
     )
     assertEquals(bindedForm.value, Some(Seq(3, 2, 1)))
   }
@@ -87,11 +78,9 @@ class FormPlayCompatibilitySuite extends munit.FunSuite {
     val form: Form[Seq[Int]] = Form("seq", seq[Int])
 
     val bindedForm = form.bind(
-      Map(
-        "seq[1]" -> "1",
-        "seq[2]" -> "2",
-        "seq[4]" -> "3",
-      )
+      "seq[1]" -> "1",
+      "seq[2]" -> "2",
+      "seq[4]" -> "3",
     )
     assertEquals(bindedForm.value, Some(Seq(1, 2, 3)))
   }
@@ -100,11 +89,9 @@ class FormPlayCompatibilitySuite extends munit.FunSuite {
     val form: Form[Seq[Int]] = Form("seq", seq[Int])
 
     val bindedForm = form.bind(
-      Map(
-        "seq[]" -> "1",
-        "seq[]" -> "2",
-        "seq[]" -> "3",
-      )
+      "seq[]" -> "1",
+      "seq[]" -> "2",
+      "seq[]" -> "3",
     )
     assertEquals(bindedForm.value, Some(Seq(1, 2, 3)))
   }
@@ -113,11 +100,9 @@ class FormPlayCompatibilitySuite extends munit.FunSuite {
     val form: Form[Seq[Int]] = Form("seq", seq[Int])
 
     val bindedForm = form.bind(
-      Map(
-        "seq[0]" -> "1",
-        "seq[1]" -> "2",
-        "seq[2]" -> "3",
-      )
+      "seq[0]" -> "1",
+      "seq[1]" -> "2",
+      "seq[2]" -> "3",
     )
     assertEquals(bindedForm.value, Some(Seq(1, 2, 3)))
   }
@@ -126,11 +111,9 @@ class FormPlayCompatibilitySuite extends munit.FunSuite {
     val form: Form[Seq[Int]] = Form("seq", seq[Int])
 
     val bindedForm = form.bind(
-      Map(
-        "seq[-1]" -> "1",
-        "seq[0]" -> "2",
-        "seq[1]" -> "3",
-      )
+      "seq[-1]" -> "1",
+      "seq[0]" -> "2",
+      "seq[1]" -> "3",
     )
     assertEquals(bindedForm.value, Some(Seq(2, 3)))
   }
@@ -139,11 +122,9 @@ class FormPlayCompatibilitySuite extends munit.FunSuite {
     val form: Form[Seq[Int]] = Form("seq", seq[Int])
 
     val bindedForm = form.bind(
-      Map(
-        "seq[1]" -> "1",
-        "seq[]" -> "2",
-        "seq[3]" -> "3",
-      )
+      "seq[1]" -> "1",
+      "seq[]" -> "2",
+      "seq[3]" -> "3",
     )
     assertEquals(bindedForm.value, Some(Seq(2, 1, 3)))
   }
@@ -152,11 +133,9 @@ class FormPlayCompatibilitySuite extends munit.FunSuite {
     val form: Form[Seq[Int]] = Form("seq", seq[Int])
 
     val bindedForm = form.bind(
-      Map(
-        "seq[1]" -> "1",
-        "seq[]" -> "2",
-        "seq[]" -> "3",
-      )
+      "seq[1]" -> "1",
+      "seq[]" -> "2",
+      "seq[]" -> "3",
     )
     assertEquals(bindedForm.value, Some(Seq(2, 3)))
   }
@@ -171,11 +150,9 @@ class FormPlayCompatibilitySuite extends munit.FunSuite {
     )
 
     val bindedForm = form.bind(
-      Map(
-        "id" -> "1",
-        "address.postalCode" -> "123456",
-        "address.country" -> "Singapore"
-      )
+      "id" -> "1",
+      "address.postalCode" -> "123456",
+      "address.country" -> "Singapore"
     )
     assertEquals(bindedForm.value, Some((1L, ("123456", "Singapore"))))
   }
@@ -198,25 +175,20 @@ class FormPlayCompatibilitySuite extends munit.FunSuite {
     )
 
     val bindedForm = form.bind(
-      Map(
-        "id" -> "1",
-        "address.postalCode" -> "123456",
-        "address.country" -> "Singapore",
-        "address.numList.num" -> "1",
-        "address.numList.num2" -> "2",
-        "address.numList.member.name1" -> "John",
-        "address.numList.member.name2" -> "Doe",
-      )
+      "id" -> "1",
+      "address.postalCode" -> "123456",
+      "address.country" -> "Singapore",
+      "address.numList.num" -> "1",
+      "address.numList.num2" -> "2",
+      "address.numList.member.name1" -> "John",
+      "address.numList.member.name2" -> "Doe",
     )
     assertEquals(bindedForm.value, Some((1L, ("123456", "Singapore", (1L, 2L, ("John", "Doe"))))))
   }
 
   test("binded ignored"){
     val form = Form("s", ignored("Foo"))
-    val data = Map(
-      "s" -> "Bar"
-    )
-    val bindedForm = form.bind(data)
+    val bindedForm = form.bind("s" -> "Bar")
     assertEquals(bindedForm.value, Some("Foo"))
   }
 

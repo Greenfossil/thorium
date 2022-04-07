@@ -11,7 +11,7 @@ class FieldBind2Suite extends munit.FunSuite {
       "f2" -> Field.of[Int]
     ).name("tupleField")
 
-    val boundField = tupleField.bind(Map("tupleField.f1" -> "Hello", "tupleField.f2" -> "1"))
+    val boundField = tupleField.bind("tupleField.f1" -> "Hello", "tupleField.f2" -> "1")
     assertEquals(boundField.value, Some(("Hello", 1)))
   }
 
@@ -22,7 +22,7 @@ class FieldBind2Suite extends munit.FunSuite {
       "number" -> Field.of[Int]
     ).name("contact")
 
-    val boundField = tupleField.bind(Map("contact.name" -> "Hello", "contact.number" -> "1"))
+    val boundField = tupleField.bind("contact.name" -> "Hello", "contact.number" -> "1")
     assertEquals(boundField.value, Some(Contact("Hello", 1)))
   }
 

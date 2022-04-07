@@ -134,12 +134,8 @@ class FormFillSuite extends munit.FunSuite {
       "s" ->  default(text, "Foo"),
       "xs" -> checked("this should be checked")
     )
-    val data = Map(
-      "s" -> null,
-      "xs" -> "true",
-    )
 
-    val filledForm = form.bind(data)
+    val filledForm = form.bind(      "s" -> null, "xs" -> "true")
     filledForm.fold(
       errorForm=> fail("should not have errors"),
       data=> {

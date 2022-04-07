@@ -3,7 +3,7 @@ package com.greenfossil.commons.data
 class FormErrorSuite extends munit.FunSuite{
 
   test("Field errors"){
-    val bindedForm = Form.tuple("name" -> nonEmptyText, "value" -> text).bind(Map("name" -> "", "value" -> ""))
+    val bindedForm = Form.tuple("name" -> nonEmptyText, "value" -> text).bind("name" -> "", "value" -> "")
     assertEquals(bindedForm.error("name").map(_.message),  Some("error.required"))
   }
 
@@ -18,7 +18,7 @@ class FormErrorSuite extends munit.FunSuite{
   }
 
   test("Form.discardingErrors"){
-    val errorForm = Form.tuple("name" -> nonEmptyText, "value" -> text).bind(Map("name" -> "", "value" -> ""))
+    val errorForm = Form.tuple("name" -> nonEmptyText, "value" -> text).bind("name" -> "", "value" -> "")
     assert(errorForm.hasErrors)
     assertEquals(errorForm.discardingErrors.hasErrors, false)
   }

@@ -94,7 +94,10 @@ trait Field[A] extends ConstraintVerifier[Field, A]{
 
   def binder(binder: Formatter[A]): Field[A]
 
-  def bind(data:Map[String, String]): Field[A]
+  def bind(data: (String, String)*): Field[A] =
+    bind(data.groupMap(_._1)(_._2))
+
+  def bind(data:Map[String, Seq[String]]): Field[A]
 
   def fill(newValue: A):Field[A] = fill(Option(newValue))
 
@@ -107,7 +110,7 @@ trait Field[A] extends ConstraintVerifier[Field, A]{
       case (_, _) => s"$prefix.$name"
   }
 
-  def bindUsingPrefix(prefix: String, data: Map[String, String]): Field[A]
+  def bindUsingPrefix(prefix: String, data: Map[String, Seq[String]]): Field[A]
 
   def bindJsValue(jsValue: JsValue): Field[A]
 
@@ -142,10 +145,10 @@ case class ScalarField[A](tpe: String,
       copy(value = newValueOpt, errors = applyConstraints(newValue))
     }
 
-  override def bind(data:Map[String, String]): Field[A] =
+  override def bind(data:Map[String, Seq[String]]): Field[A] =
     bindUsingPrefix("", data)
 
-  override def bindUsingPrefix(prefix: String, data: Map[String, String]): Field[A] = {
+  override def bindUsingPrefix(prefix: String, data: Map[String, Seq[String]]): Field[A] = {
     val pathName = getPathName(prefix, name)
     binder.bind(pathName, data) match {
       case Left(errors) => copy(errors = errors)
@@ -157,7 +160,7 @@ case class ScalarField[A](tpe: String,
 
   override def bindJsValue(jsValue: JsValue): Field[A] =
     (jsValue \ name).asOpt[Any] match
-      case Some(value) => bind(Map(name -> value.toString))
+      case Some(value) => bind(Map(name -> Seq(value.toString)))
       case None => bind(Map.empty)
 
   override def verifying(newConstraints: Constraint[A]*): Field[A] =
@@ -184,10 +187,10 @@ case class ProductField[A](tpe: String,
   override def binder(binder: Formatter[A]): Field[A] =
     throw new UnsupportedOperationException("Product field does not support setting of binder")
 
-  override def bind(data: Map[String, String]): Field[A] =
+  override def bind(data: Map[String, Seq[String]]): Field[A] =
     bindToProduct("", data)
 
-  private def bindToProduct(prefix: String, data: Map[String, String]): Field[A] = {
+  private def bindToProduct(prefix: String, data: Map[String, Seq[String]]): Field[A] = {
     val pathName = getPathName(prefix, name)
     val newMappings =
       mappings.map[[A] =>> Field[_]]{
@@ -200,7 +203,7 @@ case class ProductField[A](tpe: String,
         copy(mappings = newMappings, value = Option(newValue), errors = newErrors))
   }
 
-  override def bindUsingPrefix(prefix: String, data: Map[String, String]): Field[A] =
+  override def bindUsingPrefix(prefix: String, data: Map[String, Seq[String]]): Field[A] =
     bindToProduct(prefix, data)
 
   override def fill(newValueOpt: Option[A]): Field[A] =
@@ -236,13 +239,13 @@ case class OptionalField[A](tpe: String,
   override def binder(binder: Formatter[A]): Field[A] =
     copy(elemField= elemField.binder(binder))
 
-  override def bind(data: Map[String, String]): Field[A] =
+  override def bind(data: Map[String, Seq[String]]): Field[A] =
     val bindedField = elemField.bind(data)
     copy(value = bindedField.value, errors = bindedField.errors, elemField = bindedField)
 
   override def safeValue: Any =  value 
 
-  override def bindUsingPrefix(prefix: String, data: Map[String, String]): Field[A] =
+  override def bindUsingPrefix(prefix: String, data: Map[String, Seq[String]]): Field[A] =
     elemField.bindUsingPrefix(prefix, data)
 
   override def verifying(error: String, constraintPredicate: A => Boolean): Field[A] =
@@ -261,7 +264,7 @@ case class OptionalField[A](tpe: String,
 
   override def bindJsValue(jsValue: JsValue): Field[A] =
     (jsValue \ name).asOpt[Any] match
-      case Some(value) => bind(Map(name -> value.toString))
+      case Some(value) => bind(Map(name -> Seq(value.toString)))
       case None => bind(Map.empty)
 
 }
@@ -282,13 +285,13 @@ case class SeqField[A](tpe: String,
   override def binder(binder: Formatter[A]): Field[A] =
     copy(elemField = elemField.binder(binder))
 
-  override def bind(data: Map[String, String]): Field[A] =
+  override def bind(data: Map[String, Seq[String]]): Field[A] =
     bindToSeq("", data)
 
-  override def bindUsingPrefix(prefix: String, data: Map[String, String]): Field[A] =
+  override def bindUsingPrefix(prefix: String, data: Map[String, Seq[String]]): Field[A] =
     elemField.bindUsingPrefix(prefix, data)
 
-  private def bindToSeq(prefix: String, data: Map[String, String]): Field[A] = {
+  private def bindToSeq(prefix: String, data: Map[String, Seq[String]]): Field[A] = {
     /*
      * Filter all name-value list that matches 'field.name' + '.'
      */
@@ -331,7 +334,7 @@ case class SeqField[A](tpe: String,
   override def bindJsValue(jsValue: JsValue): Field[A] =
     (jsValue \ name).asOpt[Seq[Any]] match {
       case Some(xs) =>
-        val map =  xs.zipWithIndex.map(x => s"$name[${x._2}]" -> x._1.toString).toMap
+        val map =  xs.zipWithIndex.map(x => s"$name[${x._2}]" -> Seq(x._1.toString)).toMap
         bindToSeq("", map)
       case None =>
         bindToSeq("", Map.empty)
@@ -358,7 +361,7 @@ case class MappingField[A, B](tpe: String,
   override def binder(binder: Formatter[B]): Field[B] =
     ???
 
-  override def bind(data: Map[String, String]): Field[B] =
+  override def bind(data: Map[String, Seq[String]]): Field[B] =
     val bindedDelegate = delegate.bind(data)
     val _value = bindedDelegate.value.map(v => delegateMapping(v)).orElse(value)
     val _errors = _value.map(v => applyConstraints(v)).getOrElse(Nil)
@@ -370,7 +373,7 @@ case class MappingField[A, B](tpe: String,
     val _errors = _value.map(v => applyConstraints(v)).getOrElse(Nil)
     copy(value =  _value , errors =_errors)
 
-  override def bindUsingPrefix(prefix: String, data: Map[String, String]): Field[B] =
+  override def bindUsingPrefix(prefix: String, data: Map[String, Seq[String]]): Field[B] =
     ???
 
   override def bindJsValue(jsValue: JsValue): Field[B] =

@@ -11,7 +11,7 @@ class FormConstraintsSuite extends munit.FunSuite {
         "age"  -> number.verifying("Age must be 42", age => age == 42)
       )
 
-    val bindedForm = userFormConstraints.bind(Map("name" -> "1", "age" -> "10"))
+    val bindedForm = userFormConstraints.bind("name" -> "1", "age" -> "10")
     assertEquals(bindedForm.hasErrors, true)
     assertNoDiff(bindedForm.errors.head.messages.head, "Age must be 42")
   }
@@ -22,7 +22,7 @@ class FormConstraintsSuite extends munit.FunSuite {
         "name" -> text,
         "age"  -> number
       ).verifying("Name should be homer and age is 42", user => user.name == "homer" && user.age == 42)
-    val bindedForm = userFormConstraints.bind(Map("name" -> "homer", "age" -> "10"))
+    val bindedForm = userFormConstraints.bind("name" -> "homer", "age" -> "10")
     assertEquals(bindedForm.hasErrors, true)
     assertNoDiff(bindedForm.errors.head.messages.head, "Name should be homer and age is 42")
   }
@@ -33,7 +33,7 @@ class FormConstraintsSuite extends munit.FunSuite {
         "name" -> text,
         "age"  -> number
       ).verifying("Name should be homer and age is 42", user => user.name == "homer" && user.age == 42)
-    val boundForm = userFormConstraints.bind(Map("name" -> "homer", "age" -> "42"))
+    val boundForm = userFormConstraints.bind("name" -> "homer", "age" -> "42")
     assertEquals(boundForm.hasErrors, false)
   }
 
