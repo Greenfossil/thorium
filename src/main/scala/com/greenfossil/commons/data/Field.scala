@@ -263,6 +263,8 @@ case class SeqField[A](tpe: String,
 
   override def name(name: String): Field[A] =
     copy(name = name, elemField = elemField.name(name))
+    
+  def indexes: Seq[Int] = ???  
 
   override def mappings(mappings: Field[_] *: Tuple, mirror: Mirror.ProductOf[A]): Field[A] =
     copy(elemField = elemField.mappings(mappings = mappings, mirror))
@@ -314,8 +316,6 @@ case class SeqField[A](tpe: String,
     val filledField = elemField.fill(newValueOpt)
     copy(value = filledField.value, errors = filledField.errors)
 
-  def fill(newValues: A*): Field[A] = ???
-
   override def bindJsValue(jsValue: JsValue): Field[A] =
     (jsValue \ name).asOpt[Seq[Any]] match {
       case Some(xs) =>
@@ -332,8 +332,8 @@ case class MappingField[A, B](tpe: String,
                               value: Option[B] = None,
                               errors: Seq[FormError] = Nil,
                               constraints: Seq[Constraint[B]] = Nil,
-                              mappings: Field[_] *: Tuple = null,
-                              mirrorOpt: Option[Mirror.ProductOf[A]] = None,
+                              mappings: Field[_] *: Tuple = null, //FIXME TO be removed
+                              mirrorOpt: Option[Mirror.ProductOf[A]] = None, //FIXME to be remove
                               delegate: Field[A],
                               delegateMapping: A => B) extends Field[B] {
 
