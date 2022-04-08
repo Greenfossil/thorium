@@ -100,15 +100,42 @@ class FormPlayCompatibilitySuite extends munit.FunSuite {
   /*
   * curl http://localhost:9000/form -X POST -d 'seq[]=1' -d 'seq[]=2' -d 'seq[]=3' -o /dev/null
   */
-  test("repeated with no index []") {
+  test("repeated with no index []".only) {
+    val form: Form[Seq[Int]] = Form("seq", seq[Int])
+
+    val bindedForm = form.bind(
+      "seq[1]" -> "1",
+      "seq[1]" -> "2",
+      "seq[1]" -> "3",
+    )
+    assertEquals(bindedForm.value, Some(Seq(1, 2, 3)))
+  }
+
+
+  test("repeated with no []") {
     val form: Form[Seq[Int]] = Form("seq", seq[Int])
 
     val bindedForm = form.bind(
       "seq[]" -> "1",
       "seq[]" -> "2",
-      "seq[]" -> "3",
+      "seq" -> "3",
     )
     assertEquals(bindedForm.value, Some(Seq(1, 2, 3)))
+  }
+
+  test("repeated with path with no []") {
+    val form: Form[(String, Seq[String])] = Form(
+      "food", tuple(
+        "maincourse" -> text,
+        "drinks" -> seq[String]
+      )
+    )
+    val bindedForm = form.bind(
+     "food.maincourse" -> "pizza",
+      "food.drinks[1]" -> "coke",
+      "food.drinks[2]" -> "pepsi"
+    )
+    assertEquals(bindedForm.value, Some(("pizza", Seq("coke", "pepsi"))))
   }
 
   test("repeated with 0 as an index []") {
@@ -120,6 +147,23 @@ class FormPlayCompatibilitySuite extends munit.FunSuite {
       "seq[2]" -> "3",
     )
     assertEquals(bindedForm.value, Some(Seq(1, 2, 3)))
+  }
+
+  test("repeated tuples") {
+    val form: Form[Seq[(Int, Int)]] = Form(
+      "seq", repeatedTuple(
+        "num1"-> number,
+        "num2" -> number
+      )
+    )
+
+    val bindedForm = form.bind(
+      "seq[0].num1" -> "1",
+      "seq[0].num2" -> "2",
+      "seq[1].num1" -> "11",
+      "seq[1].num2" -> "22",
+    )
+    assertEquals(bindedForm.value, Some(Seq((1, 2), (11, 22))))
   }
 
   /*
@@ -139,7 +183,7 @@ class FormPlayCompatibilitySuite extends munit.FunSuite {
   /*
    * curl http://localhost:9000/form -X POST -d 'seq[1]=1' -d 'seq[]=2' -d 'seq[3]=3' -o /dev/null
    */
-  test("repeated with 1 empty index []".fail) {
+  test("repeated with 1 empty index []") {
     val form: Form[Seq[Int]] = Form("seq", seq[Int])
 
     val bindedForm = form.bind(
@@ -167,7 +211,7 @@ class FormPlayCompatibilitySuite extends munit.FunSuite {
   /*
   * curl http://localhost:9000/form -X POST -d 'seq[1]=1' -d 'seq[]=2' -d 'seq[]=2' -d 'seq[2]=3' -o /dev/null
   */
-  test("repeated with same value with empty index [] ") {
+  test("repeated with same value with empty index [] ".fail) {
     val form: Form[Seq[Int]] = Form("seq", seq[Int])
 
     val bindedForm = form.bind(
@@ -176,13 +220,13 @@ class FormPlayCompatibilitySuite extends munit.FunSuite {
         "seq[]" -> "2",
         "seq[2]" -> "3",
     )
-    assertEquals(bindedForm.value, Some(Seq(2, 2, 3)))
+    assertEquals(bindedForm.value, Some(Seq(2, 1, 3)))
   }
 
   /*
   * curl http://localhost:9000/form -X POST -d 'seq[1]=1' -d 'seq[]=2' -d 'seq[]=5' -d 'seq[2]=3' -o /dev/null
   */
-  test("repeated with different value with empty index [] ") {
+  test("repeated with different value with empty index [] ".fail) {
     val form: Form[Seq[Int]] = Form("seq", seq[Int])
 
     val bindedForm = form.bind(

@@ -274,7 +274,7 @@ case class SeqField[A](tpe: String,
     bindToSeq("", data)
 
   override def bindUsingPrefix(prefix: String, data: Map[String, Seq[String]]): Field[A] =
-    elemField.bindUsingPrefix(prefix, data)
+    bindToSeq(prefix, data)
 
   private def bindToSeq(prefix: String, data: Map[String, Seq[String]]): Field[A] = {
     /*
@@ -294,9 +294,39 @@ case class SeqField[A](tpe: String,
             index.toInt -> key
       }.sortBy(_._1).distinct
 
-    val bindedFields: Seq[Field[_]] = sortedIndexKeyTupList.map { (index, key) =>
+    val bindedFields: Seq[Field[_]] = sortedIndexKeyTupList.map { (_, key) =>
       //set elemField as Indexed name []
-      elemField.name(key).bind(data)
+      val x =  elemField.name(key)
+      x.bind(data)
+    }
+
+    val values = bindedFields.collect{case f: Field[_] if f.value.isDefined => f.value.get}
+    val errors = bindedFields.collect{case f: Field[_] if f.errors.nonEmpty => f.errors}.flatten
+    copy(value = Option(values).asInstanceOf[Option[A]], errors = errors)
+  }
+
+  private def bindToSeq2(prefix: String, dataMap: Map[String, Seq[String]]): Field[A] = {
+
+    val pathName = getPathName(prefix, name)
+    val keyMatchRegex = s"$pathName(\\[\\d*])?(\\..*)?"
+    val keyReplaceRegex = s"($pathName(\\[(\\d*)])?)(\\.(.*))?"  // keyName is group 1, index is group 3
+
+    /**
+     * sortedFields: List[(field name, field value)]
+     * sorted according to their dataMap index if available.
+     * if index is not available it will place in front
+     */
+    val sortedFields =
+      dataMap.toList.collect { case (key, values) if key.matches(keyMatchRegex) =>
+        val indexOpt: Option[Int] = Option(key.replaceFirst(keyReplaceRegex, "$3")).filter(_.nonEmpty).flatMap(_.toIntOption)
+        (indexOpt, key, values)
+      }
+        .sortBy(_._1)
+        .flatMap{case (_, keyName, values) => values.map(v => keyName -> v)}
+
+    val bindedFields: Seq[Field[_]] = sortedFields.map{
+      case (name, value) =>
+        elemField.name(name).bind(Map(name -> Seq(value)))
     }
 
     val values = bindedFields.collect{case f: Field[_] if f.value.isDefined => f.value.get}
