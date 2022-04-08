@@ -50,4 +50,20 @@ class FormConstraintsSuite extends munit.FunSuite {
 
   }
 
+  test("form optional binding with verifying"){
+    val optionalField = optional[String].verifying("Test error", strOpt => strOpt.exists(s => s.equals("test")))
+    val form = Form("foo",  optionalField)
+
+    assertEquals(form.bind("foo" -> "test").value, Some(Some("test")))
+    assert(form.bind("foo" -> "abc").errors.exists(_.message == "Test error"))
+  }
+
+  test("form seq binding with verifying"){
+    val optionalField = seq[String].verifying("Test error", xs => xs.exists(s => s.equals("test")))
+    val form = Form("foo",  optionalField)
+
+    assertEquals(form.bind("foo[1]" -> "test").value, Some(Seq("test")))
+    assert(form.bind("foo[1]" -> "abc").errors.exists(_.message == "Test error"))
+  }
+
 }

@@ -212,6 +212,7 @@ case class OptionalField[A](tpe: String,
                             name: String = null,
                             form: Form[_] = null,
                             value: Option[A] = null,
+                            constraints:Seq[Constraint[A]] = Nil,
                             errors: Seq[FormError] = Nil,
                             elemField: Field[A]) extends Field[A] {
 
@@ -225,27 +226,23 @@ case class OptionalField[A](tpe: String,
     copy(elemField= elemField.binder(binder))
 
   override def bind(data: Map[String, Seq[String]]): Field[A] =
-    val bindedField = elemField.bind(data)
-    copy(value = bindedField.value, errors = bindedField.errors, elemField = bindedField)
+    bindUsingPrefix("", data)
 
   override def safeValue: Any =  value 
 
   override def bindUsingPrefix(prefix: String, data: Map[String, Seq[String]]): Field[A] =
-    elemField.bindUsingPrefix(prefix, data)
+    val bindedField = elemField.bind(data)
+    val bindedValue = bindedField.value
+    val errors = applyConstraints(bindedValue.asInstanceOf[A])
+    copy(value = bindedValue, errors = bindedField.errors ++ errors, elemField = bindedField)
 
-  override def verifying(error: String, constraintPredicate: A => Boolean): Field[A] =
-    val verifiedField = elemField.verifying(error, constraintPredicate)
-    copy(errors = verifiedField.errors, elemField = verifiedField)
 
   override def fill(newValueOpt: Option[A]): Field[A] =
     val filledField = elemField.fill(newValueOpt)
     copy(value = elemField.value , elemField = filledField, errors = filledField.errors)
 
-  override val constraints: Seq[Constraint[A]] =
-    elemField.constraints
-
   override def verifying(newConstraints: Constraint[A]*): Field[A] =
-    elemField.verifying(newConstraints*)
+    copy(constraints = constraints ++ newConstraints)
 
   override def bindJsValue(jsValue: JsValue): Field[A] =
     (jsValue \ name).asOpt[Any] match
@@ -258,6 +255,7 @@ case class SeqField[A](tpe: String,
                        name: String = null,
                        form: Form[_] = null,
                        value: Option[A] = null,
+                       constraints:Seq[Constraint[A]] = Nil,
                        errors: Seq[FormError] = Nil,
                        elemField: Field[A]) extends Field[A] {
 
@@ -300,15 +298,14 @@ case class SeqField[A](tpe: String,
     }
 
     val values = bindedFields.collect{case f: Field[_] if f.value.isDefined => f.value.get}
-    val errors = bindedFields.collect{case f: Field[_] if f.errors.nonEmpty => f.errors}.flatten
+    val errors = bindedFields.collect{case f: Field[_] if f.errors.nonEmpty => f.errors}.flatten ++
+      applyConstraints(values.asInstanceOf[A])
+    
     copy(value = Option(values).asInstanceOf[Option[A]], errors = errors)
   }
 
-  override val constraints: Seq[Constraint[A]] =
-    elemField.constraints
-
   override def verifying(newConstraints: Constraint[A]*): Field[A] =
-    elemField.verifying(newConstraints*)
+    copy(constraints = constraints ++ newConstraints)
 
   override def fill(newValueOpt: Option[A]): Field[A] =
     val filledField = elemField.fill(newValueOpt)
