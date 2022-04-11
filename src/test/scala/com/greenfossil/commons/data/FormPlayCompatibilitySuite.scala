@@ -1,6 +1,7 @@
 package com.greenfossil.commons.data
 
 import com.greenfossil.commons.json.Json
+import com.linecorp.armeria.common.Request
 
 class FormPlayCompatibilitySuite extends munit.FunSuite {
 
@@ -9,13 +10,13 @@ class FormPlayCompatibilitySuite extends munit.FunSuite {
    */
   test("valid default value") {
     val form: Form[(String, Boolean)] = Form.tuple(
-      "s" -> default(text, "Foo"),
-      "xs" -> checked("this should be checked")
+      "text" -> default(text, "Foo"),
+      "isChecked" -> checked("this should be checked")
     )
 
     val filledForm = form.bind(
-      "s" -> "chicken",
-      "xs" -> "true"
+      "text" -> "chicken",
+      "isChecked" -> "true"
     )
 
     filledForm.fold(
@@ -29,11 +30,11 @@ class FormPlayCompatibilitySuite extends munit.FunSuite {
 
   test("empty default value") {
     val form: Form[(String, Boolean)] = Form.tuple(
-      "s" -> default(text, "Foo"),
-      "xs" -> checked("this should be checked")
+      "text" -> default(text, "Foo"),
+      "isChecked" -> checked("this should be checked")
     )
 
-    val filledForm = form.bind("xs" -> "true")
+    val filledForm = form.bind("isChecked" -> "true")
     filledForm.fold(
       errorForm => fail("should not have errors"),
       data => {
@@ -301,5 +302,4 @@ class FormPlayCompatibilitySuite extends munit.FunSuite {
     val bindedForm = form.fill("Bar")
     assertEquals(bindedForm.value, Some("Foo"))
   }
-
 }

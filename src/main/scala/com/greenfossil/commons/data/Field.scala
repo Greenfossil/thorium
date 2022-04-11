@@ -212,6 +212,7 @@ case class OptionalField[A](tpe: String,
                             name: String = null,
                             form: Form[_] = null,
                             value: Option[A] = null,
+                            constraints:Seq[Constraint[A]] = Nil,
                             errors: Seq[FormError] = Nil,
                             elemField: Field[A]) extends Field[A] {
 
@@ -225,27 +226,27 @@ case class OptionalField[A](tpe: String,
     copy(elemField= elemField.binder(binder))
 
   override def bind(data: Map[String, Seq[String]]): Field[A] =
-    val bindedField = elemField.bind(data)
-    copy(value = bindedField.value, errors = bindedField.errors, elemField = bindedField)
+    bindUsingPrefix("", data)
 
   override def safeValue: Any =  value 
 
   override def bindUsingPrefix(prefix: String, data: Map[String, Seq[String]]): Field[A] =
-    elemField.bindUsingPrefix(prefix, data)
+    val bindedField = elemField.bind(data)
+    val bindedValue = bindedField.value
 
-  override def verifying(error: String, constraintPredicate: A => Boolean): Field[A] =
-    val verifiedField = elemField.verifying(error, constraintPredicate)
-    copy(errors = verifiedField.errors, elemField = verifiedField)
+    //ignore required field as this field is optional
+    val bindedFieldErrors = bindedField.errors.filterNot(_.is(name, "error.required"))
+    val errors = applyConstraints(bindedValue.asInstanceOf[A])
+
+    copy(value = bindedValue, errors = bindedFieldErrors ++ errors, elemField = bindedField)
+
 
   override def fill(newValueOpt: Option[A]): Field[A] =
     val filledField = elemField.fill(newValueOpt)
     copy(value = elemField.value , elemField = filledField, errors = filledField.errors)
 
-  override val constraints: Seq[Constraint[A]] =
-    elemField.constraints
-
   override def verifying(newConstraints: Constraint[A]*): Field[A] =
-    elemField.verifying(newConstraints*)
+    copy(constraints = constraints ++ newConstraints)
 
   override def bindJsValue(jsValue: JsValue): Field[A] =
     (jsValue \ name).asOpt[Any] match
@@ -258,11 +259,14 @@ case class SeqField[A](tpe: String,
                        name: String = null,
                        form: Form[_] = null,
                        value: Option[A] = null,
+                       constraints:Seq[Constraint[A]] = Nil,
                        errors: Seq[FormError] = Nil,
                        elemField: Field[A]) extends Field[A] {
 
   override def name(name: String): Field[A] =
     copy(name = name, elemField = elemField.name(name))
+    
+  def indexes: Seq[Int] = ???  
 
   override def mappings(mappings: Field[_] *: Tuple, mirror: Mirror.ProductOf[A]): Field[A] =
     copy(elemField = elemField.mappings(mappings = mappings, mirror))
@@ -336,21 +340,18 @@ case class SeqField[A](tpe: String,
     }
 
     val values = bindedFields.collect{case f: Field[_] if f.value.isDefined => f.value.get}
-    val errors = bindedFields.collect{case f: Field[_] if f.errors.nonEmpty => f.errors}.flatten
+    val errors = bindedFields.collect{case f: Field[_] if f.errors.nonEmpty => f.errors}.flatten ++
+      applyConstraints(values.asInstanceOf[A])
+    
     copy(value = Option(values).asInstanceOf[Option[A]], errors = errors)
   }
 
-  override val constraints: Seq[Constraint[A]] =
-    elemField.constraints
-
   override def verifying(newConstraints: Constraint[A]*): Field[A] =
-    elemField.verifying(newConstraints*)
+    copy(constraints = constraints ++ newConstraints)
 
   override def fill(newValueOpt: Option[A]): Field[A] =
     val filledField = elemField.fill(newValueOpt)
     copy(value = filledField.value, errors = filledField.errors)
-
-  def fill(newValues: A*): Field[A] = ???
 
   override def bindJsValue(jsValue: JsValue): Field[A] =
     (jsValue \ name).asOpt[Seq[Any]] match {
@@ -368,8 +369,8 @@ case class MappingField[A, B](tpe: String,
                               value: Option[B] = None,
                               errors: Seq[FormError] = Nil,
                               constraints: Seq[Constraint[B]] = Nil,
-                              mappings: Field[_] *: Tuple = null,
-                              mirrorOpt: Option[Mirror.ProductOf[A]] = None,
+                              mappings: Field[_] *: Tuple = null, //FIXME TO be removed
+                              mirrorOpt: Option[Mirror.ProductOf[A]] = None, //FIXME to be remove
                               delegate: Field[A],
                               delegateMapping: A => B) extends Field[B] {
 

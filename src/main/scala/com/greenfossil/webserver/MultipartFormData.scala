@@ -3,7 +3,9 @@ package com.greenfossil.webserver
 import com.linecorp.armeria.common.MediaType
 import com.linecorp.armeria.common.multipart.{AggregatedBodyPart, AggregatedMultipart}
 
+import java.io.{File, InputStream}
 import java.nio.charset.Charset
+import scala.util.Try
 
 case class MultipartFormData(aggMultipart: AggregatedMultipart) {
   import scala.jdk.CollectionConverters.*
@@ -25,7 +27,31 @@ case class MultipartFormData(aggMultipart: AggregatedMultipart) {
    * Seq(name, filename, content-type, content)
    * @return
    */
-  case class TemporaryFile(name: String, filename: String, contentType: MediaType, part: AggregatedBodyPart)
+  case class TemporaryFile(name: String, filename: String, contentType: MediaType, part: AggregatedBodyPart) {
+    import java.nio.file.*
+
+    private def copyInputStreamToPath(is: InputStream, path: Path): File =
+      Files.copy(is, path, StandardCopyOption.REPLACE_EXISTING)
+      is.close()
+      path.toFile
+
+    def inputStream: InputStream = part.content.toInputStream
+
+    def saveFileTo(pathStr: String): Try[File] = saveFileTo(pathStr, filename, false)
+
+    def saveFileTo(dirPathStr: String, targetFilename: String, createDirectoryIfNotExist: Boolean): Try[File] = Try {
+      val path = Paths.get(dirPathStr)
+      val filePath = Paths.get(s"$dirPathStr/$targetFilename")
+      if Files.exists(path) then {
+        copyInputStreamToPath(inputStream, filePath)
+      }
+      else if createDirectoryIfNotExist then {
+        Files.createDirectory(path)
+        copyInputStreamToPath(inputStream, filePath)
+      }
+      else throw new FileSystemNotFoundException
+    }
+  }
 
   def files: List[TemporaryFile] =
     val xs = for {

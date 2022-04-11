@@ -197,6 +197,11 @@ class FormBindSuite extends munit.FunSuite {
     )
   }
 
+  test("bind tuple 1 optional[String]"){
+    val form = Form("name", optional[String])
+    assertEquals[Any, Any](form.bind("name" -> "Homer").value, Some("Homer"))
+  }
+
   test("bind optional[String]"){
     val form = Form.tuple("name" -> optional[String], "age" -> optional[Int])
     val bindedForm = form.bind("name" -> "Homer", "age" -> "50")

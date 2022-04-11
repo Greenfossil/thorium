@@ -155,10 +155,10 @@ inline def seq[A] =
 
 inline def repeatedTuple[A <: Tuple](nameValueTuple: A) =
   val elemField = tuple[A](nameValueTuple)
-  SeqField(tpe = "[", elemField = elemField).asInstanceOf[Field[Seq[FieldTypeExtractor[A]]]]
+  SeqField(tpe = "[Seq", elemField = elemField).asInstanceOf[Field[Seq[FieldTypeExtractor[A]]]]
 
 inline def repeatedMapping[A](using m: Mirror.ProductOf[A])(nameValueTuple: Tuple.Zip[m.MirroredElemLabels, FieldConstructor[m.MirroredElemTypes]]) =
-  new SeqField[A](tpe="[", elemField = mapping[A](nameValueTuple)).asInstanceOf[Field[Seq[A]]]
+  new SeqField[A](tpe="[Seq", elemField = mapping[A](nameValueTuple)).asInstanceOf[Field[Seq[A]]]
 
 //Collection
 inline def indexedSeq[A] =

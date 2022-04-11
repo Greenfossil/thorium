@@ -133,7 +133,11 @@ case class Form[T](mappings: Field[_] *: Tuple,
   private def updateBindedFields(newMappings: Field[_] *: Tuple): Form[T] = {
     bindedFieldsToValue(newMappings, mirrorOpt,
       (newData, newMappings, newValue, newErrors) =>
-        copy(data= newData, mappings = newMappings, value = Option(newValue), errors = newErrors)
+        if(mappings.size == 1 && mappings.head.tpe == "?")
+        then
+          copy(data= newData, mappings = newMappings, value = newValue.asInstanceOf[Option[T]], errors = newErrors)
+        else
+          copy(data= newData, mappings = newMappings, value = Option(newValue), errors = newErrors)
     )
   }
 
