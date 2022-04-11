@@ -276,7 +276,7 @@ case class SeqField[A](tpe: String,
   override def bindUsingPrefix(prefix: String, data: Map[String, Seq[String]]): Field[A] =
     bindToSeq(prefix, data)
 
-  private def bindToSeq(prefix: String, data: Map[String, Seq[String]]): Field[A] = {
+  private def bindToSeq2(prefix: String, data: Map[String, Seq[String]]): Field[A] = {
     /*
      * Filter all name-value list that matches 'field.name' + '.'
      */
@@ -305,28 +305,34 @@ case class SeqField[A](tpe: String,
     copy(value = Option(values).asInstanceOf[Option[A]], errors = errors)
   }
 
-  private def bindToSeq2(prefix: String, dataMap: Map[String, Seq[String]]): Field[A] = {
+  private def bindToSeq(prefix: String, dataMap: Map[String, Seq[String]]): Field[A] = {
 
     val pathName = getPathName(prefix, name)
     val keyMatchRegex = s"$pathName(\\[\\d*])?(\\..*)?"
     val keyReplaceRegex = s"($pathName(\\[(\\d*)])?)(\\.(.*))?"  // keyName is group 1, index is group 3
 
     /**
-     * sortedFields: List[(field name, field value)]
      * sorted according to their dataMap index if available.
      * if index is not available it will place in front
      */
-    val sortedFields =
-      dataMap.toList.collect { case (key, values) if key.matches(keyMatchRegex) =>
+    val sortedFieldNames =
+      dataMap.toList.collect { case (key, _) if key.matches(keyMatchRegex) =>
         val indexOpt: Option[Int] = Option(key.replaceFirst(keyReplaceRegex, "$3")).filter(_.nonEmpty).flatMap(_.toIntOption)
-        (indexOpt, key, values)
+        val name = key.replaceFirst(keyReplaceRegex, "$1") // drop the inner field names
+        (indexOpt, name)
       }
         .sortBy(_._1)
-        .flatMap{case (_, keyName, values) => values.map(v => keyName -> v)}
+        .map(_._2).distinct
 
-    val bindedFields: Seq[Field[_]] = sortedFields.map{
-      case (name, value) =>
-        elemField.name(name).bind(Map(name -> Seq(value)))
+    /**
+     * if name is not the same key in dataMap, bind using the entire dataMap (applicable for repeatedTuples)
+     * if name exists in dataMap, bind each value separately - handles multiple value to one key
+     */
+    val bindedFields: Seq[Field[_]] = sortedFieldNames.flatMap{name =>
+      dataMap.getOrElse(name, Nil) match {
+        case Nil => Seq(elemField.name(name).bind(dataMap)) 
+        case values => values.map(value => elemField.name(name).bind(Map(name -> Seq(value))))
+      }
     }
 
     val values = bindedFields.collect{case f: Field[_] if f.value.isDefined => f.value.get}

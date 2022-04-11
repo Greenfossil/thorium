@@ -100,7 +100,7 @@ class FormPlayCompatibilitySuite extends munit.FunSuite {
   /*
   * curl http://localhost:9000/form -X POST -d 'seq[]=1' -d 'seq[]=2' -d 'seq[]=3' -o /dev/null
   */
-  test("repeated with no index []".only) {
+  test("repeated with no index []") {
     val form: Form[Seq[Int]] = Form("seq", seq[Int])
 
     val bindedForm = form.bind(
