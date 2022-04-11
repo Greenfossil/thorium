@@ -2,13 +2,13 @@ package com.greenfossil.commons.data
 
 class SeqFieldSuite extends munit.FunSuite {
 
-  test("repeated with no index []") {
+  test("repeated with no []") {
     val form: Form[Seq[Int]] = Form("seq", seq[Int])
 
     val bindedForm = form.bind(
-      "seq[1]" -> "1",
-      "seq[1]" -> "2",
-      "seq[1]" -> "3",
+      "seq" -> "1",
+      "seq" -> "2",
+      "seq" -> "3",
     )
     assertEquals(bindedForm.value, Some(Seq(1, 2, 3)))
   }
