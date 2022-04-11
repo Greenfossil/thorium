@@ -233,8 +233,12 @@ case class OptionalField[A](tpe: String,
   override def bindUsingPrefix(prefix: String, data: Map[String, Seq[String]]): Field[A] =
     val bindedField = elemField.bind(data)
     val bindedValue = bindedField.value
+
+    //ignore required field as this field is optional
+    val bindedFieldErrors = bindedField.errors.filterNot(_.is(name, "error.required"))
     val errors = applyConstraints(bindedValue.asInstanceOf[A])
-    copy(value = bindedValue, errors = bindedField.errors ++ errors, elemField = bindedField)
+
+    copy(value = bindedValue, errors = bindedFieldErrors ++ errors, elemField = bindedField)
 
 
   override def fill(newValueOpt: Option[A]): Field[A] =

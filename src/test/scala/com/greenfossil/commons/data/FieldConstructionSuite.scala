@@ -156,7 +156,7 @@ class FieldConstructionSuite extends munit.FunSuite{
     test(s"Seq[$elemTypeName]"){
       assert(f.isInstanceOf[SeqField[?]], s"Field is not a SeqField $elemTypeName")
       val seqF = f.asInstanceOf[SeqField[?]]
-      assertNoDiff(seqF.tpe, "[")
+      assertNoDiff(seqF.tpe, "[Seq")
       assertNoDiff(seqF.elemField.tpe, elemTypeName)
     }
   }

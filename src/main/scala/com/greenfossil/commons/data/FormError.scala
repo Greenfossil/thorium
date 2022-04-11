@@ -14,7 +14,10 @@ case class FormError(key: String, messages: Seq[String], args: Seq[Any] = Nil) {
 
   def this(key: String, message: String, args: Seq[Any]) = this(key, Seq(message), args)
 
-  lazy val message = messages.last
+  lazy val message: String = messages.last
+  
+  def is(key:String, message: String): Boolean = 
+    this.key == key && this.message == message
 
   /**
    * Copy this error with a new Message.
@@ -27,9 +30,11 @@ case class FormError(key: String, messages: Seq[String], args: Seq[Any] = Nil) {
    * Displays the formatted message, for use in a template.
    * FIXME - use locale
    */
-//  def format(implicit messages: play.api.i18n.Messages): String = {
+  def format(using locale: java.util.Locale): String = {
+//    
 //    messages.apply(message, args: _*)
-//  }
+    ???
+  }
 }
 
 object FormError {
