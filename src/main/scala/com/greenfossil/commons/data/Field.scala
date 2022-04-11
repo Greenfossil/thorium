@@ -280,6 +280,7 @@ case class SeqField[A](tpe: String,
   override def bindUsingPrefix(prefix: String, data: Map[String, Seq[String]]): Field[A] =
     bindToSeq(prefix, data)
 
+  @deprecated("use bindToSeq")
   private def bindToSeq2(prefix: String, data: Map[String, Seq[String]]): Field[A] = {
     /*
      * Filter all name-value list that matches 'field.name' + '.'
