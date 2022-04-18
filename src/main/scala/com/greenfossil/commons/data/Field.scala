@@ -266,7 +266,7 @@ case class SeqField[A](tpe: String,
   override def name(name: String): Field[A] =
     copy(name = name, elemField = elemField.name(name))
     
-  def indexes: Seq[Int] = ???  
+  def indexes: Seq[Int] = ???
 
   override def mappings(mappings: Field[_] *: Tuple, mirror: Mirror.ProductOf[A]): Field[A] =
     copy(elemField = elemField.mappings(mappings = mappings, mirror))

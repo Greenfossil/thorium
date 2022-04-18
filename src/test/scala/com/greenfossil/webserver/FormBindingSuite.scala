@@ -15,7 +15,7 @@ class FormBindingSuite extends munit.FunSuite{
       println(s"aggResp.status() = ${aggResp.status()}")
       println(s"aggResp.headers() = ${aggResp.headers()}")
       println(s"aggResp.contentUtf8() = ${aggResp.contentUtf8()}")
-      assertEquals(aggResp.status(), HttpStatus.BAD_REQUEST) // FIXME binding of the longnumber can be null
+      assertEquals(aggResp.status(), HttpStatus.BAD_REQUEST)
     }.join()
   }
 

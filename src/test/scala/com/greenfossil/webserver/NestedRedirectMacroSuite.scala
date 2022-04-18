@@ -5,7 +5,7 @@ import com.linecorp.armeria.server.annotation.Get
 object NestedRedirectServices extends Controller {
 
   @Get("/nestedRedirect")
-  def nestedRedirect = Action { implicit request2 =>
+  def nestedRedirect = Action { request2 =>
     println("This is a println")
     //Reference class' action
     nestedRedirectFn(Endpoint(actionEnd))
@@ -16,7 +16,7 @@ object NestedRedirectServices extends Controller {
 
 
   @Get("/actionEnd")
-  def actionEnd = Action{ implicit request =>
+  def actionEnd = Action{ request =>
     Ok("End")
   }
 
