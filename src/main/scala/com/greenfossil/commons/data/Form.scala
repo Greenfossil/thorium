@@ -98,8 +98,6 @@ case class Form[T](mappings: Field[_] *: Tuple,
       }
     // FIXME improve the validation
     request match {
-      case req if req.asFormUrlEncoded.nonEmpty =>
-        bind(req.asFormUrlEncoded, querydata)
 
 //      case req if req.asMultipartFormData.bodyPart.nonEmpty =>
 //        bind(req.asMultipartFormData.asFormUrlEncoded ++ querydata)
@@ -108,7 +106,7 @@ case class Form[T](mappings: Field[_] *: Tuple,
         bind(req.asJson, querydata)
 
       case req =>
-        ???
+        bind(req.asFormUrlEncoded, querydata)
     }
 
   def bind(data: (String, String)*): Form[T] =
