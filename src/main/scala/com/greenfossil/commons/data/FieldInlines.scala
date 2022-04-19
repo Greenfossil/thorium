@@ -123,7 +123,10 @@ inline def checked(msg: String) =
 
 inline def default[A](mapping: Field[A], defaultValue: A): Field[A] =
 //Need to initialize value to defaultValue
-  MappingField[A, A](tpe = "#", value = Option(defaultValue), delegate =  mapping, a => Option(a).getOrElse(defaultValue))
+  MappingField[A, A](tpe = "#", value = Option(defaultValue), delegate =  mapping, a => 
+    println("a " + a)
+    Option(a).getOrElse(defaultValue)
+  )
 
 inline def ignored[A](value: A): Field[A] =
   Field.of[A].transform[A](_ => value)

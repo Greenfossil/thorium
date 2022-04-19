@@ -8,6 +8,8 @@ import scala.util.Try
 
 object Form {
 
+  val empty: Form[Nothing] = Form(null)
+
   /*
    * Extracts Type  't' from Field[t]
    */
@@ -84,11 +86,7 @@ case class Form[T](mappings: Field[_] *: Tuple,
 
       case value => fillValuesToFields(Tuple1(value))
     }
-    val dataMap = bindedFields.toList.collect{
-      case f: Field[_] => f.name -> f.value.orNull
-    }.toMap
-
-    copy(mappings = bindedFields, value = Option(values), data = dataMap)
+    updateBindedFields(bindedFields)
 
   def bindFromRequest()(using request: com.greenfossil.webserver.Request): Form[T] =
     val querydata: List[(String, String)] =
