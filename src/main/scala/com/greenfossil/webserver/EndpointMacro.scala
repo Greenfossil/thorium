@@ -8,7 +8,6 @@ import com.linecorp.armeria.server.annotation.AnnotatedHttpService
 
 import scala.quoted.*
 def EndpointMcrImpl[A <: AnnotatedHttpService : Type](actionExpr: Expr[A])(using Quotes): Expr[Endpoint] =
-  import quotes.reflect.*
   import AnnotatedPathMacroSupport.*
 
   computeActionAnnotatedPath(

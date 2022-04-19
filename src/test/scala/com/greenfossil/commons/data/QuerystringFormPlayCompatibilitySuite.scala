@@ -1,10 +1,9 @@
 package com.greenfossil.commons.data
 
 import com.greenfossil.commons.json.Json
-import com.greenfossil.webserver.*
+import com.greenfossil.webserver.{*, given}
 import com.linecorp.armeria.client.*
 import com.linecorp.armeria.common.*
-import com.greenfossil.webserver.{*, given}
 
 class QuerystringFormPlayCompatibilitySuite extends munit.FunSuite {
 

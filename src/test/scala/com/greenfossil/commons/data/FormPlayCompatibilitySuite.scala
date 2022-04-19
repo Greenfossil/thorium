@@ -1,8 +1,5 @@
 package com.greenfossil.commons.data
 
-import com.greenfossil.commons.json.Json
-import com.linecorp.armeria.common.Request
-
 class FormPlayCompatibilitySuite extends munit.FunSuite {
 
   /*
@@ -221,7 +218,7 @@ class FormPlayCompatibilitySuite extends munit.FunSuite {
   /*
    * curl http://localhost:9000/form -X POST -d 'id=1' -d 'address.postalCode="123456"' -d 'address.country="Singapore"' -d 'address.numList.num=1' -d 'address.numList.num2=2' -o /dev/null
    */
-  test("double nested field") {
+  test("double nested tuple fields") {
     val form: Form[(Long, (String, String, (Long, Long, (String, String))))] = Form.tuple(
       "id" -> longNumber,
       "address" -> tuple(

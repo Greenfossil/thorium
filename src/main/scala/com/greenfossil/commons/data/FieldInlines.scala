@@ -1,6 +1,6 @@
 package com.greenfossil.commons.data
 
-import Form.{FieldConstructor, FieldTypeExtractor, toNamedFieldTuple}
+import com.greenfossil.commons.data.Form.{FieldConstructor, FieldTypeExtractor, toNamedFieldTuple}
 
 import java.time.{LocalDate, LocalDateTime, LocalTime, YearMonth}
 import scala.deriving.Mirror
@@ -143,15 +143,15 @@ inline def optional[A]:Field[Option[A]] =
 inline def optional[A](field: Field[A]): Field[Option[A]] =
   OptionalField[A]("?", elemField = field).asInstanceOf[Field[Option[A]]]
 
-inline def optionalTuple[A <: Tuple](nameValueTuple: A): OptionalField[FieldTypeExtractor[A]] =
+inline def optionalTuple[A <: Tuple](nameValueTuple: A): Field[Option[FieldTypeExtractor[A]]] =
   Field.of[Option[FieldTypeExtractor[A]]]
     .mappings(toNamedFieldTuple(nameValueTuple), null)
-    .asInstanceOf[OptionalField[FieldTypeExtractor[A]]]
+    .asInstanceOf[Field[Option[FieldTypeExtractor[A]]]]
 
 inline def optionalMapping[A](using m: Mirror.ProductOf[A])
-                             (nameValueTuple: Tuple.Zip[m.MirroredElemLabels, FieldConstructor[m.MirroredElemTypes]]): OptionalField[A] =
+                             (nameValueTuple: Tuple.Zip[m.MirroredElemLabels, FieldConstructor[m.MirroredElemTypes]]): Field[Option[A]] =
   val elemField = mapping[A](nameValueTuple)
-  OptionalField(tpe = "?", elemField = elemField).asInstanceOf[OptionalField[A]]
+  OptionalField(tpe = "?", elemField = elemField).asInstanceOf[Field[Option[A]]]
 
 inline def seq[A] =
   Field.of[Seq[A]]

@@ -37,7 +37,7 @@ trait ConstraintVerifier[T[_], V] {
       .map(ve => FormError(name, ve.messages, ve.args))
   }
 
-  def bindedFieldsToValue(
+  def bindedFieldsToProduct(
                            newMappings: Field[_] *: Tuple,
                            mirrorOpt: Option[scala.deriving.Mirror.ProductOf[V]],
                            fn: (Map[String, Any],  Field[_] *: Tuple, V, Seq[FormError]) => T[V]
@@ -54,8 +54,14 @@ trait ConstraintVerifier[T[_], V] {
 
     val bindedValue: V =
     // This is to handle Form with single field to return the actual type of the field [T]
-      if newMappings.size == 1 then bindedFieldValues(0).asInstanceOf[V]
-      else mirrorOpt.map(m => m.fromProduct(bindedFieldValues)).getOrElse(bindedFieldValues.asInstanceOf[V])
+      if newMappings.size == 1
+      then
+        bindedFieldValues(0).asInstanceOf[V]
+      else
+        //If all values are None, implies value is null
+        if bindedFieldValues.toList.collect{case None => 1}.sum == newMappings.size
+        then null.asInstanceOf[V]
+        else mirrorOpt.map(m => m.fromProduct(bindedFieldValues)).getOrElse(bindedFieldValues.asInstanceOf[V])
 
     val formConstraintsErrors = applyConstraints(bindedValue)
 

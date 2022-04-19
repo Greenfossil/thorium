@@ -76,7 +76,7 @@ class JsonObjFormPlayCompatibilitySuite extends munit.FunSuite {
   /*
    * curl http://localhost:9000/form -X POST -H 'Content-Type: application/json' -d '{"id":"1","address":{"postalCode":"123456","country":"Singapore","numList":{"num":1,"num2":2}}}' -o /dev/null
    */
-  test("double nested field") {
+  test("double nested tuple fields") {
     val form: Form[(Long, (String, String, (Long, Long)))] = Form.tuple(
       "id" -> longNumber,
       "address" -> tuple(
@@ -107,7 +107,7 @@ class JsonObjFormPlayCompatibilitySuite extends munit.FunSuite {
   /*
  * curl http://localhost:9000/form -X POST -H 'Content-Type: application/json' -d '{"id":"1","address":{"postalCode":"123456","country":"Singapore","numList":[1,2]}}' -o /dev/null
  */
-  test("double nested field2") {
+  test("double nested tuple fields with seq field") {
     val form: Form[(Long, (String, String, Seq[Long]))] = Form.tuple(
       "id" -> longNumber,
       "address" -> tuple(

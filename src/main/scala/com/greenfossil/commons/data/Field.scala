@@ -1,8 +1,8 @@
 package com.greenfossil.commons.data
 
-import com.greenfossil.commons.data.Formatter.*
-import com.greenfossil.commons.json.{JsObject, JsValue}
 import com.greenfossil.commons.data.Form.{FieldConstructor, FieldTypeExtractor, toNamedFieldTuple}
+import com.greenfossil.commons.data.Formatter.*
+import com.greenfossil.commons.json.{JsArray, JsObject, JsValue}
 
 import java.time.*
 import scala.deriving.Mirror
@@ -186,10 +186,11 @@ case class ProductField[A](tpe: String,
     val newMappings =
       mappings.map[[A] =>> Field[_]]{
         [X] => (x: X) => x match
-          case f: Field[t] => f.bindUsingPrefix(pathName, data)
+          case f: Field[t] =>
+            f.bindUsingPrefix(pathName, data)
       }
 
-    bindedFieldsToValue(newMappings, mirrorOpt,
+    bindedFieldsToProduct(newMappings, mirrorOpt,
       (newData, newMappings, newValue, newErrors) =>
         copy(mappings = newMappings, value = Option(newValue), errors = newErrors))
   }
@@ -217,7 +218,7 @@ case class ProductField[A](tpe: String,
             case f: Field[t] => f.bindJsValue(prefix, jsObj)
           }
         }
-        bindedFieldsToValue(newMappings, mirrorOpt,
+        bindedFieldsToProduct(newMappings, mirrorOpt,
           (newData, newMappings, newValue, newErrors) =>
             copy(mappings = newMappings, value = Option(newValue), errors = newErrors))
 
@@ -248,7 +249,7 @@ case class OptionalField[A](tpe: String,
   override def safeValue: Any =  value 
 
   override def bindUsingPrefix(prefix: String, data: Map[String, Seq[String]]): Field[A] =
-    val bindedField = elemField.bind(data)
+    val bindedField = elemField.bindUsingPrefix(prefix, data)
     val bindedValue = bindedField.value
 
     //ignore required field as this field is optional
@@ -264,11 +265,17 @@ case class OptionalField[A](tpe: String,
     copy(constraints = constraints ++ newConstraints)
 
   override def bindJsValue(jsValue: JsValue): Field[A] =
-    (jsValue \ name).asOpt[Any] match
-      case Some(value) => bind(Map(name -> Seq(value.toString)))
-      case None => bind(Map.empty)
+    bindJsValue("", jsValue)
 
-  override def bindJsValue(prefix: String, jsValue: JsValue): Field[A] = ???
+  override def bindJsValue(prefix: String, jsValue: JsValue): Field[A] =
+    val bindedField = elemField.bindJsValue(prefix, jsValue)
+    val bindedValue = bindedField.value
+  
+    //ignore required field as this field is optional
+    val bindedFieldErrors = bindedField.errors.filterNot(_.is(name, "error.required"))
+    val errors = applyConstraints(bindedValue.asInstanceOf[A])
+    copy(value = bindedValue, errors = bindedFieldErrors ++ errors, elemField = bindedField)
+
 }
 
 case class SeqField[A](tpe: String,

@@ -54,7 +54,7 @@ class FieldConstructionSuite extends munit.FunSuite{
    * check optional tuple
    */
 
-  val optTuple: OptionalField[(String, Int)] = optionalTuple(
+  val optTuple: Field[Option[(String, Int)]] = optionalTuple(
     "f1" -> Field.of[String],
     "f2" -> Field.of[Int]
   )

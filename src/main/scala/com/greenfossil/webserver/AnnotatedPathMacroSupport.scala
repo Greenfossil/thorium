@@ -4,6 +4,7 @@ package com.greenfossil.webserver
 object AnnotatedPathMacroSupport {
 
   import com.linecorp.armeria.server.annotation.AnnotatedHttpService
+
   import scala.quoted.*
 
   def computeActionAnnotatedPath[A <: AnnotatedHttpService : Type, R : Type](actionExpr: Expr[A],

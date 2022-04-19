@@ -127,7 +127,7 @@ case class Form[T](mappings: Field[_] *: Tuple,
   }
 
   private def updateBindedFields(newMappings: Field[_] *: Tuple): Form[T] = {
-    bindedFieldsToValue(newMappings, mirrorOpt,
+    bindedFieldsToProduct(newMappings, mirrorOpt,
       (newData, newMappings, newValue, newErrors) =>
         if(mappings.size == 1 && mappings.head.tpe == "?")
         then

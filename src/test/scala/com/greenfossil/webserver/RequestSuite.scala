@@ -56,7 +56,7 @@ class RequestSuite extends munit.FunSuite{
     server.stop()
   }
 
-  import com.linecorp.armeria.scala.implicits._
+  import com.linecorp.armeria.scala.implicits.*
   test("Text") {
     val client = WebClient.of(s"http://localhost:${server.port}")
 
