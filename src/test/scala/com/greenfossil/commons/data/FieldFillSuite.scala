@@ -224,5 +224,24 @@ class FieldFillSuite extends munit.FunSuite {
     assertEquals(filledField3.value, Option(value))
   }
 
+  test("optional"){
+    val form: Form[(Long, Option[String])] = Form.tuple(
+      "id" -> longNumber,
+      "address" -> optional[String]
+    )
+    val filledForm = form.fill(1, Option("test"))
+
+    assertEquals(filledForm.value, Some((1L, Some("test"))))
+  }
+
+  test("optional with constraints"){
+    val form: Form[(Long, Option[String])] = Form.tuple(
+      "id" -> longNumber,
+      "address" -> optional(text(0,255,true))
+    )
+    val filledForm = form.fill(1, Option("test"))
+
+    assertEquals(filledForm.value, Some((1L, Some("test"))))
+  }
 
 }
