@@ -178,9 +178,6 @@ class FieldBind1Suite extends munit.FunSuite {
     val boundField = field.bind("field" -> "Bar")
     assertEquals(boundField.value, Option("Bar"))
 
-//    val boundField2 = field.bind(Nil)
-//    assertEquals(boundField2.value, Option("Foo"))
-
     //Default is where field does not exists
     val boundField3 = field.bind("field" -> "")
     assertEquals(boundField3.value, Option(""))
@@ -226,6 +223,13 @@ class FieldBind1Suite extends munit.FunSuite {
     val boundField = field.bind("field"-> nowValue)
     assertEquals(boundField.errors, Nil)
     assertEquals(boundField.value, Some(now))
+  }
+
+  test("Bind error".only){
+    val field = Field.of[Int]("field")
+    val boundField = field.bind("field" -> "abc")
+    assertEquals(boundField.errors.head.message, "error.number")
+    assertEquals(boundField.value, None)
   }
 
 }

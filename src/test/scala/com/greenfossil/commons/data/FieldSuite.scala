@@ -13,9 +13,9 @@ class FieldSuite extends munit.FunSuite {
     val f1 = Field.of[Int]("f1")
       .transform[Int](_ * 2)
       .verifying("X must be 8", x => x == 8)
-    val bindedField = f1.bind("f1" -> "4")
-    assertEquals(bindedField.value, Some(8))
-    assert(bindedField.errors.isEmpty)
+    val boundField = f1.bind("f1" -> "4")
+    assertEquals(boundField.value, Some(8))
+    assert(boundField.errors.isEmpty)
   }
 
 }

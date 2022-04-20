@@ -17,13 +17,13 @@ class FormNestedFieldsSuite extends munit.FunSuite {
     assertNoDiff(form.apply("id").tpe, "Long")
     assertNoDiff(form.apply("address").tpe, "P+")
 
-    val bindedForm = form.bind(
+    val boundForm = form.bind(
       "id" -> "1",
       "address.postalCode" -> "123456",
       "address.country" -> "Singapore"
     )
 
-    assertEquals(bindedForm.value, Some((1L, Address("123456", "Singapore"))))
+    assertEquals(boundForm.value, Some((1L, Address("123456", "Singapore"))))
 
   }
 
@@ -40,13 +40,13 @@ class FormNestedFieldsSuite extends munit.FunSuite {
     assertNoDiff(form.apply("id").tpe, "Long")
     assertNoDiff(form.apply("address").tpe, "[Seq")
 
-    val bindedForm = form.bind(
+    val boundForm = form.bind(
       "id" -> "1",
       "address[0].postalCode" -> "123456",
       "address[0].country" -> "Singapore"
     )
 
-    assertEquals(bindedForm.value, Some((1L, Seq(Address("123456", "Singapore")))))
+    assertEquals(boundForm.value, Some((1L, Seq(Address("123456", "Singapore")))))
 
   }
 
@@ -62,13 +62,13 @@ class FormNestedFieldsSuite extends munit.FunSuite {
     assertNoDiff(form.apply("id").tpe, "Long")
     assertNoDiff(form.apply("address").tpe, "P-")
 
-    val bindedForm = form.bind(
+    val boundForm = form.bind(
       "id" -> "1",
       "address.postalCode" -> "123456",
       "address.country" -> "Singapore"
     )
 
-    assertEquals(bindedForm.value, Some((1L, ("123456", "Singapore"))))
+    assertEquals(boundForm.value, Some((1L, ("123456", "Singapore"))))
 
   }
 
@@ -84,13 +84,13 @@ class FormNestedFieldsSuite extends munit.FunSuite {
     assertNoDiff(form.apply("id").tpe, "Long")
     assertNoDiff(form.apply("address").tpe, "[Seq")
 
-    val bindedForm = form.bind(
+    val boundForm = form.bind(
       "id" -> "1",
       "address[0].postalCode" -> "123456",
       "address[0].country" -> "Singapore"
     )
 
-    assertEquals(bindedForm.value, Some((1L, Seq(("123456", "Singapore")))))
+    assertEquals(boundForm.value, Some((1L, Seq(("123456", "Singapore")))))
 
   }
 
@@ -118,8 +118,8 @@ class FormNestedFieldsSuite extends munit.FunSuite {
       )
     )
 
-    val bindedForm = form.bind(jsonObject)
-    assertEquals(bindedForm.value, Some((1L, ("123456", "Singapore", Some((1L, 2L))))))
+    val boundForm = form.bind(jsonObject)
+    assertEquals(boundForm.value, Some((1L, ("123456", "Singapore", Some((1L, 2L))))))
   }
 
   test("Json optional nested tuple fields with no values") {
@@ -143,8 +143,8 @@ class FormNestedFieldsSuite extends munit.FunSuite {
       )
     )
 
-    val bindedForm = form.bind(jsonObject)
-    assertEquals(bindedForm.value, Some((1L, ("123456", "Singapore", None))))
+    val boundForm = form.bind(jsonObject)
+    assertEquals(boundForm.value, Some((1L, ("123456", "Singapore", None))))
   }
 
   test("Json optional nested mapping fields with values") {
@@ -175,8 +175,8 @@ class FormNestedFieldsSuite extends munit.FunSuite {
       )
     )
 
-    val bindedForm = form.bind(jsonObject)
-    assertEquals(bindedForm.value, Some(User(1L, Address("123456", "Singapore", Some((1L, 2L))))))
+    val boundForm = form.bind(jsonObject)
+    assertEquals(boundForm.value, Some(User(1L, Address("123456", "Singapore", Some((1L, 2L))))))
   }
 
   test("Json optional nested mapping fields with no values") {
@@ -203,7 +203,7 @@ class FormNestedFieldsSuite extends munit.FunSuite {
       )
     )
 
-    val bindedForm = form.bind(jsonObject)
-    assertEquals(bindedForm.value, Some(User(1L, Address("123456", "Singapore", None))))
+    val boundForm = form.bind(jsonObject)
+    assertEquals(boundForm.value, Some(User(1L, Address("123456", "Singapore", None))))
   }
 }

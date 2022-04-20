@@ -47,7 +47,7 @@ class QuerystringFormPlayCompatibilitySuite extends munit.FunSuite {
   test("Form data with query string"){
     val queryParams = Seq("age" -> "22")
     val formValues = Map("id" -> Seq("1"), "name" -> Seq("John Doe"))
-    val bindedForm = simpleForm.bind(formValues, queryParams)
-    assertEquals(bindedForm.value, Some("1", "John Doe"))
+    val boundForm = simpleForm.bind(formValues, queryParams)
+    assertEquals(boundForm.value, Some("1", "John Doe"))
   }
 }

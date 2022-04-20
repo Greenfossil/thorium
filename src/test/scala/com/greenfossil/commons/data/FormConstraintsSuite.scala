@@ -11,9 +11,9 @@ class FormConstraintsSuite extends munit.FunSuite {
         "age"  -> number.verifying("Age must be 42", age => age == 42)
       )
 
-    val bindedForm = userFormConstraints.bind("name" -> "1", "age" -> "10")
-    assertEquals(bindedForm.hasErrors, true)
-    assertNoDiff(bindedForm.errors.head.messages.head, "Age must be 42")
+    val boundForm = userFormConstraints.bind("name" -> "1", "age" -> "10")
+    assertEquals(boundForm.hasErrors, true)
+    assertNoDiff(boundForm.errors.head.messages.head, "Age must be 42")
   }
 
   test("case class Form - form-based verifying success") {
@@ -22,9 +22,9 @@ class FormConstraintsSuite extends munit.FunSuite {
         "name" -> text,
         "age"  -> number
       ).verifying("Name should be homer and age is 42", user => user.name == "homer" && user.age == 42)
-    val bindedForm = userFormConstraints.bind("name" -> "homer", "age" -> "10")
-    assertEquals(bindedForm.hasErrors, true)
-    assertNoDiff(bindedForm.errors.head.messages.head, "Name should be homer and age is 42")
+    val boundForm = userFormConstraints.bind("name" -> "homer", "age" -> "10")
+    assertEquals(boundForm.hasErrors, true)
+    assertNoDiff(boundForm.errors.head.messages.head, "Name should be homer and age is 42")
   }
 
   test("case class Form - form-based verifying failure") {

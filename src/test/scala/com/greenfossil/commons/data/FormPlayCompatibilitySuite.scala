@@ -47,12 +47,12 @@ class FormPlayCompatibilitySuite extends munit.FunSuite {
   test("repeated with valid index []") {
     val form: Form[Seq[Int]] = Form("seq", seq[Int])
 
-    val bindedForm = form.bind(
+    val boundForm = form.bind(
       "seq[1]" -> "1",
       "seq[2]" -> "2",
       "seq[3]" -> "3",
     )
-    assertEquals(bindedForm.value, Some(Seq(1, 2, 3)))
+    assertEquals(boundForm.value, Some(Seq(1, 2, 3)))
   }
 
   /*
@@ -61,12 +61,12 @@ class FormPlayCompatibilitySuite extends munit.FunSuite {
   test("repeated with same index []".fail) { //Will not be compatible
     val form: Form[Seq[Int]] = Form("seq", seq[Int])
 
-    val bindedForm = form.bind(
+    val boundForm = form.bind(
       "seq[1]" -> "1",
       "seq[1]" -> "2",
       "seq[1]" -> "3",
     )
-    assertEquals(bindedForm.value, Some(Seq(1)))
+    assertEquals(boundForm.value, Some(Seq(1)))
   }
 
   /*
@@ -75,12 +75,12 @@ class FormPlayCompatibilitySuite extends munit.FunSuite {
   test("repeated with inverted index []") {
     val form: Form[Seq[Int]] = Form("seq", seq[Int])
 
-    val bindedForm = form.bind(
+    val boundForm = form.bind(
       "seq[3]" -> "1",
       "seq[2]" -> "2",
       "seq[1]" -> "3",
     )
-    assertEquals(bindedForm.value, Some(Seq(3, 2, 1)))
+    assertEquals(boundForm.value, Some(Seq(3, 2, 1)))
   }
   /*
    * curl http://localhost:9000/form -X POST -d 'seq[1]=1' -d 'seq[2]=2' -d 'seq[4]=3' -o /dev/null
@@ -88,12 +88,12 @@ class FormPlayCompatibilitySuite extends munit.FunSuite {
   test("repeated with gap in index []") {
     val form: Form[Seq[Int]] = Form("seq", seq[Int])
 
-    val bindedForm = form.bind(
+    val boundForm = form.bind(
       "seq[1]" -> "1",
       "seq[2]" -> "2",
       "seq[4]" -> "3",
     )
-    assertEquals(bindedForm.value, Some(Seq(1, 2, 3)))
+    assertEquals(boundForm.value, Some(Seq(1, 2, 3)))
   }
   /*
   * curl http://localhost:9000/form -X POST -d 'seq[]=1' -d 'seq[]=2' -d 'seq[]=3' -o /dev/null
@@ -103,24 +103,24 @@ class FormPlayCompatibilitySuite extends munit.FunSuite {
   test("repeated with no []") {
     val form: Form[Seq[Int]] = Form("seq", seq[Int])
 
-    val bindedForm = form.bind(
+    val boundForm = form.bind(
       "seq[]" -> "1",
       "seq[]" -> "2",
       "seq" -> "3",
     )
-    assertEquals(bindedForm.value, Some(Seq(1, 2, 3)))
+    assertEquals(boundForm.value, Some(Seq(1, 2, 3)))
   }
   
 
   test("repeated with 0 as an index []") {
     val form: Form[Seq[Int]] = Form("seq", seq[Int])
 
-    val bindedForm = form.bind(
+    val boundForm = form.bind(
       "seq[0]" -> "1",
       "seq[1]" -> "2",
       "seq[2]" -> "3",
     )
-    assertEquals(bindedForm.value, Some(Seq(1, 2, 3)))
+    assertEquals(boundForm.value, Some(Seq(1, 2, 3)))
   }
 
   /*
@@ -129,12 +129,12 @@ class FormPlayCompatibilitySuite extends munit.FunSuite {
   test("repeated with negative value as an index []") {
     val form: Form[Seq[Int]] = Form("seq", seq[Int])
 
-    val bindedForm = form.bind(
+    val boundForm = form.bind(
       "seq[-1]" -> "1",
       "seq[0]" -> "2",
       "seq[1]" -> "3",
     )
-    assertEquals(bindedForm.value, Some(Seq(2, 3)))
+    assertEquals(boundForm.value, Some(Seq(2, 3)))
   }
 
   /*
@@ -143,12 +143,12 @@ class FormPlayCompatibilitySuite extends munit.FunSuite {
   test("repeated with 1 empty index []") {
     val form: Form[Seq[Int]] = Form("seq", seq[Int])
 
-    val bindedForm = form.bind(
+    val boundForm = form.bind(
       "seq[1]" -> "1",
       "seq[]" -> "2",
       "seq[3]" -> "3",
     )
-    assertEquals(bindedForm.value, Some(Seq(2, 1, 3)))
+    assertEquals(boundForm.value, Some(Seq(2, 1, 3)))
   }
 
   /*
@@ -157,12 +157,12 @@ class FormPlayCompatibilitySuite extends munit.FunSuite {
   test("repeated with 2 empty index [] ".fail) {
     val form: Form[Seq[Int]] = Form("seq", seq[Int])
 
-    val bindedForm = form.bind(
+    val boundForm = form.bind(
       "seq[1]" -> "1",
       "seq[]" -> "2",
       "seq[]" -> "3",
     )
-    assertEquals(bindedForm.value, Some(Seq(2, 3)))
+    assertEquals(boundForm.value, Some(Seq(2, 3)))
   }
 
   /*
@@ -171,13 +171,13 @@ class FormPlayCompatibilitySuite extends munit.FunSuite {
   test("repeated with same value with empty index [] ".fail) {
     val form: Form[Seq[Int]] = Form("seq", seq[Int])
 
-    val bindedForm = form.bind(
+    val boundForm = form.bind(
         "seq[1]" -> "1",
         "seq[]" -> "2",
         "seq[]" -> "2",
         "seq[2]" -> "3",
     )
-    assertEquals(bindedForm.value, Some(Seq(2, 1, 3)))
+    assertEquals(boundForm.value, Some(Seq(2, 1, 3)))
   }
 
   /*
@@ -186,13 +186,13 @@ class FormPlayCompatibilitySuite extends munit.FunSuite {
   test("repeated with different value with empty index [] ".fail) {
     val form: Form[Seq[Int]] = Form("seq", seq[Int])
 
-    val bindedForm = form.bind(
+    val boundForm = form.bind(
         "seq[1]" -> "1",
         "seq[]" -> "2",
         "seq[]" -> "5",
         "seq[2]" -> "3",
     )
-    assertEquals(bindedForm.value, Some(Seq(2, 5, 3)))
+    assertEquals(boundForm.value, Some(Seq(2, 5, 3)))
   }
 
   /*
@@ -207,12 +207,12 @@ class FormPlayCompatibilitySuite extends munit.FunSuite {
       )
     )
 
-    val bindedForm = form.bind(
+    val boundForm = form.bind(
       "id" -> "1",
       "address.postalCode" -> "123456",
       "address.country" -> "Singapore"
     )
-    assertEquals(bindedForm.value, Some((1L, ("123456", "Singapore"))))
+    assertEquals(boundForm.value, Some((1L, ("123456", "Singapore"))))
   }
 
   /*
@@ -235,7 +235,7 @@ class FormPlayCompatibilitySuite extends munit.FunSuite {
       )
     )
 
-    val bindedForm = form.bind(
+    val boundForm = form.bind(
       "id" -> "1",
       "address.postalCode" -> "123456",
       "address.country" -> "Singapore",
@@ -244,18 +244,18 @@ class FormPlayCompatibilitySuite extends munit.FunSuite {
       "address.numList.member.name1" -> "John",
       "address.numList.member.name2" -> "Doe",
     )
-    assertEquals(bindedForm.value, Some((1L, ("123456", "Singapore", (1L, 2L, ("John", "Doe"))))))
+    assertEquals(boundForm.value, Some((1L, ("123456", "Singapore", (1L, 2L, ("John", "Doe"))))))
   }
 
-  test("binded ignored"){
+  test("bound ignored"){
     val form = Form("s", ignored("Foo"))
-    val bindedForm = form.bind("s" -> "Bar")
-    assertEquals(bindedForm.value, Some("Foo"))
+    val boundForm = form.bind("s" -> "Bar")
+    assertEquals(boundForm.value, Some("Foo"))
   }
 
   test("filled ignored"){
     val form: Form[String] = Form("s", ignored("Foo"))
-    val bindedForm = form.fill("Bar")
-    assertEquals(bindedForm.value, Some("Foo"))
+    val boundForm = form.fill("Bar")
+    assertEquals(boundForm.value, Some("Foo"))
   }
 }

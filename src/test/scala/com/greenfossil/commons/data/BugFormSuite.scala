@@ -19,7 +19,7 @@ class BugFormSuite extends munit.FunSuite {
     )
     assertEquals[Any, Any](filledForm("name").value, Option("Homer Simpson"))
     filledForm.mappings.productIterator.foreach{
-      case f: Field[_] => println(s"${f.name}: ${f.value}")
+      case f: Field[?] => println(s"${f.name}: ${f.value}")
     }
   }
 

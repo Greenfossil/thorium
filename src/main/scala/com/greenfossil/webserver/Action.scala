@@ -16,7 +16,7 @@ import scala.concurrent.{ExecutionContext, Future}
 class WebServerRequestConverter extends RequestConverterFunction:
   override def convertRequest(ctx: ServiceRequestContext,
                               request: AggregatedHttpRequest,
-                              expectedResultType: Class[_],
+                              expectedResultType: Class[?],
                               expectedParameterizedResultType: ParameterizedType): AnyRef =
     val currentThread = Thread.currentThread()
     val oldCl = currentThread.getContextClassLoader
