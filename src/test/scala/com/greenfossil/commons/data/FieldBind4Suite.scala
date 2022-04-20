@@ -45,4 +45,14 @@ class FieldBind4Suite extends munit.FunSuite {
     assertEquals(boundField.value, Some(Seq(Contact("Homer", 123), Contact("Marge", 456))))
   }
 
+  test("bind with errors".only){
+    val seqIntField = seq[Int].name("i")
+    val boundField = seqIntField.bind("i" -> "1", "i" -> "abc", "i" -> "3").asInstanceOf[SeqField[Int]]
+    boundField.errors foreach println
+    assertEquals(boundField.boundFields.size, 3)
+    assertEquals(boundField.boundFields(1).errors.head.message, "error.number")
+    assertEquals[Any, Any](boundField.value, Some(Seq(1, 3)))
+
+  }
+
 }

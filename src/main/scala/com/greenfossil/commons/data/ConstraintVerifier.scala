@@ -37,42 +37,42 @@ trait ConstraintVerifier[T[_], V] {
       .map(ve => FormError(name, ve.messages, ve.args))
   }
 
-  def bindedFieldsToProduct(
-                           newMappings: Field[_] *: Tuple,
+  def boundFieldsToProduct(
+                           newMappings: Field[?] *: Tuple,
                            mirrorOpt: Option[scala.deriving.Mirror.ProductOf[V]],
-                           fn: (Map[String, Any],  Field[_] *: Tuple, V, Seq[FormError]) => T[V]
+                           fn: (Map[String, Any],  Field[?] *: Tuple, V, Seq[FormError]) => T[V]
                          ): T[V] =
 
-    val newData: Map[String, Any] = newMappings.toList.collect{ case f: Field[_] => f.name -> f.safeValue }.toMap
+    val newData: Map[String, Any] = newMappings.toList.collect{ case f: Field[?] => f.name -> f.safeValue }.toMap
 
     val fieldsErrors: List[FormError] =  newMappings.toList.collect{ case f: Field[t] => f.errors }.flatten
 
-    val bindedFieldValues: Any *: Tuple = newMappings.map[[A] =>> Any]{
+    val boundFieldValues: Any *: Tuple = newMappings.map[[A] =>> Any]{
       [X] => (x: X) => x match
         case f: Field[t] => f.safeValue
     }
 
-    val bindedValue: V =
+    val boundValue: V =
     // This is to handle Form with single field to return the actual type of the field [T]
       if newMappings.size == 1
       then
-        bindedFieldValues(0).asInstanceOf[V]
+        boundFieldValues(0).asInstanceOf[V]
       else
         //If all values are None, implies value is null
-        if bindedFieldValues.toList.collect{case None => 1}.sum == newMappings.size
+        if boundFieldValues.toList.collect{case None => 1}.sum == newMappings.size
         then null.asInstanceOf[V]
-        else mirrorOpt.map(m => m.fromProduct(bindedFieldValues)).getOrElse(bindedFieldValues.asInstanceOf[V])
+        else mirrorOpt.map(m => m.fromProduct(boundFieldValues)).getOrElse(boundFieldValues.asInstanceOf[V])
 
-    val formConstraintsErrors = applyConstraints(bindedValue)
+    val formConstraintsErrors = applyConstraints(boundValue)
 
-    fn(newData, newMappings, bindedValue, formConstraintsErrors ++ fieldsErrors)
+    fn(newData, newMappings, boundValue, formConstraintsErrors ++ fieldsErrors)
 
 
   /*
  * TODO - query string params is not implemented yet
  */
-  def bindJsValueToMappings(mappings: Field[_] *: Tuple, js: JsValue, query: List[(String, String)]): Field[_] *: Tuple =
-    mappings.map[[A] =>> Field[_]] {
+  def bindJsValueToMappings(mappings: Field[?] *: Tuple, js: JsValue, query: List[(String, String)]): Field[?] *: Tuple =
+    mappings.map[[A] =>> Field[?]] {
       [X] => (x: X) => x match
         case f: Field[t] => f.bindJsValue(js)
     }

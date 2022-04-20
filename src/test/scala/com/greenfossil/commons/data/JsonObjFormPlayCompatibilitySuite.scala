@@ -45,8 +45,8 @@ class JsonObjFormPlayCompatibilitySuite extends munit.FunSuite {
       "seq" -> Seq("1", "2","3")
     )
 
-    val bindedForm = form.bind(jsonObject)
-    assertEquals(bindedForm.value, Some(Seq(1, 2, 3)))
+    val boundForm = form.bind(jsonObject)
+    assertEquals(boundForm.value, Some(Seq(1, 2, 3)))
   }
 
   /*
@@ -69,8 +69,8 @@ class JsonObjFormPlayCompatibilitySuite extends munit.FunSuite {
       )
     )
 
-    val bindedForm = form.bind(jsonObject)
-    assertEquals(bindedForm.value, Some((1L, ("123456", "Singapore"))))
+    val boundForm = form.bind(jsonObject)
+    assertEquals(boundForm.value, Some((1L, ("123456", "Singapore"))))
   }
 
   /*
@@ -100,8 +100,8 @@ class JsonObjFormPlayCompatibilitySuite extends munit.FunSuite {
       )
     )
 
-    val bindedForm = form.bind(jsonObject)
-    assertEquals(bindedForm.value, Some((1L, ("123456", "Singapore", (1L, 2L)))))
+    val boundForm = form.bind(jsonObject)
+    assertEquals(boundForm.value, Some((1L, ("123456", "Singapore", (1L, 2L)))))
   }
 
   /*
@@ -126,8 +126,8 @@ class JsonObjFormPlayCompatibilitySuite extends munit.FunSuite {
       )
     )
 
-    val bindedForm = form.bind(jsonObject)
-    assertEquals(bindedForm.value, Some((1L, ("123456", "Singapore", Seq(1L, 2L)))))
+    val boundForm = form.bind(jsonObject)
+    assertEquals(boundForm.value, Some((1L, ("123456", "Singapore", Seq(1L, 2L)))))
   }
 
 }

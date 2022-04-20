@@ -6,7 +6,7 @@ object In {
 }
 
 extension (x: String) def /(arg: String) : In[Unit] = In(Tuple(x)) / arg
-extension (x: String) def /(arg: In[_]) : In[_] = In(Tuple(x)) / arg
+extension (x: String) def /(arg: In[?]) : In[?] = In(Tuple(x)) / arg
 
 def path[I](x: String) = In[I](Tuple(x))
 

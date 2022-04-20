@@ -32,7 +32,7 @@ object Formatter {
   /**
    * Default formatter for the `String` type.
    */
-  def stringFormat: Formatter[String] = new Formatter[String] {
+  def checkRequiredFormat: Formatter[String] = new Formatter[String] {
 
     override val tpe: String = "String"
 
@@ -67,7 +67,7 @@ object Formatter {
    * @param data Field data
    */
   def parsing[T](parse: String => T, errMsg: String, errArgs: Seq[Any])(key: String, data: Map[String, Seq[String]]): Either[Seq[FormError], T] = {
-    stringFormat
+    checkRequiredFormat
       .bind(key, data)
       .flatMap { s =>
         scala.util.control.Exception
@@ -133,7 +133,7 @@ object Formatter {
     override val format = Some(("format.real", Nil))
 
     override def bind(key: String, data: Map[String, Seq[String]]) = {
-      stringFormat
+      checkRequiredFormat
         .bind(key, data)
         .flatMap { s =>
           scala.util.control.Exception

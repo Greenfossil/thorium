@@ -26,7 +26,7 @@ object Field {
 
   inline def fieldOf[A]: Field[A] =
     inline erasedValue[A] match {
-      case _: String             => ScalarField("String", binder = stringFormat.asInstanceOf[Formatter[A]])
+      case _: String             => ScalarField("String", binder = checkRequiredFormat.asInstanceOf[Formatter[A]])
       case _: Int                => ScalarField("Int", binder = intFormat.asInstanceOf[Formatter[A]])
       case _: Long               => ScalarField("Long", binder = longFormat.asInstanceOf[Formatter[A]])
       case _: Double             => ScalarField("Double", binder = doubleFormat.asInstanceOf[Formatter[A]])
@@ -62,7 +62,7 @@ trait Field[A] extends ConstraintVerifier[Field, A]{
 
   val name: String
 
-  val form: Form[_]
+  val form: Form[?]
 
   val value: Option[A]
 
@@ -72,7 +72,9 @@ trait Field[A] extends ConstraintVerifier[Field, A]{
 
   def safeValue: Any =  if value.isDefined then value.get else None
 
-  def mappings(mappings: Field[_] *: Tuple, mirror: Mirror.ProductOf[A]): Field[A]
+  def mappings(mappings: Field[?] *: Tuple, mirror: Mirror.ProductOf[A]): Field[A]
+
+  def format: Option[(String, Seq[Any])]
 
   def binder(binder: Formatter[A]): Field[A]
 
@@ -110,7 +112,7 @@ trait Field[A] extends ConstraintVerifier[Field, A]{
 
 case class ScalarField[A](tpe: String,
                        name: String = null,
-                       form: Form[_] = Form.empty,
+                       form: Form[?] = Form.empty,
                        value: Option[A] = None,
                        binder: Formatter[A],
                        constraints:Seq[Constraint[A]] = Nil,
@@ -123,7 +125,7 @@ case class ScalarField[A](tpe: String,
 
   override def binder(binder: Formatter[A]): Field[A] = copy(binder = binder)
 
-  override def mappings(mappings: Field[_] *: Tuple, mirror: Mirror.ProductOf[A]): Field[A] =
+  override def mappings(mappings: Field[?] *: Tuple, mirror: Mirror.ProductOf[A]): Field[A] =
     throw new UnsupportedOperationException("ScalarField does not support mappings")
 
   override def fill(newValueOpt: Option[A]): Field[A] =
@@ -161,19 +163,22 @@ case class ScalarField[A](tpe: String,
 
 case class ProductField[A](tpe: String,
                            name: String = null,
-                           form: Form[_] = Form.empty,
+                           form: Form[?] = Form.empty,
                            value: Option[A] = None,
                            constraints:Seq[Constraint[A]] = Nil,
                            format: Option[(String, Seq[Any])] = None,
                            errors: Seq[FormError] = Nil,
-                           mappings: Field[_] *: Tuple = null,
+                           mappings: Field[?] *: Tuple = null,
                            mirrorOpt: Option[Mirror.ProductOf[A]] = None) extends Field[A] {
 
   override def name(name: String): Field[A] =
     copy(name = name)
 
-  override def mappings(mappings: Field[_] *: Tuple, mirror: Mirror.ProductOf[A]): Field[A] =
+  override def mappings(mappings: Field[?] *: Tuple, mirror: Mirror.ProductOf[A]): Field[A] =
     copy(mappings = mappings, mirrorOpt = Option(mirror))
+
+  def mapping(name: String): Option[Field[?]] =
+    mappings.toList.asInstanceOf[List[Field[?]]].find(_.name == name)
 
   override def binder(binder: Formatter[A]): Field[A] =
     throw new UnsupportedOperationException("Product field does not support setting of binder")
@@ -184,13 +189,13 @@ case class ProductField[A](tpe: String,
   private def bindToProduct(prefix: String, data: Map[String, Seq[String]]): Field[A] = {
     val pathName = getPathName(prefix, name)
     val newMappings =
-      mappings.map[[A] =>> Field[_]]{
+      mappings.map[[A] =>> Field[?]]{
         [X] => (x: X) => x match
           case f: Field[t] =>
             f.bindUsingPrefix(pathName, data)
       }
 
-    bindedFieldsToProduct(newMappings, mirrorOpt,
+    boundFieldsToProduct(newMappings, mirrorOpt,
       (newData, newMappings, newValue, newErrors) =>
         copy(mappings = newMappings, value = Option(newValue), errors = newErrors))
   }
@@ -213,12 +218,12 @@ case class ProductField[A](tpe: String,
     val pathName = getPathName(prefix, name)
     (jsValue \ pathName).asOpt[JsObject] match {
       case Some(jsObj) =>
-        val newMappings = mappings.map[[X] =>> Field[_]]{[X] => (x: X) =>
+        val newMappings = mappings.map[[X] =>> Field[?]]{[X] => (x: X) =>
           x match {
             case f: Field[t] => f.bindJsValue(prefix, jsObj)
           }
         }
-        bindedFieldsToProduct(newMappings, mirrorOpt,
+        boundFieldsToProduct(newMappings, mirrorOpt,
           (newData, newMappings, newValue, newErrors) =>
             copy(mappings = newMappings, value = Option(newValue), errors = newErrors))
 
@@ -228,7 +233,7 @@ case class ProductField[A](tpe: String,
 
 case class OptionalField[A](tpe: String,
                             name: String = null,
-                            form: Form[_] = Form.empty,
+                            form: Form[?] = Form.empty,
                             value: Option[A] = None,
                             constraints:Seq[Constraint[A]] = Nil,
                             errors: Seq[FormError] = Nil,
@@ -237,8 +242,10 @@ case class OptionalField[A](tpe: String,
   override def name(name: String): OptionalField[A] =
     copy(name = name, elemField = elemField.name(name))
 
-  override def mappings(mappings: Field[_] *: Tuple, mirror: Mirror.ProductOf[A]): Field[A] =
+  override def mappings(mappings: Field[?] *: Tuple, mirror: Mirror.ProductOf[A]): Field[A] =
     copy(elemField = elemField.mappings(mappings = mappings, mirror))
+
+  override def format: Option[(String, Seq[Any])] = elemField.format
 
   override def binder(binder: Formatter[A]): Field[A] =
     copy(elemField= elemField.binder(binder))
@@ -249,13 +256,13 @@ case class OptionalField[A](tpe: String,
   override def safeValue: Any =  value 
 
   override def bindUsingPrefix(prefix: String, data: Map[String, Seq[String]]): Field[A] =
-    val bindedField = elemField.bindUsingPrefix(prefix, data)
-    val bindedValue = bindedField.value
+    val boundField = elemField.bindUsingPrefix(prefix, data)
+    val boundValue = boundField.value
 
     //ignore required field as this field is optional
-    val bindedFieldErrors = bindedField.errors.filterNot(_.is(name, "error.required"))
-    val errors = applyConstraints(bindedValue.asInstanceOf[A])
-    copy(value = bindedValue, errors = bindedFieldErrors ++ errors, elemField = bindedField)
+    val boundFieldErrors = boundField.errors.filterNot(_.is(name, "error.required"))
+    val errors = applyConstraints(boundValue.asInstanceOf[A])
+    copy(value = boundValue, errors = boundFieldErrors ++ errors, elemField = boundField)
 
   override def fill(newValueOpt: Option[A]): Field[A] =
     val filledField = elemField.fill(newValueOpt)
@@ -268,31 +275,37 @@ case class OptionalField[A](tpe: String,
     bindJsValue("", jsValue)
 
   override def bindJsValue(prefix: String, jsValue: JsValue): Field[A] =
-    val bindedField = elemField.bindJsValue(prefix, jsValue)
-    val bindedValue = bindedField.value
+    val boundField = elemField.bindJsValue(prefix, jsValue)
+    val boundValue = boundField.value
   
     //ignore required field as this field is optional
-    val bindedFieldErrors = bindedField.errors.filterNot(_.is(name, "error.required"))
-    val errors = applyConstraints(bindedValue.asInstanceOf[A])
-    copy(value = bindedValue, errors = bindedFieldErrors ++ errors, elemField = bindedField)
+    val boundFieldErrors = boundField.errors.filterNot(_.is(name, "error.required"))
+    val errors = applyConstraints(boundValue.asInstanceOf[A])
+    copy(value = boundValue, errors = boundFieldErrors ++ errors, elemField = boundField)
 
 }
 
 case class SeqField[A](tpe: String,
                        name: String = null,
-                       form: Form[_] = Form.empty,
+                       form: Form[?] = Form.empty,
                        value: Option[A] = None,
                        constraints:Seq[Constraint[A]] = Nil,
                        errors: Seq[FormError] = Nil,
-                       elemField: Field[A]) extends Field[A] {
+                       elemField: Field[A],
+                       boundFields: Seq[Field[A]] = Nil) extends Field[A] {
 
   override def name(name: String): Field[A] =
     copy(name = name, elemField = elemField.name(name))
     
-  def indexes: Seq[Int] = ???
+  def indexes: Range =
+    value match 
+      case None => 0 to 0
+      case Some(xs: Seq[?]) => xs.indices
 
-  override def mappings(mappings: Field[_] *: Tuple, mirror: Mirror.ProductOf[A]): Field[A] =
+  override def mappings(mappings: Field[?] *: Tuple, mirror: Mirror.ProductOf[A]): Field[A] =
     copy(elemField = elemField.mappings(mappings = mappings, mirror))
+
+  override def format: Option[(String, Seq[Any])] = elemField.format
 
   override def binder(binder: Formatter[A]): Field[A] =
     copy(elemField = elemField.binder(binder))
@@ -326,18 +339,18 @@ case class SeqField[A](tpe: String,
      * if name is not the same key in dataMap, bind using the entire dataMap (applicable for repeatedTuples)
      * if name exists in dataMap, bind each value separately - handles multiple value to one key
      */
-    val bindedFields: Seq[Field[_]] = sortedFieldNames.flatMap{name =>
+    val boundFields: Seq[Field[A]] = sortedFieldNames.flatMap{name =>
       dataMap.getOrElse(name, Nil) match {
         case Nil => Seq(elemField.name(name).bind(dataMap)) 
         case values => values.map(value => elemField.name(name).bind(Map(name -> Seq(value))))
       }
     }
 
-    val values = bindedFields.collect{case f: Field[_] if f.value.isDefined => f.value.get}
-    val errors = bindedFields.collect{case f: Field[_] if f.errors.nonEmpty => f.errors}.flatten ++
+    val values = boundFields.collect{case f: Field[?] if f.value.isDefined => f.value.get}
+    val errors = boundFields.collect{case f: Field[?] if f.errors.nonEmpty => f.errors}.flatten ++
       applyConstraints(values.asInstanceOf[A])
     
-    copy(value = Option(values).asInstanceOf[Option[A]], errors = errors)
+    copy(value = Option(values).asInstanceOf[Option[A]], errors = errors, boundFields = boundFields)
   }
 
   override def verifying(newConstraints: Constraint[A]*): Field[A] =
@@ -363,7 +376,7 @@ case class SeqField[A](tpe: String,
 
 case class MappingField[A, B](tpe: String,
                               name: String = null,
-                              form: Form[_] = Form.empty,
+                              form: Form[?] = Form.empty,
                               value: Option[B] = None,
                               errors: Seq[FormError] = Nil,
                               constraints: Seq[Constraint[B]] = Nil,
@@ -373,8 +386,11 @@ case class MappingField[A, B](tpe: String,
   override def name(name: String): Field[B] =
     copy(name = name, delegate = delegate.name(name))
 
-  override def mappings(mappings: Field[_] *: Tuple, mirror: ProductOf[B]): Field[B] =
+  override def mappings(mappings: Field[?] *: Tuple, mirror: ProductOf[B]): Field[B] =
     throw new IllegalArgumentException("MappingField#mappings is not supported for MappingField")
+
+  override def format: Option[(String, Seq[Any])] =
+    throw new IllegalArgumentException("MappingField#format is not supported for MappingField")
 
   override def binder(binder: Formatter[B]): Field[B] =
     throw new IllegalArgumentException("MappingField#binder is not supported for MappingField")
@@ -386,8 +402,8 @@ case class MappingField[A, B](tpe: String,
     copy(value =  _value , errors =_errors)
 
   override def bind(data: Map[String, Seq[String]]): Field[B] =
-    val bindedDelegate = delegate.bind(data)
-    val _value = bindedDelegate.value.map(v => delegateMapping(v)).orElse(value)
+    val boundDelegate = delegate.bind(data)
+    val _value = boundDelegate.value.map(v => delegateMapping(v)).orElse(value)
     val _errors = _value.map(v => applyConstraints(v)).getOrElse(Nil)
     copy(value =  _value , errors =_errors)
 
@@ -395,8 +411,8 @@ case class MappingField[A, B](tpe: String,
     throw new IllegalArgumentException("MappingField#bindUsingPrefix is not supported for MappingField")
 
   override def bindJsValue(jsValue: JsValue): Field[B] =
-    val bindedDelegate = delegate.bindJsValue(jsValue)
-    val _value = bindedDelegate.value.map(v => delegateMapping(v)).orElse(value)
+    val boundDelegate = delegate.bindJsValue(jsValue)
+    val _value = boundDelegate.value.map(v => delegateMapping(v)).orElse(value)
     val _errors = _value.map(v => applyConstraints(v)).getOrElse(Nil)
     copy(value =  _value , errors =_errors)
 

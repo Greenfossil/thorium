@@ -60,7 +60,7 @@ class FieldConstructionSuite extends munit.FunSuite{
   )
   checkOptional("P-", optTuple)
 
-  val tupleElemField = optTuple.asInstanceOf[OptionalField[_]].elemField
+  val tupleElemField = optTuple.asInstanceOf[OptionalField[?]].elemField
   checkTuple("", tupleElemField, "String", "Int")
 
   /**

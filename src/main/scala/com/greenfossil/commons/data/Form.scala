@@ -50,11 +50,11 @@ object Form {
   def mapping[A](using m: Mirror.ProductOf[A])(nameValueTuple: Tuple.Zip[m.MirroredElemLabels, FieldConstructor[m.MirroredElemTypes]]): Form[A] =
     new Form[A](toNamedFieldTuple(nameValueTuple), mirrorOpt = Some(m))
 
-  def toNamedFieldTuple(tuple: Tuple): Field[_] *: Tuple =
-    tuple.map[[X] =>> Field[_]]([X] => (x: X) =>
+  def toNamedFieldTuple(tuple: Tuple): Field[?] *: Tuple =
+    tuple.map[[X] =>> Field[?]]([X] => (x: X) =>
       x match
-        case (name: String, f: Field[_]) => f.name(name)
-    ).asInstanceOf[Field[_] *: Tuple]
+        case (name: String, f: Field[?]) => f.name(name)
+    ).asInstanceOf[Field[?] *: Tuple]
 
 }
 
@@ -66,7 +66,7 @@ object Form {
  * @param value
  * @tparam T
  */
-case class Form[T](mappings: Field[_] *: Tuple,
+case class Form[T](mappings: Field[?] *: Tuple,
                    data: Map[String, Any] = Map.empty,
                    errors: Seq[FormError] = Nil,
                    value: Option[T] = None,
@@ -76,7 +76,7 @@ case class Form[T](mappings: Field[_] *: Tuple,
   val name = ""
 
   def fill(values: T): Form[T] =
-    val bindedFields  = values match {
+    val boundFields  = values match {
       case _values: Tuple =>
         fillValuesToFields(_values)
 
@@ -86,7 +86,7 @@ case class Form[T](mappings: Field[_] *: Tuple,
 
       case value => fillValuesToFields(Tuple1(value))
     }
-    updateBindedFields(bindedFields)
+    updateBoundFields(boundFields)
 
   def bindFromRequest()(using request: com.greenfossil.webserver.Request): Form[T] =
     val querydata: List[(String, String)] =
@@ -114,20 +114,22 @@ case class Form[T](mappings: Field[_] *: Tuple,
     bind(data ++ queryData.groupMap(_._1)(_._2))
 
   def bind(data: Map[String, Seq[String]]): Form[T] =
-    val bindedFields = 
-        mappings.map[[A] =>> Field[_]]{
+    val boundFields =
+        mappings.map[[A] =>> Field[?]]{
           [X] => (x: X) => x match
-            case f: Field[t] => f.bind(data)
+            case f: Field[t] =>
+              println(s"f = ${f}")
+              f.bind(data)
         }
-    updateBindedFields(bindedFields)
+    updateBoundFields(boundFields)
 
   def bind(js: JsValue, query: List[(String, String)] = Nil): Form[T] = {
-    val bindedFields = bindJsValueToMappings(mappings, js, query)
-    updateBindedFields(bindedFields)
+    val boundFields = bindJsValueToMappings(mappings, js, query)
+    updateBoundFields(boundFields)
   }
 
-  private def updateBindedFields(newMappings: Field[_] *: Tuple): Form[T] = {
-    bindedFieldsToProduct(newMappings, mirrorOpt,
+  private def updateBoundFields(newMappings: Field[?] *: Tuple): Form[T] = {
+    boundFieldsToProduct(newMappings, mirrorOpt,
       (newData, newMappings, newValue, newErrors) =>
         if(mappings.size == 1 && mappings.head.tpe == "?")
         then
@@ -137,14 +139,14 @@ case class Form[T](mappings: Field[_] *: Tuple,
     )
   }
 
-  private def fillValuesToFields(values: Product): Field[_] *: Tuple = {
+  private def fillValuesToFields(values: Product): Field[?] *: Tuple = {
     val valuesIter = values.productIterator
-    val bindedFields = mappings.map[[F] =>> Field[_]](
+    val boundFields = mappings.map[[F] =>> Field[?]](
       [F] => (f: F) => f match {
         case f: Field[a] =>
           f.fill(valuesIter.nextOption().asInstanceOf[Option[a]])
       })
-    bindedFields
+    boundFields
   }
 
   def fold[R](hasErrors: Form[T] => R, success: T => R): R = value match {
@@ -190,13 +192,15 @@ case class Form[T](mappings: Field[_] *: Tuple,
    *
    * @return all global errors
    */
-  def globalErrors: Seq[FormError] = errors.filter(_.key.isEmpty)
+  def globalErrors: Seq[FormError] =
+    errors.filter(_.key.isEmpty)
 
   /**
     * Adds an error to this form
     * @param error FormError
     */
-  def withError(error: FormError): Form[T] = this.copy(errors = this.errors :+ error)
+  def withError(error: FormError): Form[T] =
+    this.copy(errors = this.errors :+ error)
 
   /**
     * Adds an error to this form
@@ -204,7 +208,8 @@ case class Form[T](mappings: Field[_] *: Tuple,
     * @param message Error message
     * @param args Error message arguments
     */
-  def withError(key: String, message: String, args: Any*): Form[T] = withError(FormError(key, message, args))
+  def withError(key: String, message: String, args: Any*): Form[T] =
+    withError(FormError(key, message, args))
 
   /**
     * Adds a global error to this form
@@ -217,5 +222,18 @@ case class Form[T](mappings: Field[_] *: Tuple,
     copy(constraints = constraints ++ addConstraints)
 
   def discardingErrors: Form[T] = this.copy(errors = Nil)
+  
+  def fieldConstraints(fName: String): Option[(Option[(String, Seq[Any])], Seq[(String, Seq[Any])])] =
+    mappings
+      .toList
+      .asInstanceOf[List[Field[?]]]
+      .collectFirst{
+        case f: Field[?] if f.name == fName =>
+          
+          val constraintArgs = f.constraints.collect{
+            case Constraint(Some(name), args) => name -> args
+          }
+          (f.format , constraintArgs)
+      }
 
 }

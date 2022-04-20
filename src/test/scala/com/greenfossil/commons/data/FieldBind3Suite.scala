@@ -9,7 +9,6 @@ class FieldBind3Suite extends munit.FunSuite {
 
   test("Option[Int]") {
     val optIntField: Field[Option[Int]] =  optional[Int].name("optInt")
-//    optIntField.fill(None)
     val boundField = optIntField.bind("optInt" -> "1")
     assertEquals[Any, Any](boundField.value, Option(1))
   }

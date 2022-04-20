@@ -64,16 +64,16 @@ class FormFillSuite extends munit.FunSuite {
       "remaining" -> 100.00, "birthday" -> LocalDate.parse("1990-01-01")
     )
 
-    val bindedForm = form.bind(jsonObject)
-    assertEquals[Any, Any](bindedForm.data.get("name"), Some("Homer"))
-    assertEquals[Any, Any](bindedForm.data.get("age"), Some(50))
-    assertEquals[Any, Any](bindedForm.data.get("isActive"), Some(true))
-    assertEquals[Any, Any](bindedForm.data.get("id"), Some(123456L))
-    assertEquals[Any, Any](bindedForm.data.get("balance"), Some(100.12F))
-    assertEquals[Any, Any](bindedForm.data.get("remaining"), Some(100.00))
-    assertEquals[Any, Any](bindedForm.data.get("birthday"), Some(LocalDate.parse("1990-01-01")))
+    val boundForm = form.bind(jsonObject)
+    assertEquals[Any, Any](boundForm.data.get("name"), Some("Homer"))
+    assertEquals[Any, Any](boundForm.data.get("age"), Some(50))
+    assertEquals[Any, Any](boundForm.data.get("isActive"), Some(true))
+    assertEquals[Any, Any](boundForm.data.get("id"), Some(123456L))
+    assertEquals[Any, Any](boundForm.data.get("balance"), Some(100.12F))
+    assertEquals[Any, Any](boundForm.data.get("remaining"), Some(100.00))
+    assertEquals[Any, Any](boundForm.data.get("birthday"), Some(LocalDate.parse("1990-01-01")))
 
-    val fields = bindedForm.mappings.toList.asInstanceOf[List[Field[_]]]
+    val fields = boundForm.mappings.toList.asInstanceOf[List[Field[?]]]
     assertEquals[Any, Any](fields(0).value, Some("Homer"))
     assertEquals[Any, Any](fields(1).value, Some(50))
     assertEquals[Any, Any](fields(2).value, Some(true))
@@ -81,8 +81,8 @@ class FormFillSuite extends munit.FunSuite {
     assertEquals[Any, Any](fields(4).value, Some(100.12F))
     assertEquals[Any, Any](fields(5).value, Some(100.00))
     assertEquals[Any, Any](fields(6).value, Some(LocalDate.parse("1990-01-01")))
-    assertEquals(bindedForm.value, Some(("Homer", 50, true, 123456L, 100.12F, 100.00, LocalDate.parse("1990-01-01"))))
-    assertEquals(bindedForm.data.size, 7)
+    assertEquals(boundForm.value, Some(("Homer", 50, true, 123456L, 100.12F, 100.00, LocalDate.parse("1990-01-01"))))
+    assertEquals(boundForm.data.size, 7)
 
   }
 
