@@ -1,6 +1,6 @@
 package com.greenfossil.commons.data
 
-class FieldBind4Suite extends munit.FunSuite {
+class MappingBind4Suite extends munit.FunSuite {
 
   test("Seq[Int]") {
     val seqIntField = seq[Int].name("i")
@@ -15,9 +15,9 @@ class FieldBind4Suite extends munit.FunSuite {
   }
 
   test("Seq[Tuple]") {
-    val tupleField: Field[Seq[(String, Int)]] = repeatedTuple(
-      "name" -> Field.of[String],
-      "number" -> Field.of[Int]
+    val tupleField: Mapping[Seq[(String, Int)]] = repeatedTuple(
+      "name" -> Mapping.of[String],
+      "number" -> Mapping.of[Int]
     ).name("contact")
 
     val boundField = tupleField.bind(
@@ -31,9 +31,9 @@ class FieldBind4Suite extends munit.FunSuite {
 
   test("Seq[Mapping]") {
     case class Contact(name: String, number: Int)
-    val tupleField: Field[Seq[Contact]] = repeatedMapping[Contact](
-      "name" -> Field.of[String],
-      "number" -> Field.of[Int]
+    val tupleField: Mapping[Seq[Contact]] = repeatedMapping[Contact](
+      "name" -> Mapping.of[String],
+      "number" -> Mapping.of[Int]
     ).name("contact")
 
     val boundField = tupleField.bind(
@@ -47,7 +47,7 @@ class FieldBind4Suite extends munit.FunSuite {
 
   test("bind with errors".only){
     val seqIntField = seq[Int].name("i")
-    val boundField = seqIntField.bind("i" -> "1", "i" -> "abc", "i" -> "3").asInstanceOf[SeqField[Int]]
+    val boundField = seqIntField.bind("i" -> "1", "i" -> "abc", "i" -> "3").asInstanceOf[SeqMapping[Int]]
     boundField.errors foreach println
     assertEquals(boundField.boundFields.size, 3)
     assertEquals(boundField.boundFields(1).errors.head.message, "error.number")

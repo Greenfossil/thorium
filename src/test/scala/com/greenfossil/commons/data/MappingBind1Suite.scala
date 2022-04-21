@@ -4,38 +4,38 @@ import java.time.format.DateTimeFormatter
 import java.time.temporal.{ChronoUnit, TemporalUnit}
 import java.time.{LocalDate, LocalDateTime, LocalTime, YearMonth}
 
-class FieldBind1Suite extends munit.FunSuite {
+class MappingBind1Suite extends munit.FunSuite {
 
   test("int"){
-    val field = Field.of[Int]("field") 
+    val field = Mapping.of[Int]("field") 
     val boundField = field.bind("field" -> "1")
     assertEquals(boundField.errors, Nil)
     assertEquals[Any, Any](boundField.value, Option(1))
   }
 
   test("string"){
-    val field = Field.of[String]("field")
+    val field = Mapping.of[String]("field")
     val boundField = field.bind("field" -> "hello world")
     assertEquals(boundField.errors, Nil)
     assertEquals[Any,Any](boundField.value, Option("hello world"))
   }
 
   test("long"){
-    val field = Field.of[Long]("field")
+    val field = Mapping.of[Long]("field")
     val boundField = field.bind("field" -> "200000")
     assertEquals(boundField.errors, Nil)
     assertEquals[Any, Any](boundField.value, Option(200000L))
   }
 
   test("double"){
-    val field = Field.of[Double]("field")
+    val field = Mapping.of[Double]("field")
     val boundField = field.bind("field" -> "200000")
     assertEquals(boundField.errors, Nil)
     assertEquals[Any,Any](boundField.value, Option(200000D))
   }
 
   test("float"){
-    val field = Field.of[Float]("field")
+    val field = Mapping.of[Float]("field")
     val boundField = field.bind("field" -> "200000")
     assertEquals(boundField.errors, Nil)
     assertEquals[Any,Any](boundField.value, Option(200000.0F))
@@ -43,7 +43,7 @@ class FieldBind1Suite extends munit.FunSuite {
 
   test("boolean"){
     val value: Boolean = false
-    val field = Field.of[Boolean]("field")
+    val field = Mapping.of[Boolean]("field")
     val boundField = field.bind("field" -> "false")
     assertEquals(boundField.errors, Nil)
     assertEquals[Any,Any](boundField.value, Option(false))
@@ -55,7 +55,7 @@ class FieldBind1Suite extends munit.FunSuite {
 
   test("local date") {
     val now = LocalDate.now
-    val field = Field.of[LocalDate]("field")
+    val field = Mapping.of[LocalDate]("field")
     val boundField = field.bind("field" -> now.toString)
     assertEquals(boundField.errors, Nil)
     assertEquals[Any,Any](boundField.value, Some(now))
@@ -63,7 +63,7 @@ class FieldBind1Suite extends munit.FunSuite {
 
   test("local time"){
     val now = LocalTime.now()
-    val field = Field.of[LocalTime]("field")
+    val field = Mapping.of[LocalTime]("field")
     val boundField = field.bind("field" -> now.toString)
     assertEquals(boundField.errors, Nil)
     assertEquals[Any,Any](boundField.value, Some(now))
@@ -72,7 +72,7 @@ class FieldBind1Suite extends munit.FunSuite {
     val nowInSecs = now.truncatedTo(ChronoUnit.SECONDS)
     assertNotEquals(now, nowInSecs, "nowInSecs should not have millis")
 
-    val field2 = Field.of[LocalTime]("field")
+    val field2 = Mapping.of[LocalTime]("field")
     val boundField2 = field2.bind("field" -> nowInSecs.toString)
     assertEquals(boundField2.errors, Nil)
     assertEquals[Any,Any](boundField2.value, Some(nowInSecs))
@@ -83,7 +83,7 @@ class FieldBind1Suite extends munit.FunSuite {
     //By default uses ISO_LOCAL_DATE_TIME -
     // https://docs.oracle.com/javase/8/docs/api/java/time/format/DateTimeFormatter.html#ISO_LOCAL_DATE_TIME
     val now = LocalDateTime.now()
-    val field = Field.of[LocalDateTime]("field")
+    val field = Mapping.of[LocalDateTime]("field")
     val boundField = field.bind("field" -> now.toString)
     assertEquals(boundField.errors, Nil)
     assertEquals[Any,Any](boundField.value, Some(now))
@@ -91,7 +91,7 @@ class FieldBind1Suite extends munit.FunSuite {
     val nowInSecs = LocalDateTime.now().truncatedTo(ChronoUnit.SECONDS)
     assertNotEquals(now, nowInSecs, "nowInSecs should not have millis")
 
-    val field2 = Field.of[LocalDateTime]("field")
+    val field2 = Mapping.of[LocalDateTime]("field")
     val boundField2 = field.bind("field" -> nowInSecs.toString)
     assertEquals(boundField2.errors, Nil)
     assertEquals[Any,Any](boundField2.value, Some(nowInSecs))
@@ -99,7 +99,7 @@ class FieldBind1Suite extends munit.FunSuite {
 
   test("sql date"){
     val now: java.sql.Date = java.sql.Date.valueOf("2022-02-02")
-    val field = Field.of[java.sql.Date]("field")
+    val field = Mapping.of[java.sql.Date]("field")
     val boundField = field.bind("field" -> now.toString)
     assertEquals(boundField.errors, Nil)
     assertEquals[Any,Any](boundField.value, Some(now))
@@ -109,7 +109,7 @@ class FieldBind1Suite extends munit.FunSuite {
     val milli: Long = System.currentTimeMillis()
     val now: java.sql.Timestamp = new java.sql.Timestamp(milli)
 
-    val field = Field.of[java.sql.Timestamp]("field")
+    val field = Mapping.of[java.sql.Timestamp]("field")
     val boundField = field.bind("field" -> now.toString)
     assertEquals(boundField.errors, Nil)
     assertEquals[Any,Any](boundField.value, Some(now))
@@ -118,7 +118,7 @@ class FieldBind1Suite extends munit.FunSuite {
   test("uuid"){
     val uuid = java.util.UUID.randomUUID()
 
-    val field = Field.of[java.util.UUID]("field")
+    val field = Mapping.of[java.util.UUID]("field")
     val boundField = field.bind("field" -> uuid.toString)
     assertEquals(boundField.errors, Nil)
     assertEquals[Any,Any](boundField.value, Some(uuid))
@@ -126,7 +126,7 @@ class FieldBind1Suite extends munit.FunSuite {
 
   test("byte"){
     val value: Byte = 123.toByte
-    val field = Field.of[Byte]("field")
+    val field = Mapping.of[Byte]("field")
     val boundField = field.bind("field" -> value.toString)
     assertEquals(boundField.errors, Nil)
     assertEquals[Any,Any](boundField.value, Some(value))
@@ -134,7 +134,7 @@ class FieldBind1Suite extends munit.FunSuite {
 
   test("short"){
     val value: Short = 1
-    val field = Field.of[Short]("field")
+    val field = Mapping.of[Short]("field")
     val boundField = field.bind("field" -> value.toString)
     assertEquals(boundField.errors, Nil)
     assertEquals[Any,Any](boundField.value, Some(value))
@@ -142,7 +142,7 @@ class FieldBind1Suite extends munit.FunSuite {
 
   test("big decimal"){
     val value: BigDecimal = BigDecimal(200000)
-    val field = Field.of[BigDecimal]("field")
+    val field = Mapping.of[BigDecimal]("field")
     val boundField = field.bind("field" -> value.toString)
     assertEquals(boundField.errors, Nil)
     assertEquals[Any,Any](boundField.value, Some(value))
@@ -151,7 +151,7 @@ class FieldBind1Suite extends munit.FunSuite {
   test("char"){
     val value: Char = 'a'
 
-    val field = Field.of[Char]("field")
+    val field = Mapping.of[Char]("field")
     val boundField = field.bind("field" -> value.toString)
     assertEquals(boundField.errors, Nil)
     assertEquals[Any,Any](boundField.value, Some(value))
@@ -184,7 +184,7 @@ class FieldBind1Suite extends munit.FunSuite {
   }
 
   test("checked type"){
-    val field: Field[Boolean] =
+    val field: Mapping[Boolean] =
       checked("Please check this field")
         .name("field") //Assign name to field
 
@@ -224,7 +224,7 @@ class FieldBind1Suite extends munit.FunSuite {
   }
 
   test("Bind error".only){
-    val field = Field.of[Int]("field")
+    val field = Mapping.of[Int]("field")
     val boundField = field.bind("field" -> "abc")
     assertEquals(boundField.errors.head.message, "error.number")
     assertEquals(boundField.value, None)

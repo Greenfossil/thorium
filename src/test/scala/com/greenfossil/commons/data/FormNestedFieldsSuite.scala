@@ -6,7 +6,7 @@ class FormNestedFieldsSuite extends munit.FunSuite {
 
   test("bind case-class field") {
     case class Address(postalCode: String, country: String)
-    val form: Field[(Long, Address)] = tuple(
+    val form: Mapping[(Long, Address)] = tuple(
       "id" -> longNumber,
       "address" -> mapping[Address](
           "postalCode" -> text,
@@ -29,7 +29,7 @@ class FormNestedFieldsSuite extends munit.FunSuite {
 
   test("bind repeating case class field") {
     case class Address(postalCode: String, country: String)
-    val form: Field[(Long, Seq[Address])] = tuple(
+    val form: Mapping[(Long, Seq[Address])] = tuple(
       "id" -> longNumber,
       "address" -> repeatedMapping[Address](
         "postalCode" -> text,
@@ -51,7 +51,7 @@ class FormNestedFieldsSuite extends munit.FunSuite {
   }
 
   test("bind tuple field") {
-    val form: Field[(Long, (String, String))] = tuple(
+    val form: Mapping[(Long, (String, String))] = tuple(
       "id" -> longNumber,
       "address" -> tuple(
         "postalCode" -> text,
@@ -73,7 +73,7 @@ class FormNestedFieldsSuite extends munit.FunSuite {
   }
 
   test("bind repeat tuple field") {
-    val form: Field[(Long, Seq[(String, String)])] = tuple(
+    val form: Mapping[(Long, Seq[(String, String)])] = tuple(
       "id" -> longNumber,
       "address" -> repeatedTuple(
         "postalCode" -> text,
@@ -95,7 +95,7 @@ class FormNestedFieldsSuite extends munit.FunSuite {
   }
 
   test("Json optional nested tuple fields") {
-    val form: Field[(Long, (String, String, Option[(Long, Long)]))] = tuple(
+    val form: Mapping[(Long, (String, String, Option[(Long, Long)]))] = tuple(
       "id" -> longNumber,
       "address" -> tuple(
         "postalCode" -> text,
@@ -123,7 +123,7 @@ class FormNestedFieldsSuite extends munit.FunSuite {
   }
 
   test("Json optional nested tuple fields with no values") {
-    val form: Field[(Long, (String, String, Option[(Long, Long)]))] = tuple(
+    val form: Mapping[(Long, (String, String, Option[(Long, Long)]))] = tuple(
       "id" -> longNumber,
       "address" -> tuple(
         "postalCode" -> text,
@@ -152,7 +152,7 @@ class FormNestedFieldsSuite extends munit.FunSuite {
     case class User(id: Long, address: Address)
     case class Address(postalCode: String, country: String, numList: Option[(Long, Long)])
 
-    val form: Field[User] = mapping[User](
+    val form: Mapping[User] = mapping[User](
       "id" -> longNumber,
       "address" -> mapping[Address](
         "postalCode" -> text,
@@ -183,7 +183,7 @@ class FormNestedFieldsSuite extends munit.FunSuite {
     case class User(id: Long, address: Address)
     case class Address(postalCode: String, country: String, numList: Option[(Long, Long)])
 
-    val form: Field[User] = mapping[User](
+    val form: Mapping[User] = mapping[User](
       "id" -> longNumber,
       "address" -> mapping[Address](
         "postalCode" -> text,

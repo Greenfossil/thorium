@@ -1,6 +1,6 @@
 package com.greenfossil.commons.data
 
-class FieldConstraintsSuite extends munit.FunSuite {
+class MappingConstraintsSuite extends munit.FunSuite {
 
   /*
    * For implementing constraints - use play.api.data.Forms for help. Need to use Constraints class

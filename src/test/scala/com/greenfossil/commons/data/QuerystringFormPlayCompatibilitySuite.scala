@@ -9,7 +9,7 @@ class QuerystringFormPlayCompatibilitySuite extends munit.FunSuite {
 
   var server: WebServer = null
 
-  private def simpleForm: Field[(String, String)] = tuple(
+  private def simpleForm: Mapping[(String, String)] = tuple(
     "id" -> text,
     "name" -> text
   )

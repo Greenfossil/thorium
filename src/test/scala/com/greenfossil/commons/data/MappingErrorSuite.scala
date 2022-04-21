@@ -1,6 +1,6 @@
 package com.greenfossil.commons.data
 
-class FormErrorSuite extends munit.FunSuite{
+class MappingErrorSuite extends munit.FunSuite{
 
   test("Field errors"){
     val boundForm = tuple("name" -> nonEmptyText, "value" -> text).bind("name" -> "", "value" -> "")

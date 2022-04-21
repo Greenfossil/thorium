@@ -72,9 +72,9 @@ class FormFillSuite extends munit.FunSuite {
 
   test("case class 2") {
     case class Foo(l: Long, s: String)
-    val form: Field[Foo] = mapping[Foo](
-      "l" -> Field.of[Long],
-      "s" -> Field.of[String]
+    val form: Mapping[Foo] = mapping[Foo](
+      "l" -> Mapping.of[Long],
+      "s" -> Mapping.of[String]
     )
     val filledForm = form.fill(Foo(1, "hello"))
     assertEquals[Any, Any](filledForm.field("l").value, Option(1))
@@ -84,7 +84,7 @@ class FormFillSuite extends munit.FunSuite {
 
   test("case class 3") {
     case class Foo(l: Long, s: String, xs: Seq[Long])
-    val form: Field[Foo] = mapping[Foo](
+    val form: Mapping[Foo] = mapping[Foo](
       "l" -> longNumber,
       "s" -> text,
       "xs" -> seq[Long]
@@ -98,7 +98,7 @@ class FormFillSuite extends munit.FunSuite {
 
 
   test("valid form fill"){
-    val form: Field[(Long, String, Seq[Long])] = tuple(
+    val form: Mapping[(Long, String, Seq[Long])] = tuple(
       "l" -> longNumber,
       "s" -> text,
       "xs" -> seq[Long]
@@ -110,7 +110,7 @@ class FormFillSuite extends munit.FunSuite {
   }
 
   test("valid default, checked type"){
-    val form: Field[(String, Boolean)] = tuple(
+    val form: Mapping[(String, Boolean)] = tuple(
       "defaultText" ->  default(text, "Foo"),
       "isChecked" -> checked("this should be checked")
     )

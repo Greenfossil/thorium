@@ -5,10 +5,10 @@ import com.greenfossil.commons.json.Json
 /*
  * Test for Option and Seq Field
  */
-class FieldBind3Suite extends munit.FunSuite {
+class MappingBind3Suite extends munit.FunSuite {
 
   test("Option[Int]") {
-    val optIntField: Field[Option[Int]] =  optional[Int].name("optInt")
+    val optIntField: Mapping[Option[Int]] =  optional[Int].name("optInt")
     val boundField = optIntField.bind("optInt" -> "1")
     assertEquals[Any, Any](boundField.value, Option(1))
   }
@@ -20,9 +20,9 @@ class FieldBind3Suite extends munit.FunSuite {
   }
 
   test("Option[Tuple]") {
-    val tupleField: Field[Option[(String, Int)]] = optionalTuple(
-      "name" -> Field.of[String],
-      "contact" -> Field.of[Int]
+    val tupleField: Mapping[Option[(String, Int)]] = optionalTuple(
+      "name" -> Mapping.of[String],
+      "contact" -> Mapping.of[Int]
     ).name("tupleField")
 
     val boundField = tupleField.bind("tupleField.name" -> "Hello World!", "tupleField.contact" -> "123")
@@ -31,9 +31,9 @@ class FieldBind3Suite extends munit.FunSuite {
 
   test("Option[Mapping]") {
     case class Contact(name: String, contact: Int)
-    val tupleField: Field[Option[Contact]] = optionalMapping[Contact](
-      "name" -> Field.of[String],
-      "contact" -> Field.of[Int]
+    val tupleField: Mapping[Option[Contact]] = optionalMapping[Contact](
+      "name" -> Mapping.of[String],
+      "contact" -> Mapping.of[Int]
     ).name("tupleField")
 
     val boundField = tupleField.bind("tupleField.name" -> "Hello World!", "tupleField.contact" -> "123")
@@ -44,7 +44,7 @@ class FieldBind3Suite extends munit.FunSuite {
     case class User(id: Long,  address: Option[Address])
     case class Address(postalCode: String, country: String)
 
-    val nestedOptionalField :Field[Option[User]] = optionalMapping[User](
+    val nestedOptionalField :Mapping[Option[User]] = optionalMapping[User](
       "id" -> longNumber,
       "address" -> optionalMapping[Address](
         "postalCode" -> text,
@@ -63,7 +63,7 @@ class FieldBind3Suite extends munit.FunSuite {
     case class User(id: Long,  address: Option[Address])
     case class Address(postalCode: String, country: String)
 
-    val nestedOptionalField :Field[Option[User]] = optionalMapping[User](
+    val nestedOptionalField :Mapping[Option[User]] = optionalMapping[User](
       "id" -> longNumber,
       "address" -> optionalMapping[Address](
         "postalCode" -> text,
@@ -79,7 +79,7 @@ class FieldBind3Suite extends munit.FunSuite {
     case class User(id: Long,  address: Seq[Address])
     case class Address(postalCode: String, country: String)
 
-    val nestedOptionalField :Field[Option[User]] = optionalMapping[User](
+    val nestedOptionalField :Mapping[Option[User]] = optionalMapping[User](
       "id" -> longNumber,
       "address" -> repeatedMapping[Address](
         "postalCode" -> text,
@@ -98,7 +98,7 @@ class FieldBind3Suite extends munit.FunSuite {
     case class User(id: Long,  address: Seq[Address])
     case class Address(postalCode: String, country: String)
 
-    val nestedOptionalField :Field[Option[User]] = optionalMapping[User](
+    val nestedOptionalField :Mapping[Option[User]] = optionalMapping[User](
       "id" -> longNumber,
       "address" -> repeatedMapping[Address](
         "postalCode" -> text,

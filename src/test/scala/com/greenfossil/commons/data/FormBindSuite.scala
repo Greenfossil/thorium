@@ -7,7 +7,7 @@ import java.time.LocalDate
 class FormBindSuite extends munit.FunSuite {
 
   test("bind tuple 2") {
-    val form: Field[(Long, String, Seq[Int])] = tuple(
+    val form: Mapping[(Long, String, Seq[Int])] = tuple(
       "long" -> longNumber,
       "text" -> text,
       "seq" -> seq[Int]
@@ -82,7 +82,7 @@ class FormBindSuite extends munit.FunSuite {
 
   test("case class 3") {
     case class Foo(l: Long, s: String, xs: Seq[Long])
-    val form: Field[Foo] = mapping[Foo](
+    val form: Mapping[Foo] = mapping[Foo](
       "l" -> longNumber,
       "s" -> text,
       "xs" -> seq[Long]
@@ -107,7 +107,7 @@ class FormBindSuite extends munit.FunSuite {
 
   test("valid bind and fold"){
 
-    val form: Field[(Long, String, Seq[Long])] = tuple(
+    val form: Mapping[(Long, String, Seq[Long])] = tuple(
       "l" -> longNumber,
       "s" -> text,
       "xs" -> seq[Long]
@@ -122,7 +122,7 @@ class FormBindSuite extends munit.FunSuite {
 
   test("invalid bind and fold"){
 
-    val form: Field[(Long, String, Seq[Long])] = tuple(
+    val form: Mapping[(Long, String, Seq[Long])] = tuple(
       "l" -> longNumber(1,2, true),
       "s" -> text,
       "xs" -> seq[Long]
@@ -137,7 +137,7 @@ class FormBindSuite extends munit.FunSuite {
   }
 
   test("invalid default, checked type"){
-    val form: Field[(String, Boolean)] = tuple(
+    val form: Mapping[(String, Boolean)] = tuple(
       "defaultText" ->  default(text, "Foo"),
       "isChecked" -> checked("this should be checked")
     )
@@ -151,7 +151,7 @@ class FormBindSuite extends munit.FunSuite {
   }
 
   test("valid default, checked type"){
-    val form: Field[(String, Boolean)] = tuple(
+    val form: Mapping[(String, Boolean)] = tuple(
       "s" ->  default(text, "Foo"),
       "xs" -> checked("this should be checked")
     )

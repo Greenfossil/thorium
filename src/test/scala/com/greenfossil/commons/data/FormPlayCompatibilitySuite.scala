@@ -6,7 +6,7 @@ class FormPlayCompatibilitySuite extends munit.FunSuite {
    * Html form-url-encoded
    */
   test("valid default value") {
-    val form: Field[(String, Boolean)] = tuple(
+    val form: Mapping[(String, Boolean)] = tuple(
       "text" -> default(text, "Foo"),
       "isChecked" -> checked("this should be checked")
     )
@@ -26,7 +26,7 @@ class FormPlayCompatibilitySuite extends munit.FunSuite {
   }
 
   test("empty default value") {
-    val form: Field[(String, Boolean)] = tuple(
+    val form: Mapping[(String, Boolean)] = tuple(
       "text" -> default(text, "Foo"),
       "isChecked" -> checked("this should be checked")
     )
@@ -45,7 +45,7 @@ class FormPlayCompatibilitySuite extends munit.FunSuite {
   * curl http://localhost:9000/form -X POST -d 'seq[1]=1' -d 'seq[2]=2' -d 'seq[3]=3' -o /dev/null
   */
   test("repeated with valid index []") {
-    val form: Field[Seq[Int]] = seq[Int].name("seq")
+    val form: Mapping[Seq[Int]] = seq[Int].name("seq")
 
     val boundForm = form.bind(
       "seq[1]" -> "1",
@@ -59,7 +59,7 @@ class FormPlayCompatibilitySuite extends munit.FunSuite {
   * curl http://localhost:9000/form -X POST -d 'seq[1]=1' -d 'seq[1]=2' -d 'seq[1]=3' -o /dev/null
   */
   test("repeated with same index []".fail) { //Will not be compatible
-    val form: Field[Seq[Int]] = seq[Int].name("seq")
+    val form: Mapping[Seq[Int]] = seq[Int].name("seq")
 
     val boundForm = form.bind(
       "seq[1]" -> "1",
@@ -73,7 +73,7 @@ class FormPlayCompatibilitySuite extends munit.FunSuite {
    * curl http://localhost:9000/form -X POST -d 'seq[3]=1' -d 'seq[2]=2' -d 'seq[1]=3' -o /dev/null
    */
   test("repeated with inverted index []") {
-    val form: Field[Seq[Int]] = seq[Int].name("seq")
+    val form: Mapping[Seq[Int]] = seq[Int].name("seq")
 
     val boundForm = form.bind(
       "seq[3]" -> "1",
@@ -86,7 +86,7 @@ class FormPlayCompatibilitySuite extends munit.FunSuite {
    * curl http://localhost:9000/form -X POST -d 'seq[1]=1' -d 'seq[2]=2' -d 'seq[4]=3' -o /dev/null
    */
   test("repeated with gap in index []") {
-    val form: Field[Seq[Int]] = seq[Int].name("seq")
+    val form: Mapping[Seq[Int]] = seq[Int].name("seq")
 
     val boundForm = form.bind(
       "seq[1]" -> "1",
@@ -101,7 +101,7 @@ class FormPlayCompatibilitySuite extends munit.FunSuite {
 
 
   test("repeated with no []") {
-    val form: Field[Seq[Int]] = seq[Int].name("seq")
+    val form: Mapping[Seq[Int]] = seq[Int].name("seq")
 
     val boundForm = form.bind(
       "seq[]" -> "1",
@@ -113,7 +113,7 @@ class FormPlayCompatibilitySuite extends munit.FunSuite {
   
 
   test("repeated with 0 as an index []") {
-    val form: Field[Seq[Int]] = seq[Int].name("seq")
+    val form: Mapping[Seq[Int]] = seq[Int].name("seq")
 
     val boundForm = form.bind(
       "seq[0]" -> "1",
@@ -127,7 +127,7 @@ class FormPlayCompatibilitySuite extends munit.FunSuite {
   * curl http://localhost:9000/form -X POST -d 'seq[-1]=1' -d 'seq[0]=2' -d 'seq[1]=3' -o /dev/null
   */
   test("repeated with negative value as an index []") {
-    val form: Field[Seq[Int]] = seq[Int].name("seq")
+    val form: Mapping[Seq[Int]] = seq[Int].name("seq")
 
     val boundForm = form.bind(
       "seq[-1]" -> "1",
@@ -141,7 +141,7 @@ class FormPlayCompatibilitySuite extends munit.FunSuite {
    * curl http://localhost:9000/form -X POST -d 'seq[1]=1' -d 'seq[]=2' -d 'seq[3]=3' -o /dev/null
    */
   test("repeated with 1 empty index []") {
-    val form: Field[Seq[Int]] = seq[Int].name("seq")
+    val form: Mapping[Seq[Int]] = seq[Int].name("seq")
 
     val boundForm = form.bind(
       "seq[1]" -> "1",
@@ -155,7 +155,7 @@ class FormPlayCompatibilitySuite extends munit.FunSuite {
    * curl http://localhost:9000/form -X POST -d 'seq[1]=1' -d 'seq[]=2' -d 'seq[]=3' -o /dev/null
    */
   test("repeated with 2 empty index [] ".fail) {
-    val form: Field[Seq[Int]] = seq[Int].name("seq")
+    val form: Mapping[Seq[Int]] = seq[Int].name("seq")
 
     val boundForm = form.bind(
       "seq[1]" -> "1",
@@ -169,7 +169,7 @@ class FormPlayCompatibilitySuite extends munit.FunSuite {
   * curl http://localhost:9000/form -X POST -d 'seq[1]=1' -d 'seq[]=2' -d 'seq[]=2' -d 'seq[2]=3' -o /dev/null
   */
   test("repeated with same value with empty index [] ".fail) {
-    val form: Field[Seq[Int]] = seq[Int].name("seq")
+    val form: Mapping[Seq[Int]] = seq[Int].name("seq")
 
     val boundForm = form.bind(
         "seq[1]" -> "1",
@@ -184,7 +184,7 @@ class FormPlayCompatibilitySuite extends munit.FunSuite {
   * curl http://localhost:9000/form -X POST -d 'seq[1]=1' -d 'seq[]=2' -d 'seq[]=5' -d 'seq[2]=3' -o /dev/null
   */
   test("repeated with different value with empty index [] ".fail) {
-    val form: Field[Seq[Int]] = seq[Int].name("seq")
+    val form: Mapping[Seq[Int]] = seq[Int].name("seq")
 
     val boundForm = form.bind(
         "seq[1]" -> "1",
@@ -199,7 +199,7 @@ class FormPlayCompatibilitySuite extends munit.FunSuite {
    * curl http://localhost:9000/form -X POST -d 'id=1' -d 'address.postalCode="123456"' -d 'address.country="Singapore"' -o /dev/null
    */
   test("nested field") {
-    val form: Field[(Long, (String, String))] = tuple(
+    val form: Mapping[(Long, (String, String))] = tuple(
       "id" -> longNumber,
       "address" -> tuple(
         "postalCode" -> text,
@@ -219,7 +219,7 @@ class FormPlayCompatibilitySuite extends munit.FunSuite {
    * curl http://localhost:9000/form -X POST -d 'id=1' -d 'address.postalCode="123456"' -d 'address.country="Singapore"' -d 'address.numList.num=1' -d 'address.numList.num2=2' -o /dev/null
    */
   test("double nested tuple fields") {
-    val form: Field[(Long, (String, String, (Long, Long, (String, String))))] = tuple(
+    val form: Mapping[(Long, (String, String, (Long, Long, (String, String))))] = tuple(
       "id" -> longNumber,
       "address" -> tuple(
         "postalCode" -> text,

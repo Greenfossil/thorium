@@ -21,7 +21,7 @@ trait Formatter[T] {
    * @param data the submitted data
    * @return Either a concrete value of type T or a set of error if the binding failed.
    */
-  def bind(key: String, data: Map[String, Seq[String]]): Either[Seq[FormError], T]
+  def bind(key: String, data: Map[String, Seq[String]]): Either[Seq[MappingError], T]
 
   override def toString: String = s"Binder: ${tpe}"
 }
@@ -40,7 +40,7 @@ object Formatter {
       data
         .get(key)
         .flatMap(_.headOption)
-        .toRight(Seq(FormError(key, "error.required", Nil)))
+        .toRight(Seq(MappingError(key, "error.required", Nil)))
   }
 
   /**
@@ -56,7 +56,7 @@ object Formatter {
         .flatMap(_.headOption)
         .filter(s => s.length == 1 && s != " ")
         .map(s => Right(s.charAt(0)))
-        .getOrElse(Left(Seq(FormError(key, "error.required", Nil))))
+        .getOrElse(Left(Seq(MappingError(key, "error.required", Nil))))
   }
 
   /**
@@ -66,7 +66,7 @@ object Formatter {
    * @param key Key name of the field to parse
    * @param data Field data
    */
-  def parsing[T](parse: String => T, errMsg: String, errArgs: Seq[Any])(key: String, data: Map[String, Seq[String]]): Either[Seq[FormError], T] = {
+  def parsing[T](parse: String => T, errMsg: String, errArgs: Seq[Any])(key: String, data: Map[String, Seq[String]]): Either[Seq[MappingError], T] = {
     checkRequiredFormat
       .bind(key, data)
       .flatMap { s =>
@@ -74,7 +74,7 @@ object Formatter {
           .allCatch[T]
           .either(parse(s))
           .left
-          .map(e => Seq(FormError(key, errMsg, errArgs)))
+          .map(e => Seq(MappingError(key, errMsg, errArgs)))
     }
   }
 
@@ -154,8 +154,8 @@ object Formatter {
             .map { e =>
               Seq(
                 precision match {
-                  case Some((p, s)) => FormError(key, "error.real.precision", Seq(p, s))
-                  case None         => FormError(key, "error.real", Nil)
+                  case Some((p, s)) => MappingError(key, "error.real.precision", Seq(p, s))
+                  case None         => MappingError(key, "error.real", Nil)
                 }
               )
             }
@@ -182,7 +182,7 @@ object Formatter {
       Right(data.getOrElse(key, Seq("false")).head).flatMap {
         case "true"  => Right(true)
         case "false" => Right(false)
-        case _       => Left(Seq(FormError(key, "error.boolean", Nil)))
+        case _       => Left(Seq(MappingError(key, "error.boolean", Nil)))
       }
 
   }
@@ -262,7 +262,7 @@ object Formatter {
 
       override val format = Some(("format.timestamp", Seq(pattern)))
 
-      override def bind(key: String, data: Map[String, Seq[String]]): Either[Seq[FormError], Timestamp] =
+      override def bind(key: String, data: Map[String, Seq[String]]): Either[Seq[MappingError], Timestamp] =
         parsing(timestampParse, "error.timestamp", Nil)(key, data)
 
     }

@@ -8,7 +8,7 @@ package com.greenfossil.commons.data
  *                 is passed the last one will be used.
  * @param args Arguments used to format the message.
  */
-case class FormError(key: String, messages: Seq[String], args: Seq[Any] = Nil) {
+case class MappingError(key: String, messages: Seq[String], args: Seq[Any] = Nil) {
 
   def this(key: String, message: String) = this(key, Seq(message), Nil)
 
@@ -24,7 +24,7 @@ case class FormError(key: String, messages: Seq[String], args: Seq[Any] = Nil) {
    *
    * @param message The new message.
    */
-  def withMessage(message: String): FormError = FormError(key, message)
+  def withMessage(message: String): MappingError = MappingError(key, message)
 
   /**
    * Displays the formatted message, for use in a template.
@@ -37,10 +37,10 @@ case class FormError(key: String, messages: Seq[String], args: Seq[Any] = Nil) {
   }
 }
 
-object FormError {
+object MappingError {
 
-  def apply(key: String, message: String) = new FormError(key, message)
+  def apply(key: String, message: String) = new MappingError(key, message)
 
-  def apply(key: String, message: String, args: Seq[Any]) = new FormError(key, message, args)
+  def apply(key: String, message: String, args: Seq[Any]) = new MappingError(key, message, args)
 
 }

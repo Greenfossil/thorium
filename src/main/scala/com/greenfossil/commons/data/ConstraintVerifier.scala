@@ -29,27 +29,27 @@ trait ConstraintVerifier[T[_], V] {
       if successConstraintPredicate(a) then Valid else Invalid(Seq(ValidationError(error)))
     })
 
-  def applyConstraints(value: V): Seq[FormError] = {
+  def applyConstraints(value: V): Seq[MappingError] = {
     constraints
       .map(_.apply(value))
       .collect{case Invalid(ve) => ve}
       .flatten
-      .map(ve => FormError(name, ve.messages, ve.args))
+      .map(ve => MappingError(name, ve.messages, ve.args))
   }
 
   def boundFieldsToProduct(
-                           newMappings: Field[?] *: Tuple,
-                           mirrorOpt: Option[scala.deriving.Mirror.ProductOf[V]],
-                           fn: (Map[String, Any],  Field[?] *: Tuple, V, Seq[FormError]) => T[V]
+                            newMappings: Mapping[?] *: Tuple,
+                            mirrorOpt: Option[scala.deriving.Mirror.ProductOf[V]],
+                            fn: (Map[String, Any],  Mapping[?] *: Tuple, V, Seq[MappingError]) => T[V]
                          ): T[V] =
 
-    val newData: Map[String, Any] = newMappings.toList.collect{ case f: Field[?] => f.name -> f.safeValue }.toMap
+    val newData: Map[String, Any] = newMappings.toList.collect{ case f: Mapping[?] => f.name -> f.safeValue }.toMap
 
-    val fieldsErrors: List[FormError] =  newMappings.toList.collect{ case f: Field[t] => f.errors }.flatten
+    val fieldsErrors: List[MappingError] =  newMappings.toList.collect{ case f: Mapping[t] => f.errors }.flatten
 
     val boundFieldValues: Any *: Tuple = newMappings.map[[A] =>> Any]{
       [X] => (x: X) => x match
-        case f: Field[t] => f.safeValue
+        case f: Mapping[t] => f.safeValue
     }
 
     val boundValue: V =
@@ -71,10 +71,10 @@ trait ConstraintVerifier[T[_], V] {
   /*
  * TODO - query string params is not implemented yet
  */
-  def bindJsValueToMappings(mappings: Field[?] *: Tuple, js: JsValue, query: List[(String, String)]): Field[?] *: Tuple =
-    mappings.map[[A] =>> Field[?]] {
+  def bindJsValueToMappings(mappings: Mapping[?] *: Tuple, js: JsValue, query: List[(String, String)]): Mapping[?] *: Tuple =
+    mappings.map[[A] =>> Mapping[?]] {
       [X] => (x: X) => x match
-        case f: Field[t] => f.bind(js)
+        case f: Mapping[t] => f.bind(js)
     }
 
 }

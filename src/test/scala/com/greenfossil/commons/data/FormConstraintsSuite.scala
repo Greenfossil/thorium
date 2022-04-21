@@ -38,12 +38,12 @@ class FormConstraintsSuite extends munit.FunSuite {
   }
 
   test("form verifying") {
-    val userFormConstraints:Field[UserData] = mapping[UserData](
+    val userFormConstraints:Mapping[UserData] = mapping[UserData](
         "name" -> text,
         "age"  -> number
       ).verifying("Bad data", userData => true)
 
-    val tupleField:Field[(String, Int)] = tuple(
+    val tupleField:Mapping[(String, Int)] = tuple(
       "name" -> text, //FIXME .transform[Int](s => s.toInt, int => int.toString),
       "age"  -> number
     ).verifying("Bad data", tuple => true)
