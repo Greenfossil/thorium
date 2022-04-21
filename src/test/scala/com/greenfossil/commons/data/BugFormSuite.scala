@@ -3,7 +3,7 @@ package com.greenfossil.commons.data
 class BugFormSuite extends munit.FunSuite {
 
   test("Bind form"){
-    val sampleForm = Form.tuple(
+    val sampleForm = tuple(
       "name" -> text,
       "age" -> longNumber,
       "gender" -> text,
@@ -17,10 +17,7 @@ class BugFormSuite extends munit.FunSuite {
       "Homer Simpson", 21, "Male", Seq("Singapore"), "Married", Some(true),
       Seq("Marge Simpson", "Bart Simpson", "Lisa Simpson")
     )
-    assertEquals[Any, Any](filledForm("name").value, Option("Homer Simpson"))
-    filledForm.mappings.productIterator.foreach{
-      case f: Field[?] => println(s"${f.name}: ${f.value}")
-    }
+    assertEquals[Any, Any](filledForm.field("name").value, Option("Homer Simpson"))
   }
 
 }

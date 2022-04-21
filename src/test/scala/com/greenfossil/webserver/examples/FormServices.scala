@@ -8,7 +8,7 @@ object FormServices extends Controller {
 
   @Get("/form")
   def tupleForm = Action { implicit request =>
-    val form = Form.tuple(
+    val form = tuple(
       "name" -> text,
       "id" -> longNumber
     )
@@ -21,7 +21,7 @@ object FormServices extends Controller {
 
   def classForm = Action { implicit request =>
     case class Foo(name: String, id: Long)
-    val form = Form.mapping[Foo](
+    val form = mapping[Foo](
       "name" -> text,
       "id" -> longNumber
     )

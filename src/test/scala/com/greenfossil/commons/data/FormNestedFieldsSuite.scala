@@ -6,7 +6,7 @@ class FormNestedFieldsSuite extends munit.FunSuite {
 
   test("bind case-class field") {
     case class Address(postalCode: String, country: String)
-    val form: Form[(Long, Address)] = Form.tuple(
+    val form: Field[(Long, Address)] = tuple(
       "id" -> longNumber,
       "address" -> mapping[Address](
           "postalCode" -> text,
@@ -14,8 +14,8 @@ class FormNestedFieldsSuite extends munit.FunSuite {
       )
     )
 
-    assertNoDiff(form.apply("id").tpe, "Long")
-    assertNoDiff(form.apply("address").tpe, "P+")
+    assertNoDiff(form.field("id").tpe, "Long")
+    assertNoDiff(form.field("address").tpe, "P+")
 
     val boundForm = form.bind(
       "id" -> "1",
@@ -29,7 +29,7 @@ class FormNestedFieldsSuite extends munit.FunSuite {
 
   test("bind repeating case class field") {
     case class Address(postalCode: String, country: String)
-    val form: Form[(Long, Seq[Address])] = Form.tuple(
+    val form: Field[(Long, Seq[Address])] = tuple(
       "id" -> longNumber,
       "address" -> repeatedMapping[Address](
         "postalCode" -> text,
@@ -37,8 +37,8 @@ class FormNestedFieldsSuite extends munit.FunSuite {
       )
     )
 
-    assertNoDiff(form.apply("id").tpe, "Long")
-    assertNoDiff(form.apply("address").tpe, "[Seq")
+    assertNoDiff(form.field("id").tpe, "Long")
+    assertNoDiff(form.field("address").tpe, "[Seq")
 
     val boundForm = form.bind(
       "id" -> "1",
@@ -51,7 +51,7 @@ class FormNestedFieldsSuite extends munit.FunSuite {
   }
 
   test("bind tuple field") {
-    val form: Form[(Long, (String, String))] = Form.tuple(
+    val form: Field[(Long, (String, String))] = tuple(
       "id" -> longNumber,
       "address" -> tuple(
         "postalCode" -> text,
@@ -59,8 +59,8 @@ class FormNestedFieldsSuite extends munit.FunSuite {
       )
     )
 
-    assertNoDiff(form.apply("id").tpe, "Long")
-    assertNoDiff(form.apply("address").tpe, "P-")
+    assertNoDiff(form.field("id").tpe, "Long")
+    assertNoDiff(form.field("address").tpe, "P-")
 
     val boundForm = form.bind(
       "id" -> "1",
@@ -73,7 +73,7 @@ class FormNestedFieldsSuite extends munit.FunSuite {
   }
 
   test("bind repeat tuple field") {
-    val form: Form[(Long, Seq[(String, String)])] = Form.tuple(
+    val form: Field[(Long, Seq[(String, String)])] = tuple(
       "id" -> longNumber,
       "address" -> repeatedTuple(
         "postalCode" -> text,
@@ -81,8 +81,8 @@ class FormNestedFieldsSuite extends munit.FunSuite {
       )
     )
 
-    assertNoDiff(form.apply("id").tpe, "Long")
-    assertNoDiff(form.apply("address").tpe, "[Seq")
+    assertNoDiff(form.field("id").tpe, "Long")
+    assertNoDiff(form.field("address").tpe, "[Seq")
 
     val boundForm = form.bind(
       "id" -> "1",
@@ -95,7 +95,7 @@ class FormNestedFieldsSuite extends munit.FunSuite {
   }
 
   test("Json optional nested tuple fields") {
-    val form: Form[(Long, (String, String, Option[(Long, Long)]))] = Form.tuple(
+    val form: Field[(Long, (String, String, Option[(Long, Long)]))] = tuple(
       "id" -> longNumber,
       "address" -> tuple(
         "postalCode" -> text,
@@ -123,7 +123,7 @@ class FormNestedFieldsSuite extends munit.FunSuite {
   }
 
   test("Json optional nested tuple fields with no values") {
-    val form: Form[(Long, (String, String, Option[(Long, Long)]))] = Form.tuple(
+    val form: Field[(Long, (String, String, Option[(Long, Long)]))] = tuple(
       "id" -> longNumber,
       "address" -> tuple(
         "postalCode" -> text,
@@ -152,7 +152,7 @@ class FormNestedFieldsSuite extends munit.FunSuite {
     case class User(id: Long, address: Address)
     case class Address(postalCode: String, country: String, numList: Option[(Long, Long)])
 
-    val form: Form[User] = Form.mapping[User](
+    val form: Field[User] = mapping[User](
       "id" -> longNumber,
       "address" -> mapping[Address](
         "postalCode" -> text,
@@ -183,7 +183,7 @@ class FormNestedFieldsSuite extends munit.FunSuite {
     case class User(id: Long, address: Address)
     case class Address(postalCode: String, country: String, numList: Option[(Long, Long)])
 
-    val form: Form[User] = Form.mapping[User](
+    val form: Field[User] = mapping[User](
       "id" -> longNumber,
       "address" -> mapping[Address](
         "postalCode" -> text,

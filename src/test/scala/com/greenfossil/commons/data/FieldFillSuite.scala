@@ -173,7 +173,7 @@ class FieldFillSuite extends munit.FunSuite {
     val filledField = field.fill("Bar")
     assertEquals(filledField.value, Option("Bar"))
 
-    val filledField2 = field.fill(None)
+    val filledField2 = field.fill(null)
     assertEquals(filledField2.value, Option("Foo"))
 
   }
@@ -219,13 +219,10 @@ class FieldFillSuite extends munit.FunSuite {
 
     val filledField = field.fill(value)
     assertEquals(filledField.value, Option(value))
-
-    val filledField3 = field.fill(Option(value))
-    assertEquals(filledField3.value, Option(value))
   }
 
   test("optional"){
-    val form: Form[(Long, Option[String])] = Form.tuple(
+    val form: Field[(Long, Option[String])] = tuple(
       "id" -> longNumber,
       "address" -> optional[String]
     )
@@ -235,7 +232,7 @@ class FieldFillSuite extends munit.FunSuite {
   }
 
   test("optional with constraints"){
-    val form: Form[(Long, Option[String])] = Form.tuple(
+    val form: Field[(Long, Option[String])] = tuple(
       "id" -> longNumber,
       "address" -> optional(text(0,255,true))
     )

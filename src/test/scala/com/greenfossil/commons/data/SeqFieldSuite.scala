@@ -3,7 +3,7 @@ package com.greenfossil.commons.data
 class SeqFieldSuite extends munit.FunSuite {
 
   test("repeated with no []") {
-    val form: Form[Seq[Int]] = Form("seq", seq[Int])
+    val form: Field[Seq[Int]] = seq[Int].name("seq")
 
     val boundForm = form.bind(
       "seq" -> "1",
@@ -14,12 +14,12 @@ class SeqFieldSuite extends munit.FunSuite {
   }
 
   test("repeated with path with no []") {
-    val form: Form[(String, Seq[String])] = Form(
-      "food", tuple(
+    val form: Field[(String, Seq[String])] =
+      tuple(
         "maincourse" -> text,
         "drinks" -> seq[String]
-      )
-    )
+      ).name("food")
+
     val boundForm = form.bind(
       "food.maincourse" -> "pizza",
       "food.drinks[1]" -> "coke",
@@ -29,12 +29,12 @@ class SeqFieldSuite extends munit.FunSuite {
   }
 
   test("repeated tuples") {
-    val form: Form[Seq[(Int, Int)]] = Form(
-      "seq", repeatedTuple(
+    val form: Field[Seq[(Int, Int)]] =
+      repeatedTuple(
         "num1"-> number,
         "num2" -> number
-      )
-    )
+      ).name("seq")
+
 
     val boundForm = form.bind(
       "seq[0].num1" -> "1",
@@ -46,7 +46,7 @@ class SeqFieldSuite extends munit.FunSuite {
   }
 
   test("repeated with same index []") {
-    val form: Form[Seq[Int]] = Form("seq", seq[Int])
+    val form: Field[Seq[Int]] = seq[Int].name("seq")
 
     val boundForm = form.bind(
       "seq[1]" -> "1",
@@ -57,7 +57,7 @@ class SeqFieldSuite extends munit.FunSuite {
   }
 
   test("repeated with empty index []") {
-    val form: Form[Seq[Int]] = Form("seq", seq[Int])
+    val form: Field[Seq[Int]] = seq[Int].name("seq")
 
     val boundForm = form.bind(
       "seq[1]" -> "1",

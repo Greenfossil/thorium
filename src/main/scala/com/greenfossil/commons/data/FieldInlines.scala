@@ -1,6 +1,6 @@
 package com.greenfossil.commons.data
 
-import com.greenfossil.commons.data.Form.{FieldConstructor, FieldTypeExtractor, toNamedFieldTuple}
+import com.greenfossil.commons.data.Field.{FieldConstructor, FieldTypeExtractor, toNamedFieldTuple}
 
 import java.time.{LocalDate, LocalDateTime, LocalTime, YearMonth}
 import scala.deriving.Mirror
@@ -122,9 +122,7 @@ inline def checked(msg: String) =
   Field.of[Boolean].verifying(msg, _ == true)
 
 inline def default[A](mapping: Field[A], defaultValue: A): Field[A] =
-//Need to initialize value to defaultValue
-  MappingField[A, A](tpe = "#", value = Option(defaultValue), delegate =  mapping, a => 
-    println("a " + a)
+  MappingField[A, A](tpe = "#", value = Option(defaultValue), delegate =  mapping, a =>
     Option(a).getOrElse(defaultValue)
   )
 

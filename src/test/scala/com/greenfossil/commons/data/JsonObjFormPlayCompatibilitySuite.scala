@@ -8,7 +8,7 @@ class JsonObjFormPlayCompatibilitySuite extends munit.FunSuite {
    * curl http://localhost:9000/form -X POST -H 'Content-Type: application/json' -d '{"s":"my_login","xs":"my_password"}' -o /dev/null
    */
   test("valid default value") {
-    val form: Form[(String, Boolean)] = Form.tuple(
+    val form: Field[(String, Boolean)] = tuple(
       "text" -> default(text, "Foo"),
       "isChecked" -> checked("this should be checked")
     )
@@ -17,12 +17,12 @@ class JsonObjFormPlayCompatibilitySuite extends munit.FunSuite {
     )
 
     val filledForm = form.bind(jsonObject)
-    assertEquals[Any, Any](filledForm.data.get("text"), Option("chicken"))
-    assertEquals[Any, Any](filledForm.data.get("isChecked"), Option(true))
+    assertEquals[Any, Any](filledForm.field("text").value, Option("chicken"))
+    assertEquals[Any, Any](filledForm.field("isChecked").value, Option(true))
   }
 
   test("empty default value") {
-    val form: Form[(String, Boolean)] = Form.tuple(
+    val form: Field[(String, Boolean)] = tuple(
       "text" -> default(text, "Foo"),
       "isChecked" -> checked("this should be checked")
     )
@@ -31,15 +31,15 @@ class JsonObjFormPlayCompatibilitySuite extends munit.FunSuite {
       "isChecked" -> true,
     )
     val filledForm = form.bind(jsonObject)
-    assertEquals[Any, Any](filledForm.data.get("text"), Option("Foo"))
-    assertEquals[Any, Any](filledForm.data.get("isChecked"), Option(true))
+    assertEquals[Any, Any](filledForm.field("text").value, Option("Foo"))
+    assertEquals[Any, Any](filledForm.field("isChecked").value, Option(true))
   }
 
   /*
   * curl http://localhost:9000/form -X POST -H 'Content-Type: application/json' -d '{"seq": ["1","2""3"]}' -o /dev/null
   */
   test("seq") {
-    val form: Form[Seq[Int]] = Form("seq", seq[Int])
+    val form: Field[Seq[Int]] = seq[Int].name("seq")
 
     val jsonObject = Json.obj(
       "seq" -> Seq("1", "2","3")
@@ -53,7 +53,7 @@ class JsonObjFormPlayCompatibilitySuite extends munit.FunSuite {
    * curl http://localhost:9000/form -X POST -H 'Content-Type: application/json' -d '{"id":1,"address":{"postalCode":"123456","country":"Singapore"}}' -o /dev/null
    */
   test("nested field") {
-    val form: Form[(Long, (String, String))] = Form.tuple(
+    val form: Field[(Long, (String, String))] = tuple(
       "id" -> longNumber,
       "address" -> tuple(
         "postalCode" -> text,
@@ -77,7 +77,7 @@ class JsonObjFormPlayCompatibilitySuite extends munit.FunSuite {
    * curl http://localhost:9000/form -X POST -H 'Content-Type: application/json' -d '{"id":"1","address":{"postalCode":"123456","country":"Singapore","numList":{"num":1,"num2":2}}}' -o /dev/null
    */
   test("double nested tuple fields") {
-    val form: Form[(Long, (String, String, (Long, Long)))] = Form.tuple(
+    val form: Field[(Long, (String, String, (Long, Long)))] = tuple(
       "id" -> longNumber,
       "address" -> tuple(
         "postalCode" -> text,
@@ -108,7 +108,7 @@ class JsonObjFormPlayCompatibilitySuite extends munit.FunSuite {
  * curl http://localhost:9000/form -X POST -H 'Content-Type: application/json' -d '{"id":"1","address":{"postalCode":"123456","country":"Singapore","numList":[1,2]}}' -o /dev/null
  */
   test("double nested tuple fields with seq field") {
-    val form: Form[(Long, (String, String, Seq[Long]))] = Form.tuple(
+    val form: Field[(Long, (String, String, Seq[Long]))] = tuple(
       "id" -> longNumber,
       "address" -> tuple(
         "postalCode" -> text,

@@ -7,41 +7,40 @@ import java.time.LocalDate
 class FormBindSuite extends munit.FunSuite {
 
   test("bind tuple 2") {
-    val form: Form[(Long, String, Seq[Int])] = Form.tuple(
+    val form: Field[(Long, String, Seq[Int])] = tuple(
       "long" -> longNumber,
       "text" -> text,
       "seq" -> seq[Int]
     )
     val boundForm = form.bind("long" -> "1", "text" -> "hello", "seq[1]" -> "1", "seq[2]" -> "2")
-    assertEquals(boundForm.data.size, 3)
-    val a = boundForm("long")
-    val x = boundForm("long").value
-    assertEquals[Any, Any](boundForm("long").value, Option(1))
-    assertEquals[Any, Any](boundForm("text").value, Option("hello"))
-    assertEquals[Any, Any](boundForm("seq").value, Option(Seq(1,2)))
+//    assertEquals(boundForm.data.size, 3)
+    val a = boundForm.field("long")
+    val x = boundForm.field("long").value
+    assertEquals[Any, Any](boundForm.field("long").value, Option(1))
+    assertEquals[Any, Any](boundForm.field("text").value, Option("hello"))
+    assertEquals[Any, Any](boundForm.field("seq").value, Option(Seq(1,2)))
 
-    assertEquals[Any, Any](boundForm.data.get("long"), Option(1))
-    assertEquals[Any, Any](boundForm.data.get("text"), Option("hello"))
-    assertEquals[Any, Any](boundForm.data.get("seq"), Option(Seq(1,2)))
+//    assertEquals[Any, Any](boundForm.data.get("long"), Option(1))
+//    assertEquals[Any, Any](boundForm.data.get("text"), Option("hello"))
+//    assertEquals[Any, Any](boundForm.data.get("seq"), Option(Seq(1,2)))
 
     assertEquals(boundForm.value, Option((1L, "hello", Seq(1, 2))))
   }
 
   test("bind tuple 3"){
-    val form = Form.tuple(
+    val form = tuple(
       "name" -> text,
       "birthday" -> localDate
     )
 
     val boundForm = form.bind("name" -> "Homer", "birthday" -> "1990-01-01")
-    assertEquals[Any, Any](boundForm("birthday").value, Some(LocalDate.parse("1990-01-01")))
-    assertEquals[Any, Any](boundForm.data.get("birthday"), Some(LocalDate.parse("1990-01-01")))
+    assertEquals[Any, Any](boundForm.field("birthday").value, Some(LocalDate.parse("1990-01-01")))
     assertEquals(boundForm.value, Some(("Homer", LocalDate.parse("1990-01-01"))))
-    assertEquals(boundForm.data.size, 2)
+//    assertEquals(boundForm.data.size, 2)
   }
 
   test("bind tuple 4 - longnumber"){
-    val form = Form.tuple(
+    val form = tuple(
       "l1" -> longNumber,
       "l2" -> optional[Long]
     )
@@ -53,7 +52,7 @@ class FormBindSuite extends munit.FunSuite {
   }
 
   test("bind as JSON"){
-    val form = Form.tuple(
+    val form = tuple(
       "name" -> text,
       "age" -> number,
       "isActive" -> boolean,
@@ -68,65 +67,47 @@ class FormBindSuite extends munit.FunSuite {
     )
 
     val boundForm = form.bind(jsonObject)
-    assertEquals[Any, Any](boundForm.data.get("name"), Some("Homer"))
-    assertEquals[Any, Any](boundForm.data.get("age"), Some(50))
-    assertEquals[Any, Any](boundForm.data.get("isActive"), Some(true))
-    assertEquals[Any, Any](boundForm.data.get("id"), Some(123456L))
-    assertEquals[Any, Any](boundForm.data.get("balance"), Some(100.12F))
-    assertEquals[Any, Any](boundForm.data.get("remaining"), Some(100.00))
-    assertEquals[Any, Any](boundForm.data.get("birthday"), Some(LocalDate.parse("1990-01-01")))
+    assertEquals[Any, Any](boundForm.field("name").value, Some("Homer"))
+    assertEquals[Any, Any](boundForm.field("age").value, Some(50))
+    assertEquals[Any, Any](boundForm.field("isActive").value, Some(true))
+    assertEquals[Any, Any](boundForm.field("id").value, Some(123456L))
+    assertEquals[Any, Any](boundForm.field("balance").value, Some(100.12F))
+    assertEquals[Any, Any](boundForm.field("remaining").value, Some(100.00))
+    assertEquals[Any, Any](boundForm.field("birthday").value, Some(LocalDate.parse("1990-01-01")))
 
-    val fields = boundForm.mappings.toList.asInstanceOf[List[Field[?]]]
-    assertEquals[Any, Any](fields(0).value, Some("Homer"))
-    assertEquals[Any, Any](fields(1).value, Some(50))
-    assertEquals[Any, Any](fields(2).value, Some(true))
-    assertEquals[Any, Any](fields(3).value, Some(123456L))
-    assertEquals[Any, Any](fields(4).value, Some(100.12F))
-    assertEquals[Any, Any](fields(5).value, Some(100.00))
-    assertEquals[Any, Any](fields(6).value, Some(LocalDate.parse("1990-01-01")))
     assertEquals(boundForm.value, Some(("Homer", 50, true, 123456L, 100.12F, 100.00, LocalDate.parse("1990-01-01"))))
-    assertEquals(boundForm.data.size, 7)
+//    assertEquals(boundForm.data.size, 7)
 
   }
 
   test("case class 3") {
     case class Foo(l: Long, s: String, xs: Seq[Long])
-    val form: Form[Foo] = Form.mapping[Foo](
+    val form: Field[Foo] = mapping[Foo](
       "l" -> longNumber,
       "s" -> text,
       "xs" -> seq[Long]
     )
 
     val boundMappingForm1 = form.bind("l" -> "1", "s" -> "hello", "xs[1]" -> "1", "xs[2]" -> "2")
-    assertEquals[Any, Any](boundMappingForm1.data.get("l"), Option(1))
-    assertEquals[Any, Any](boundMappingForm1.data.get("s"), Option("hello"))
-    assertEquals[Any, Any](boundMappingForm1.data.get("xs"), Option(Seq(1, 2)))
-    assertEquals[Any, Any](boundMappingForm1("l").value, Option(1))
-    assertEquals[Any, Any](boundMappingForm1("s").value, Option("hello"))
-    assertEquals[Any, Any](boundMappingForm1("xs").value, Option(Seq(1, 2)))
+    assertEquals[Any, Any](boundMappingForm1.field("l").value, Option(1))
+    assertEquals[Any, Any](boundMappingForm1.field("s").value, Option("hello"))
+    assertEquals[Any, Any](boundMappingForm1.field("xs").value, Option(Seq(1, 2)))
 
     val boundMappingForm2 = form.bind("l" -> "1", "s" -> "hello", "xs[0]" -> "1", "xs[1]" -> "2")
-    assertEquals[Any, Any](boundMappingForm2.data.get("l"), Option(1))
-    assertEquals[Any, Any](boundMappingForm2.data.get("s"), Option("hello"))
-    assertEquals[Any, Any](boundMappingForm2.data.get("xs"), Option(Seq(1, 2)))
-    assertEquals[Any, Any](boundMappingForm2("l").value, Option(1))
-    assertEquals[Any, Any](boundMappingForm2("s").value, Option("hello"))
-    assertEquals[Any, Any](boundMappingForm2("xs").value, Option(Seq(1, 2)))
+    assertEquals[Any, Any](boundMappingForm2.field("l").value, Option(1))
+    assertEquals[Any, Any](boundMappingForm2.field("s").value, Option("hello"))
+    assertEquals[Any, Any](boundMappingForm2.field("xs").value, Option(Seq(1, 2)))
 
     val jsonboundForm = form.bind(Json.obj("l" -> 1, "s" -> "hello", "xs" -> Json.arr(1, 2)))
-    assertEquals[Any, Any](jsonboundForm.data.get("l"), Some(1))
-    assertEquals[Any, Any](jsonboundForm.data.get("s"), Some("hello"))
-    assertEquals[Any, Any](jsonboundForm.data.get("xs"), Some(Seq(1, 2)))
-    val jsonFields = jsonboundForm.mappings.toList.asInstanceOf[List[Field[?]]]
-    assertEquals[Any, Any](jsonFields(0).value, Some(1))
-    assertEquals[Any, Any](jsonFields(1).value, Some("hello"))
-    assertEquals[Any, Any](jsonFields(2).value, Some(Seq(1, 2)))
+    assertEquals[Any, Any](jsonboundForm.field("l").value, Some(1))
+    assertEquals[Any, Any](jsonboundForm.field("s").value, Some("hello"))
+    assertEquals[Any, Any](jsonboundForm.field("xs").value, Some(Seq(1, 2)))
   }
 
 
   test("valid bind and fold"){
 
-    val form: Form[(Long, String, Seq[Long])] = Form.tuple(
+    val form: Field[(Long, String, Seq[Long])] = tuple(
       "l" -> longNumber,
       "s" -> text,
       "xs" -> seq[Long]
@@ -141,7 +122,7 @@ class FormBindSuite extends munit.FunSuite {
 
   test("invalid bind and fold"){
 
-    val form: Form[(Long, String, Seq[Long])] = Form.tuple(
+    val form: Field[(Long, String, Seq[Long])] = tuple(
       "l" -> longNumber(1,2, true),
       "s" -> text,
       "xs" -> seq[Long]
@@ -155,14 +136,13 @@ class FormBindSuite extends munit.FunSuite {
     )
   }
 
-  //Discuss on Checked api expection?
   test("invalid default, checked type"){
-    val form: Form[(String, Boolean)] = Form.tuple(
-      "s" ->  default(text, "Foo"),
-      "xs" -> checked("this should be checked")
+    val form: Field[(String, Boolean)] = tuple(
+      "defaultText" ->  default(text, "Foo"),
+      "isChecked" -> checked("this should be checked")
     )
 
-    val boundForm = form.bind("s" -> "Bar", "xs" -> "true")
+    val boundForm = form.bind("defaultText" -> "Bar", "isChecked" -> "true")
     boundForm.fold(
       errorForm=> fail("Should not have error"),
       data=>
@@ -171,7 +151,7 @@ class FormBindSuite extends munit.FunSuite {
   }
 
   test("valid default, checked type"){
-    val form: Form[(String, Boolean)] = Form.tuple(
+    val form: Field[(String, Boolean)] = tuple(
       "s" ->  default(text, "Foo"),
       "xs" -> checked("this should be checked")
     )
@@ -186,7 +166,7 @@ class FormBindSuite extends munit.FunSuite {
   }
 
   test("bind tuple 1"){
-    val form = Form("name", text).bind("name" -> "Homer")
+    val form = text.name("name").bind("name" -> "Homer")
     assertEquals(form.value, Some("Homer"))
 
     form.fold(
@@ -198,12 +178,12 @@ class FormBindSuite extends munit.FunSuite {
   }
 
   test("bind tuple 1 optional[String]"){
-    val form = Form("name", optional[String])
+    val form = optional[String].name("name")
     assertEquals[Any, Any](form.bind("name" -> "Homer").value, Some("Homer"))
   }
 
   test("bind optional[String]"){
-    val form = Form.tuple("name" -> optional[String], "age" -> optional[Int])
+    val form = tuple("name" -> optional[String], "age" -> optional[Int])
     val boundForm = form.bind("name" -> "Homer", "age" -> "50")
     assertEquals(boundForm.value, Some((Option("Homer"), Option(50))))
 
@@ -218,7 +198,7 @@ class FormBindSuite extends munit.FunSuite {
   }
 
   test("bind optional(text)"){
-    val form = Form.tuple("name" -> optional(text), "age" -> optional(number))
+    val form = tuple("name" -> optional(text), "age" -> optional(number))
     val boundForm = form.bind("name" -> "Homer", "age" -> "50")
     assertEquals(boundForm.value, Some((Option("Homer"), Option(50))))
 
@@ -233,7 +213,7 @@ class FormBindSuite extends munit.FunSuite {
   }
   
   test("bind optional with no value"){
-    val form = Form.tuple("name" -> optional(text), "age" -> optional(number))
+    val form = tuple("name" -> optional(text), "age" -> optional(number))
     val boundForm = form.bind("name" -> "Homer")
     assertEquals(boundForm.value, Some((Option("Homer"), None)))
 

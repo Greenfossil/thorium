@@ -5,8 +5,8 @@ class FormConstraintsSuite extends munit.FunSuite {
   case class UserData(name: String, age: Int)
 
   test("case class Form - field-based verify") {
-    val userFormConstraints = Form
-      .mapping[UserData](
+    val userFormConstraints =
+      mapping[UserData](
         "name" -> nonEmptyText,
         "age"  -> number.verifying("Age must be 42", age => age == 42)
       )
@@ -17,8 +17,8 @@ class FormConstraintsSuite extends munit.FunSuite {
   }
 
   test("case class Form - form-based verifying success") {
-    val userFormConstraints = Form
-      .mapping[UserData](
+    val userFormConstraints =
+      mapping[UserData](
         "name" -> text,
         "age"  -> number
       ).verifying("Name should be homer and age is 42", user => user.name == "homer" && user.age == 42)
@@ -28,8 +28,8 @@ class FormConstraintsSuite extends munit.FunSuite {
   }
 
   test("case class Form - form-based verifying failure") {
-    val userFormConstraints = Form
-      .mapping[UserData](
+    val userFormConstraints =
+      mapping[UserData](
         "name" -> text,
         "age"  -> number
       ).verifying("Name should be homer and age is 42", user => user.name == "homer" && user.age == 42)
@@ -38,12 +38,12 @@ class FormConstraintsSuite extends munit.FunSuite {
   }
 
   test("form verifying") {
-    val userFormConstraints:Form[UserData] = Form.mapping[UserData](
+    val userFormConstraints:Field[UserData] = mapping[UserData](
         "name" -> text,
         "age"  -> number
       ).verifying("Bad data", userData => true)
 
-    val tuple:Form[(String, Int)] = Form.tuple(
+    val tupleField:Field[(String, Int)] = tuple(
       "name" -> text, //FIXME .transform[Int](s => s.toInt, int => int.toString),
       "age"  -> number
     ).verifying("Bad data", tuple => true)
@@ -52,7 +52,7 @@ class FormConstraintsSuite extends munit.FunSuite {
 
   test("form optional binding with verifying"){
     val optionalField = optional[String].verifying("Test error", strOpt => strOpt.exists(s => s.equals("test")))
-    val form = Form("foo",  optionalField)
+    val form = optionalField.name("foo")
 
     assertEquals[Any, Any](form.bind("foo" -> "test").value, Some("test"))
     assert(form.bind("foo" -> "abc").errors.exists(_.message == "Test error"))
@@ -60,7 +60,7 @@ class FormConstraintsSuite extends munit.FunSuite {
 
   test("form seq binding with verifying"){
     val optionalField = seq[String].verifying("Test error", xs => xs.exists(s => s.equals("test")))
-    val form = Form("foo",  optionalField)
+    val form = optionalField.name("foo")
 
     assertEquals(form.bind("foo[1]" -> "test").value, Some(Seq("test")))
     assert(form.bind("foo[1]" -> "abc").errors.exists(_.message == "Test error"))
