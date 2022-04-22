@@ -80,8 +80,8 @@ object Result {
   def bakeDiscardCookie(name: String): Cookie =
     bakeDiscardCookie(name, false)
 
-  def bakeDiscardCookie(name: String, secure: Boolean): Cookie =
-    bakeCookie(name , "", secure, maxAgeOpt = Some(0L), None, None)
+  def bakeDiscardCookie(name: String, secure: Boolean, path: String = "/"): Cookie =
+    bakeCookie(name , "", secure, maxAgeOpt = Option(0L), Option(path), None)
 
   def bakeSessionCookie(session: Session): Option[Cookie] =
     bakeBase64URLEncodedCookie(RequestAttrs.Session.name(), session.data)
