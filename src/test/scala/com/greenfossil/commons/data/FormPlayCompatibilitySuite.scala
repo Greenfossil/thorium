@@ -2,6 +2,8 @@ package com.greenfossil.commons.data
 
 class FormPlayCompatibilitySuite extends munit.FunSuite {
 
+  import Mapping.*
+
   /*
    * Html form-url-encoded
    */

@@ -1,7 +1,8 @@
 package com.greenfossil.commons.data
 
 class FormConstraintsSuite extends munit.FunSuite {
-
+  import Mapping.*
+  
   case class UserData(name: String, age: Int)
 
   test("case class Form - field-based verify") {

@@ -4,6 +4,8 @@ import com.greenfossil.commons.json.Json
 
 class FormNestedFieldsSuite extends munit.FunSuite {
 
+  import Mapping.*
+
   test("bind case-class field") {
     case class Address(postalCode: String, country: String)
     val form: Mapping[(Long, Address)] = tuple(

@@ -7,35 +7,35 @@ import java.time.{LocalDate, LocalDateTime, LocalTime, YearMonth}
 class MappingFillSuite extends munit.FunSuite {
 
   test("int"){
-    val field = Mapping.of[Int]("field")
+    val field = Mapping[Int]("field")
     val filledField = field.fill(1)
     assertEquals(filledField.errors, Nil)
     assertEquals(filledField.value, Option(1))
   }
 
   test("string"){
-    val field = Mapping.of[String]("field")
+    val field = Mapping[String]("field")
     val filledField = field.fill("hello world")
     assertEquals(filledField.errors, Nil)
     assertEquals(filledField.value, Option("hello world"))
   }
 
   test("long"){
-    val field = Mapping.of[Long]("field")
+    val field = Mapping[Long]("field")
     val filledField = field.fill(200000)
     assertEquals(filledField.errors, Nil)
     assertEquals(filledField.value, Option(200000L))
   }
 
   test("double"){
-    val field = Mapping.of[Double]("field")
+    val field = Mapping[Double]("field")
     val filledField = field.fill(200000.0)
     assertEquals(filledField.errors, Nil)
     assertEquals(filledField.value, Option(200000D))
   }
 
   test("float"){
-    val field = Mapping.of[Float]("field")
+    val field = Mapping[Float]("field")
     val filledField = field.fill(200000)
     assertEquals(filledField.errors, Nil)
     assertEquals(filledField.value, Option(200000.0F))
@@ -43,7 +43,7 @@ class MappingFillSuite extends munit.FunSuite {
 
   test("boolean"){
     val value: Boolean = false
-    val field = Mapping.of[Boolean]("field")
+    val field = Mapping[Boolean]("field")
     val filledField = field.fill(false)
     assertEquals(filledField.errors, Nil)
     assertEquals(filledField.value, Option(false))
@@ -51,7 +51,7 @@ class MappingFillSuite extends munit.FunSuite {
 
   test("local date") {
     val now = LocalDate.now
-    val field = Mapping.of[LocalDate]("field")
+    val field = Mapping[LocalDate]("field")
     val filledField = field.fill(now)
     assertEquals(filledField.errors, Nil)
     assertEquals(filledField.value, Some(now))
@@ -59,7 +59,7 @@ class MappingFillSuite extends munit.FunSuite {
 
   test("local time"){
     val now = LocalTime.now()
-    val field = Mapping.of[LocalTime]("field")
+    val field = Mapping[LocalTime]("field")
     val filledField = field.fill(now)
     assertEquals(filledField.errors, Nil)
     assertEquals(filledField.value, Some(now))
@@ -68,7 +68,7 @@ class MappingFillSuite extends munit.FunSuite {
     val nowInSecs = now.truncatedTo(ChronoUnit.SECONDS)
     assertNotEquals(now, nowInSecs, "nowInSecs should not have millis")
 
-    val field2 = Mapping.of[LocalTime]("field")
+    val field2 = Mapping[LocalTime]("field")
     val filledField2 = field2.fill(nowInSecs)
     assertEquals(filledField2.errors, Nil)
     assertEquals(filledField2.value, Some(nowInSecs))
@@ -79,7 +79,7 @@ class MappingFillSuite extends munit.FunSuite {
     //By default uses ISO_LOCAL_DATE_TIME -
     // https://docs.oracle.com/javase/8/docs/api/java/time/format/DateTimeFormatter.html#ISO_LOCAL_DATE_TIME
     val now = LocalDateTime.now()
-    val field = Mapping.of[LocalDateTime]("field")
+    val field = Mapping[LocalDateTime]("field")
     val filledField = field.fill(now)
     assertEquals(filledField.errors, Nil)
     assertEquals(filledField.value, Some(now))
@@ -87,7 +87,7 @@ class MappingFillSuite extends munit.FunSuite {
     val nowInSecs = LocalDateTime.now().truncatedTo(ChronoUnit.SECONDS)
     assertNotEquals(now, nowInSecs, "nowInSecs should not have millis")
 
-    val field2 = Mapping.of[LocalDateTime]("field")
+    val field2 = Mapping[LocalDateTime]("field")
     val filledField2 = field.fill(nowInSecs)
     assertEquals(filledField2.errors, Nil)
     assertEquals(filledField2.value, Some(nowInSecs))
@@ -95,7 +95,7 @@ class MappingFillSuite extends munit.FunSuite {
 
   test("sql date"){
     val now: java.sql.Date = java.sql.Date.valueOf("2022-02-02")
-    val field = Mapping.of[java.sql.Date]("field")
+    val field = Mapping[java.sql.Date]("field")
     val filledField = field.fill(now)
     assertEquals(filledField.errors, Nil)
     assertEquals(filledField.value, Some(now))
@@ -105,7 +105,7 @@ class MappingFillSuite extends munit.FunSuite {
     val milli: Long = System.currentTimeMillis()
     val now: java.sql.Timestamp = new java.sql.Timestamp(milli)
 
-    val field = Mapping.of[java.sql.Timestamp]("field")
+    val field = Mapping[java.sql.Timestamp]("field")
     val filledField = field.fill(now)
     assertEquals(filledField.errors, Nil)
     assertEquals(filledField.value, Some(now))
@@ -114,7 +114,7 @@ class MappingFillSuite extends munit.FunSuite {
   test("uuid"){
     val uuid = java.util.UUID.randomUUID()
 
-    val field = Mapping.of[java.util.UUID]("field")
+    val field = Mapping[java.util.UUID]("field")
     val filledField = field.fill(uuid)
     assertEquals(filledField.errors, Nil)
     assertEquals(filledField.value, Some(uuid))
@@ -122,7 +122,7 @@ class MappingFillSuite extends munit.FunSuite {
 
   test("byte"){
     val value: Byte = 123.toByte
-    val field = Mapping.of[Byte]("field")
+    val field = Mapping[Byte]("field")
     val filledField = field.fill(value)
     assertEquals(filledField.errors, Nil)
     assertEquals(filledField.value, Some(value))
@@ -130,7 +130,7 @@ class MappingFillSuite extends munit.FunSuite {
 
   test("short"){
     val value: Short = 1
-    val field = Mapping.of[Short]("field")
+    val field = Mapping[Short]("field")
     val filledField = field.fill(value)
     assertEquals(filledField.errors, Nil)
     assertEquals(filledField.value, Some(value))
@@ -138,7 +138,7 @@ class MappingFillSuite extends munit.FunSuite {
 
   test("big decimal"){
     val value: BigDecimal = BigDecimal(200000)
-    val field = Mapping.of[BigDecimal]("field")
+    val field = Mapping[BigDecimal]("field")
     val filledField = field.fill(value)
     assertEquals(filledField.errors, Nil)
     assertEquals(filledField.value, Some(value))
@@ -147,7 +147,7 @@ class MappingFillSuite extends munit.FunSuite {
   test("char"){
     val value: Char = 'a'
 
-    val field = Mapping.of[Char]("field")
+    val field = Mapping[Char]("field")
     val filledField = field.fill(value)
     assertEquals(filledField.errors, Nil)
     assertEquals(filledField.value, Some(value))
@@ -156,7 +156,7 @@ class MappingFillSuite extends munit.FunSuite {
   test("ignored"){
 
     val field =
-      ignored[Long](0L)
+      Mapping.ignored[Long](0L)
         .name("field") //Assign a name to the ignore field
 
     val filledField = field.fill(2)
@@ -164,8 +164,9 @@ class MappingFillSuite extends munit.FunSuite {
   }
 
   test("default type"){
+    import Mapping.*
     val field  =
-      default[String](text, "Foo")
+      Mapping.default[String](text, "Foo")
         .name("field") // Assigned a name to the default field
 
     assertEquals(field.value, Option("Foo"))
@@ -180,7 +181,7 @@ class MappingFillSuite extends munit.FunSuite {
 
   test("checked type"){
     val field: Mapping[Boolean] =
-      checked("Please check this field")
+      Mapping.checked("Please check this field")
         .name("field") //Assign name to field
 
     assertEquals(field.fill(true).value, Option(true))
@@ -191,7 +192,7 @@ class MappingFillSuite extends munit.FunSuite {
   test("year month type"){
     val data = YearMonth.now()
     val pattern = "yy-MM"
-    val field = yearMonth(pattern).name("field")
+    val field = Mapping.yearMonthUsing(pattern).name("field")
 
     val formatter = java.time.format.DateTimeFormatter.ofPattern(pattern)
     val filledField = field.fill(data)
@@ -205,7 +206,7 @@ class MappingFillSuite extends munit.FunSuite {
     val format = "MMMM d, yyyy"
     val nowValue = now.format(DateTimeFormatter.ofPattern(format))
     val field =
-      localDate(format)
+      Mapping.localDateUsing(format)
         .name("field")
 
     val filledField = field.fill(now)
@@ -215,14 +216,15 @@ class MappingFillSuite extends munit.FunSuite {
 
   test("seq"){
     val value = Seq(1,2,3,4,5)
-    val field = Mapping.of[Seq[Int]]("field")
+    val field = Mapping[Seq[Int]]("field")
 
     val filledField = field.fill(value)
     assertEquals(filledField.value, Option(value))
   }
 
   test("optional"){
-    val form: Mapping[(Long, Option[String])] = tuple(
+    import Mapping.*
+    val form: Mapping[(Long, Option[String])] = Mapping.tuple(
       "id" -> longNumber,
       "address" -> optional[String]
     )
@@ -232,7 +234,8 @@ class MappingFillSuite extends munit.FunSuite {
   }
 
   test("optional with constraints"){
-    val form: Mapping[(Long, Option[String])] = tuple(
+    import Mapping.*
+    val form: Mapping[(Long, Option[String])] = Mapping.tuple(
       "id" -> longNumber,
       "address" -> optional(text(0,255,true))
     )

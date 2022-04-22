@@ -4,6 +4,8 @@ import com.greenfossil.commons.json.Json
 
 class JsonObjFormPlayCompatibilitySuite extends munit.FunSuite {
 
+  import Mapping.*
+
   /*
    * curl http://localhost:9000/form -X POST -H 'Content-Type: application/json' -d '{"s":"my_login","xs":"my_password"}' -o /dev/null
    */

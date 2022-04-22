@@ -1,6 +1,7 @@
 package com.greenfossil.commons.data
 
 class SeqMappingSuite extends munit.FunSuite {
+  import Mapping.*
 
   test("repeated with no []") {
     val form: Mapping[Seq[Int]] = seq[Int].name("seq")

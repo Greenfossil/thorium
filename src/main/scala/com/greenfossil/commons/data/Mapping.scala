@@ -7,75 +7,13 @@ import java.time.*
 import scala.deriving.Mirror
 import scala.deriving.Mirror.ProductOf
 
-object Mapping {
-
-  /*
- * Extracts Type  't' from Field[t]
- */
-  type FieldTypeExtractor[Xs <: Tuple] <: Tuple = Xs match {
-    case EmptyTuple => Xs
-    case Mapping[t] *: ts => t *: FieldTypeExtractor[ts]
-    case (String, Mapping[t]) *: ts => t *: FieldTypeExtractor[ts]
-  }
-
-  /*
-   * Constructs Field[t] from a given type 't'
-   */
-  type FieldConstructor[X <:Tuple] <: Tuple = X match {
-    case EmptyTuple => X
-    case t *: ts => Mapping[t] *: FieldConstructor[ts]
-  }
-
-  def toNamedFieldTuple(tuple: Tuple): Mapping[?] *: Tuple =
-    tuple.map[[X] =>> Mapping[?]]([X] => (x: X) =>
-      x match
-        case (name: String, f: Mapping[?]) => f.name(name)
-    ).asInstanceOf[Mapping[?] *: Tuple]
-
-  inline def of[A]: Mapping[A] =
-    fieldOf[A]
-
-  inline def of[A](inline binder: Formatter[A]) : Mapping[A] =
-    fieldOf[A].binder(binder)
-
-  inline def of[A](name: String): Mapping[A] =
+object Mapping extends MappingInlines {
+  
+  inline def apply[A](name: String): Mapping[A] =
     fieldOf[A].name(name)
 
-  inline def of[A](name: String, binder: Formatter[A]): Mapping[A] =
-    fieldOf[A].name(name).binder(binder)
-
-  import scala.compiletime.*
-
-  inline def fieldOf[A]: Mapping[A] =
-    inline erasedValue[A] match {
-      case _: String             => ScalarMapping("String", binder = checkRequiredFormat.asInstanceOf[Formatter[A]])
-      case _: Int                => ScalarMapping("Int", binder = intFormat.asInstanceOf[Formatter[A]])
-      case _: Long               => ScalarMapping("Long", binder = longFormat.asInstanceOf[Formatter[A]])
-      case _: Double             => ScalarMapping("Double", binder = doubleFormat.asInstanceOf[Formatter[A]])
-      case _: Float              => ScalarMapping("Float", binder = floatFormat.asInstanceOf[Formatter[A]])
-      case _: Boolean            => ScalarMapping("Boolean", binder = booleanFormat.asInstanceOf[Formatter[A]])
-      case _: LocalDateTime      => ScalarMapping("LocalDateTime", binder = localDateTimeFormat.asInstanceOf[Formatter[A]])
-      case _: LocalDate          => ScalarMapping("LocalDate", binder = localDateFormat.asInstanceOf[Formatter[A]])
-      case _: LocalTime          => ScalarMapping("LocalTime", binder = localTimeFormat.asInstanceOf[Formatter[A]])
-      case _: YearMonth          => ScalarMapping("YearMonth", binder = yearMonthFormat.asInstanceOf[Formatter[A]])
-      case _: java.sql.Timestamp => ScalarMapping("SqlTimestamp", binder = sqlTimestampFormat.asInstanceOf[Formatter[A]])
-      case _: java.sql.Date      => ScalarMapping("SqlDate", binder = sqlDateFormat.asInstanceOf[Formatter[A]])
-      case _: java.util.Date     => ScalarMapping("Date", binder = dateFormat.asInstanceOf[Formatter[A]])
-      case _: java.util.UUID     => ScalarMapping("UUID", binder = uuidFormat.asInstanceOf[Formatter[A]])
-      case _: Byte               => ScalarMapping("Byte", binder = byteFormat.asInstanceOf[Formatter[A]])
-      case _: Short              => ScalarMapping("Short", binder =shortFormat.asInstanceOf[Formatter[A]])
-      case _: BigDecimal         => ScalarMapping("BigDecimal", binder = bigDecimalFormat.asInstanceOf[Formatter[A]])
-      case _: Char               => ScalarMapping("Char", binder = charFormat.asInstanceOf[Formatter[A]])
-      case _: Option[a]          => OptionalMapping[a]("?", elemField = fieldOf[a]).asInstanceOf[Mapping[A]]
-      case _: Set[a]             => SeqMapping[a]("[Set", elemField = fieldOf[a]).asInstanceOf[Mapping[A]]
-      case _: IndexedSeq[a]      => SeqMapping[a]("[IndexSeq", elemField = fieldOf[a]).asInstanceOf[Mapping[A]]
-      case _: Vector[a]          => SeqMapping[a]("[Vector", elemField = fieldOf[a]).asInstanceOf[Mapping[A]]
-      case _: List[a]            => SeqMapping[a]("[List", elemField = fieldOf[a]).asInstanceOf[Mapping[A]]
-      case _: Seq[a]             => SeqMapping[a]("[Seq", elemField = fieldOf[a]).asInstanceOf[Mapping[A]]
-      case _: Tuple              => ProductMapping("P-") // "P-"
-      case _: Product            => ProductMapping("P+") //"P+" //Product must be tested last
-      case _: Any                => ScalarMapping("Any", binder = null)
-    }
+  inline def apply[A](name: String, mapping: Mapping[A]): Mapping[A] =
+    mapping.name(name)
 
 }
 

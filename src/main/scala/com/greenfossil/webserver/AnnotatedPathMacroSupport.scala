@@ -28,7 +28,7 @@ object AnnotatedPathMacroSupport {
 
       case otherTerm =>
         val sym = otherTerm.symbol
-        println(s">>>Other term flags ${sym.flags.show}")
+//        println(s">>>Other term flags ${sym.flags.show}")
         report.errorAndAbort("Unable to find annotations")
     }
 
@@ -59,8 +59,7 @@ object AnnotatedPathMacroSupport {
 
   def searchForAnnotations(using Quotes)(term: quotes.reflect.Term, level: Int): quotes.reflect.Term =
     import quotes.reflect.*
-    //  show("SearchForAnnotations", term)
-    if level == 1 then println("SearchForAnnotations...")
+    //  show(s"SearchForAnnotations level: $level", term)
     term match {
       case inlined @ Inlined(_, _, owner) =>
         show(s"Inlined...search level ${level}", inlined)
@@ -114,45 +113,53 @@ object AnnotatedPathMacroSupport {
     (computedPathExpr, mismatchParams)
   }
 
+  val debug = false
+
   def showStructure(using Quotes)(msg: String, x: quotes.reflect.Tree | List[quotes.reflect.Tree]): Unit =
     import quotes.reflect.*
-    x match {
-      case xs: List[Tree]  =>
-        println(s"$msg: ${xs.map(_.show(using Printer.TreeStructure))}")
+    if debug then
+      x match {
+        case xs: List[Tree]  =>
+          println(s"$msg: ${xs.map(_.show(using Printer.TreeStructure))}")
 
-      case term: Tree =>
-        println(s"$msg: ${term.show(using Printer.TreeStructure)}")
+        case term: Tree =>
+          println(s"$msg: ${term.show(using Printer.TreeStructure)}")
 
-    }
+      }
+    else ()
 
   def showCode(using Quotes)(msg: String, x: quotes.reflect.Tree | List[quotes.reflect.Tree] ): Unit =
     import quotes.reflect.*
-    x match {
-      case xs: List[Tree]  =>
-        println(s"$msg: ${xs.map(_.show(using quotes.reflect.Printer.TreeAnsiCode))}")
+    if debug then
+      x match {
+        case xs: List[Tree]  =>
+          println(s"$msg: ${xs.map(_.show(using quotes.reflect.Printer.TreeAnsiCode))}")
 
-      case term: Tree =>
-        println(s"$msg: ${term.show(using quotes.reflect.Printer.TreeAnsiCode)}")
-    }
+        case term: Tree =>
+          println(s"$msg: ${term.show(using quotes.reflect.Printer.TreeAnsiCode)}")
+      }
+    else ()
 
   def show(using Quotes)(msg: String, x: quotes.reflect.Tree | List[quotes.reflect.Tree]): Unit =
     import quotes.reflect.*
-    x match {
-      case xs: List[Tree]  =>
-        println(s"===> [List] ${msg}")
-        println(s"Code - Size:${xs.size}")
-        println("  " + xs.map(_.show(using quotes.reflect.Printer.TreeAnsiCode)))
+    if debug then
+      x match {
+        case xs: List[Tree]  =>
+          println(s"===> [List] ${msg}")
+          println(s"Code - Size:${xs.size}")
+          println("  " + xs.map(_.show(using quotes.reflect.Printer.TreeAnsiCode)))
 
-        println(s"Structure - Size:${xs.size}")
-        println("  " + xs.map(_.show(using Printer.TreeStructure)))
+          println(s"Structure - Size:${xs.size}")
+          println("  " + xs.map(_.show(using Printer.TreeStructure)))
 
-      case term: Tree =>
-        println(s"===> [Tree] ${msg}")
-        println(s"Symbol: ${term.symbol.flags.show}")
-        println(s"Code: ${term.show(using quotes.reflect.Printer.TreeAnsiCode)}")
-        println(s"Struct: ${term.show(using Printer.TreeStructure)}")
+        case term: Tree =>
+          println(s"===> [Tree] ${msg}")
+          println(s"Symbol: ${term.symbol.flags.show}")
+          println(s"Code: ${term.show(using quotes.reflect.Printer.TreeAnsiCode)}")
+          println(s"Struct: ${term.show(using Printer.TreeStructure)}")
 
-    }
+      }
+    else ()
 
 
 }

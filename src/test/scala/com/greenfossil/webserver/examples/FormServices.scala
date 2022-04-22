@@ -5,6 +5,7 @@ import com.greenfossil.webserver.{*, given}
 import com.linecorp.armeria.server.annotation.Get
 
 object FormServices extends Controller {
+  import Mapping.*
 
   @Get("/form")
   def tupleForm = Action { implicit request =>

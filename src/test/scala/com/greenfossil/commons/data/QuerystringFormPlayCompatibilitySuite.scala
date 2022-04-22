@@ -7,6 +7,8 @@ import com.linecorp.armeria.common.*
 
 class QuerystringFormPlayCompatibilitySuite extends munit.FunSuite {
 
+  import Mapping.*
+  
   var server: WebServer = null
 
   private def simpleForm: Mapping[(String, String)] = tuple(

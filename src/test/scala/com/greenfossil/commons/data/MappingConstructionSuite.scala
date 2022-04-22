@@ -3,35 +3,36 @@ package com.greenfossil.commons.data
 import java.time.*
 
 class MappingConstructionSuite extends munit.FunSuite{
-
+  import Mapping.*
+  
   /**
    * Check Scalar type
    */
 
-  checkScalar("String", Mapping.of[String])
-  checkScalar("Int", Mapping.of[Int])
-  checkScalar("Long", Mapping.of[Long])
-  checkScalar("Double", Mapping.of[Double])
-  checkScalar("Float", Mapping.of[Float])
-  checkScalar("LocalDateTime", Mapping.of[LocalDateTime])
-  checkScalar("LocalDate", Mapping.of[LocalDate])
-  checkScalar("LocalTime", Mapping.of[LocalTime])
-  checkScalar("YearMonth", Mapping.of[YearMonth])
-  checkScalar("SqlTimestamp", Mapping.of[java.sql.Timestamp])
-  checkScalar("SqlDate", Mapping.of[java.sql.Date])
-  checkScalar("Date", Mapping.of[java.util.Date])
-  checkScalar("UUID", Mapping.of[java.util.UUID])
-  checkScalar("Byte", Mapping.of[Byte])
-  checkScalar("Short", Mapping.of[Short])
-  checkScalar("BigDecimal", Mapping.of[BigDecimal])
-  checkScalar("Char", Mapping.of[Char])
+  checkScalar("String", Mapping.fieldOf[String])
+  checkScalar("Int", Mapping.fieldOf[Int])
+  checkScalar("Long", Mapping.fieldOf[Long])
+  checkScalar("Double", Mapping.fieldOf[Double])
+  checkScalar("Float", Mapping.fieldOf[Float])
+  checkScalar("LocalDateTime", Mapping.fieldOf[LocalDateTime])
+  checkScalar("LocalDate", Mapping.fieldOf[LocalDate])
+  checkScalar("LocalTime", Mapping.fieldOf[LocalTime])
+  checkScalar("YearMonth", Mapping.fieldOf[YearMonth])
+  checkScalar("SqlTimestamp", Mapping.fieldOf[java.sql.Timestamp])
+  checkScalar("SqlDate", Mapping.fieldOf[java.sql.Date])
+  checkScalar("Date", Mapping.fieldOf[java.util.Date])
+  checkScalar("UUID", Mapping.fieldOf[java.util.UUID])
+  checkScalar("Byte", Mapping.fieldOf[Byte])
+  checkScalar("Short", Mapping.fieldOf[Short])
+  checkScalar("BigDecimal", Mapping.fieldOf[BigDecimal])
+  checkScalar("Char", Mapping.fieldOf[Char])
 
   /**
    * check tuple
    */
   checkTuple("Tuple2", tuple(
-    "f1" -> Mapping.of[String],
-    "f2" -> Mapping.of[Int]
+    "f1" -> Mapping.fieldOf[String],
+    "f2" -> Mapping.fieldOf[Int]
   ), "String", "Int")
 
   /**
@@ -40,8 +41,8 @@ class MappingConstructionSuite extends munit.FunSuite{
 
   case class Address(f1: String, f2: Int)
   checkMapping("Address", mapping[Address](
-    "f1" -> Mapping.of[String],
-    "f2" -> Mapping.of[Int]
+    "f1" -> Mapping.fieldOf[String],
+    "f2" -> Mapping.fieldOf[Int]
   ), "Address", "String", "Int")
 
   /**
@@ -55,8 +56,8 @@ class MappingConstructionSuite extends munit.FunSuite{
    */
 
   val optTuple: Mapping[Option[(String, Int)]] = optionalTuple(
-    "f1" -> Mapping.of[String],
-    "f2" -> Mapping.of[Int]
+    "f1" -> Mapping.fieldOf[String],
+    "f2" -> Mapping.fieldOf[Int]
   )
   checkOptional("P-", optTuple)
 
@@ -67,8 +68,8 @@ class MappingConstructionSuite extends munit.FunSuite{
    * check optional mapping
    */
   val optMapping = optionalMapping[Address](
-    "f1" -> Mapping.of[String],
-    "f2" -> Mapping.of[Int]
+    "f1" -> Mapping.fieldOf[String],
+    "f2" -> Mapping.fieldOf[Int]
   )
   checkOptional("P+", optMapping)
 
@@ -85,8 +86,8 @@ class MappingConstructionSuite extends munit.FunSuite{
    * Check Repeated tuple
    */
   val repTuple = repeatedTuple(
-    "name" -> Mapping.of[String],
-    "number" -> Mapping.of[Int]
+    "name" -> Mapping.fieldOf[String],
+    "number" -> Mapping.fieldOf[Int]
   )
   checkSeq("P-",repTuple)
   val repTupElem = repTuple.asInstanceOf[SeqMapping[?]].elemField
@@ -97,8 +98,8 @@ class MappingConstructionSuite extends munit.FunSuite{
    */
 
   val repMapping = repeatedMapping[Address](
-    "f1" -> Mapping.of[String],
-    "f2" -> Mapping.of[Int]
+    "f1" -> Mapping.fieldOf[String],
+    "f2" -> Mapping.fieldOf[Int]
   )
   checkSeq("P+", repMapping)
   val repMappingElem = repMapping.asInstanceOf[SeqMapping[?]].elemField

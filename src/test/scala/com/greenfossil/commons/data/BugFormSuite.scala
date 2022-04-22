@@ -1,7 +1,8 @@
 package com.greenfossil.commons.data
 
 class BugFormSuite extends munit.FunSuite {
-
+  import Mapping.*
+  
   test("Bind form"){
     val sampleForm = tuple(
       "name" -> text,

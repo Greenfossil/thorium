@@ -6,6 +6,8 @@ import java.time.LocalDate
 
 class FormFillSuite extends munit.FunSuite {
 
+  import Mapping.*
+
   test("tuple 2") {
     val form = tuple(
       "long" -> longNumber,
@@ -72,9 +74,9 @@ class FormFillSuite extends munit.FunSuite {
 
   test("case class 2") {
     case class Foo(l: Long, s: String)
-    val form: Mapping[Foo] = mapping[Foo](
-      "l" -> Mapping.of[Long],
-      "s" -> Mapping.of[String]
+    val form = mapping[Foo](
+      "l" -> Mapping.fieldOf[Long],
+      "s" -> Mapping.fieldOf[String]
     )
     val filledForm = form.fill(Foo(1, "hello"))
     assertEquals[Any, Any](filledForm("l").value, Option(1))

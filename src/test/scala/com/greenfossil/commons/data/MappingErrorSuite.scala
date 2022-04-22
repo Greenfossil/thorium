@@ -1,7 +1,8 @@
 package com.greenfossil.commons.data
 
 class MappingErrorSuite extends munit.FunSuite{
-
+  import Mapping.*
+  
   test("Field errors"){
     val boundForm = tuple("name" -> nonEmptyText, "value" -> text).bind("name" -> "", "value" -> "")
     assertEquals(boundForm.error("name").map(_.message),  Some("error.required"))

@@ -5,7 +5,8 @@ import com.greenfossil.commons.json.Json
 import java.time.LocalDate
 
 class FormBindSuite extends munit.FunSuite {
-
+  import Mapping.*
+  
   test("bind tuple 2") {
     val form: Mapping[(Long, String, Seq[Int])] = tuple(
       "long" -> longNumber,

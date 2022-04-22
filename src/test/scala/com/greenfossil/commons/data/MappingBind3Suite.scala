@@ -7,6 +7,8 @@ import com.greenfossil.commons.json.Json
  */
 class MappingBind3Suite extends munit.FunSuite {
 
+  import Mapping.*
+
   test("Option[Int]") {
     val optIntField: Mapping[Option[Int]] =  optional[Int].name("optInt")
     val boundField = optIntField.bind("optInt" -> "1")
@@ -21,8 +23,8 @@ class MappingBind3Suite extends munit.FunSuite {
 
   test("Option[Tuple]") {
     val tupleField: Mapping[Option[(String, Int)]] = optionalTuple(
-      "name" -> Mapping.of[String],
-      "contact" -> Mapping.of[Int]
+      "name" -> Mapping.fieldOf[String],
+      "contact" -> Mapping.fieldOf[Int]
     ).name("tupleField")
 
     val boundField = tupleField.bind("tupleField.name" -> "Hello World!", "tupleField.contact" -> "123")
@@ -32,8 +34,8 @@ class MappingBind3Suite extends munit.FunSuite {
   test("Option[Mapping]") {
     case class Contact(name: String, contact: Int)
     val tupleField: Mapping[Option[Contact]] = optionalMapping[Contact](
-      "name" -> Mapping.of[String],
-      "contact" -> Mapping.of[Int]
+      "name" -> Mapping.fieldOf[String],
+      "contact" -> Mapping.fieldOf[Int]
     ).name("tupleField")
 
     val boundField = tupleField.bind("tupleField.name" -> "Hello World!", "tupleField.contact" -> "123")
