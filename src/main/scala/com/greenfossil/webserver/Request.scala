@@ -46,6 +46,17 @@ trait Request(val requestContext: ServiceRequestContext, val aggregatedHttpReque
 
   def uri: java.net.URI  /*String*/ = aggregatedHttpRequest.uri()
 
+  /**
+    * The host name and port number (if there is any)
+    *
+    */
+  def uriAuthority: String = uri.getAuthority
+
+  /**
+    * URI scheme (e.g. http, https)
+    */
+  def uriScheme: String = uri.getScheme
+
   def path: String = aggregatedHttpRequest.path()
 
   def endpoint: Endpoint = Endpoint(path)

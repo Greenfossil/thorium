@@ -5,11 +5,12 @@ import com.linecorp.armeria.server.annotation.AnnotatedHttpService
 
 case class Endpoint(url: String, method: String = "POST") {
   
-  def absoluteUrl(host: String, secure: Boolean): String =
+  def absoluteUrl(authority: String, secure: Boolean): String =
     val protocol = if secure then "https" else "http"
-    s"$protocol://$host/$secure"
+    s"$protocol://$authority/$secure"
   
-  def absoluteUrl(request: Request): String = ??? //absoluteUrl(request.host, request.secure)
+  def absoluteUrl(request: Request): String = 
+    absoluteUrl(request.uriAuthority, "https".equalsIgnoreCase(request.uriScheme))
   
 }
 
