@@ -12,8 +12,8 @@ class FormFillSuite extends munit.FunSuite {
       "text" -> text
     )
     val filledForm = form.fill(1, "hello")
-    assertEquals[Any, Any](filledForm.field("long").value, Option(1))
-    assertEquals[Any, Any](filledForm.field("text").value, Option("hello"))
+    assertEquals[Any, Any](filledForm("long").value, Option(1))
+    assertEquals[Any, Any](filledForm("text").value, Option("hello"))
 
     assertEquals(filledForm.value, Some((1L, "hello")))
   }
@@ -25,9 +25,9 @@ class FormFillSuite extends munit.FunSuite {
       "seq" -> seq[Long]
     )
     val filledForm = form.fill(1, "hello", Seq(1,2))
-    assertEquals[Any, Any](filledForm.field("long").value, Option(1L))
-    assertEquals[Any, Any](filledForm.field("text").value, Option("hello"))
-    assertEquals[Any, Any](filledForm.field("seq").value, Option(Seq(1,2)))
+    assertEquals[Any, Any](filledForm("long").value, Option(1L))
+    assertEquals[Any, Any](filledForm("text").value, Option("hello"))
+    assertEquals[Any, Any](filledForm("seq").value, Option(Seq(1,2)))
 
     assertEquals(filledForm.value, Option((1L, "hello", Seq(1L, 2L))))
   }
@@ -38,7 +38,7 @@ class FormFillSuite extends munit.FunSuite {
       "birthday" -> localDate
     )
     val filledForm = form.fill("Homer", LocalDate.parse("1990-01-01"))
-    assertEquals[Any, Any](filledForm.field("birthday").value, Some(LocalDate.parse("1990-01-01")))
+    assertEquals[Any, Any](filledForm("birthday").value, Some(LocalDate.parse("1990-01-01")))
   }
 
   test("bind as JSON"){
@@ -57,13 +57,13 @@ class FormFillSuite extends munit.FunSuite {
     )
 
     val boundForm = form.bind(jsonObject)
-    assertEquals[Any, Any](boundForm.field("name").value, Some("Homer"))
-    assertEquals[Any, Any](boundForm.field("age").value, Some(50))
-    assertEquals[Any, Any](boundForm.field("isActive").value, Some(true))
-    assertEquals[Any, Any](boundForm.field("id").value, Some(123456L))
-    assertEquals[Any, Any](boundForm.field("balance").value, Some(100.12F))
-    assertEquals[Any, Any](boundForm.field("remaining").value, Some(100.00))
-    assertEquals[Any, Any](boundForm.field("birthday").value, Some(LocalDate.parse("1990-01-01")))
+    assertEquals[Any, Any](boundForm("name").value, Some("Homer"))
+    assertEquals[Any, Any](boundForm("age").value, Some(50))
+    assertEquals[Any, Any](boundForm("isActive").value, Some(true))
+    assertEquals[Any, Any](boundForm("id").value, Some(123456L))
+    assertEquals[Any, Any](boundForm("balance").value, Some(100.12F))
+    assertEquals[Any, Any](boundForm("remaining").value, Some(100.00))
+    assertEquals[Any, Any](boundForm("birthday").value, Some(LocalDate.parse("1990-01-01")))
 
     assertEquals(boundForm.value, Some(("Homer", 50, true, 123456L, 100.12F, 100.00, LocalDate.parse("1990-01-01"))))
 //    assertEquals(boundForm.size, 7)
@@ -77,8 +77,8 @@ class FormFillSuite extends munit.FunSuite {
       "s" -> Mapping.of[String]
     )
     val filledForm = form.fill(Foo(1, "hello"))
-    assertEquals[Any, Any](filledForm.field("l").value, Option(1))
-    assertEquals[Any, Any](filledForm.field("s").value, Option("hello"))
+    assertEquals[Any, Any](filledForm("l").value, Option(1))
+    assertEquals[Any, Any](filledForm("s").value, Option("hello"))
 
   }
 
@@ -90,9 +90,9 @@ class FormFillSuite extends munit.FunSuite {
       "xs" -> seq[Long]
     )
     val filledForm = form.fill(Foo(1, "hello", Seq(1,2)))
-    assertEquals[Any, Any](filledForm.field("l").value, Option(1))
-    assertEquals[Any, Any](filledForm.field("s").value, Option("hello"))
-    assertEquals[Any, Any](filledForm.field("xs").value, Option(Seq(1,2)))
+    assertEquals[Any, Any](filledForm("l").value, Option(1))
+    assertEquals[Any, Any](filledForm("s").value, Option("hello"))
+    assertEquals[Any, Any](filledForm("xs").value, Option(Seq(1,2)))
 
   }
 
@@ -104,9 +104,9 @@ class FormFillSuite extends munit.FunSuite {
       "xs" -> seq[Long]
     )
     val filledForm = form.fill((1L, "text", Seq(1L, 2L)))
-    assertEquals[Any, Any](filledForm.field("l").value, Some(1L))
-    assertEquals[Any, Any](filledForm.field("s").value, Some("text"))
-    assertEquals[Any, Any](filledForm.field("xs").value, Some(Seq(1L, 2L)))
+    assertEquals[Any, Any](filledForm("l").value, Some(1L))
+    assertEquals[Any, Any](filledForm("s").value, Some("text"))
+    assertEquals[Any, Any](filledForm("xs").value, Some(Seq(1L, 2L)))
   }
 
   test("valid default, checked type"){

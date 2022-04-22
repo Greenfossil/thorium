@@ -129,7 +129,14 @@ trait Mapping[A] extends ConstraintVerifier[Mapping, A]{
   /*
    * Form APIs
    */
-  def field[A](key: String): Mapping[A]
+
+  /**
+   * Alias for method field()
+   * @param key
+   * @tparam A
+   * @return
+   */
+  def apply[A](key: String): Mapping[A]
 
   def fold[R](hasErrors: Mapping[A] => R, success: A => R): R = value match {
     case Some(v) if errors.isEmpty => success(v)
@@ -242,7 +249,7 @@ case class ScalarMapping[A](tpe: String,
   override def verifying(newConstraints: Constraint[A]*): Mapping[A] =
     copy(constraints = constraints ++ newConstraints)
 
-  override def field[A](key: String): Mapping[A] = this.asInstanceOf[Mapping[A]]
+  override def apply[A](key: String): Mapping[A] = this.asInstanceOf[Mapping[A]]
 
   /**
    * Adds an error to this form
@@ -340,7 +347,7 @@ case class ProductMapping[A](tpe: String,
       (newData, newMappings, newValue, newErrors) =>
         copy(mappings = newMappings, value = Option(newValue), errors = newErrors))
 
-  override def field[A](key: String): Mapping[A] =
+  override def apply[A](key: String): Mapping[A] =
     mappings
       .toList
       .collectFirst{case f : Mapping[A]  if f.name == key => f}
@@ -412,8 +419,8 @@ case class OptionalMapping[A](tpe: String,
     val errors = applyConstraints(boundValue.asInstanceOf[A])
     copy(value = boundValue, errors = boundFieldErrors ++ errors, elemField = boundField)
 
-  override def field[A](key: String): Mapping[A] =
-    elemField.field(key)
+  override def apply[A](key: String): Mapping[A] =
+    elemField.apply(key)
 
   /** FIXME
    * Adds an error to this form
@@ -497,8 +504,19 @@ case class SeqMapping[A](tpe: String,
     copy(constraints = constraints ++ newConstraints)
 
   override def fill(newValue: A): Mapping[A] =
-    val filledField = elemField.fill(newValue)
-    copy(value = filledField.value, errors = filledField.errors)
+    newValue match {
+      case xs: Seq[?] =>
+        val filledFields = xs.map(x => elemField.fill(x.asInstanceOf[A]))
+        val errors = filledFields.collect{case f: Mapping[?] if f.errors.nonEmpty => f.errors}.flatten ++
+          applyConstraints(newValue)
+        copy(value = Option(newValue), errors = errors, boundFields = filledFields)
+
+      case _ =>
+        val filledField = elemField.fill(newValue)
+        val errors = applyConstraints(newValue)
+        copy(value = Option(newValue), errors = errors, boundFields = Seq(filledField))
+
+    }
 
   override def bind(jsValue: JsValue): Mapping[A] =
     bind("", jsValue)
@@ -513,8 +531,8 @@ case class SeqMapping[A](tpe: String,
     }
     bindToSeq(prefix, data)
 
-  override def field[A](key: String): Mapping[A] =
-    elemField.field(key)
+  override def apply[A](key: String): Mapping[A] =
+    elemField.apply(key)
 
   /** FIXME
    * Adds an error to this form
@@ -574,8 +592,8 @@ case class DelegateMapping[A, B](tpe: String,
   override def verifying(newConstraints: Constraint[B]*): Mapping[B] =
     copy(constraints = newConstraints)
 
-  override def field[A](key: String): Mapping[A] =
-    delegate.field(key)
+  override def apply[A](key: String): Mapping[A] =
+    delegate.apply(key)
 
   /** FIXME
    * Adds an error to this form

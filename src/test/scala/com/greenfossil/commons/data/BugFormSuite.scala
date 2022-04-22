@@ -17,7 +17,7 @@ class BugFormSuite extends munit.FunSuite {
       "Homer Simpson", 21, "Male", Seq("Singapore"), "Married", Some(true),
       Seq("Marge Simpson", "Bart Simpson", "Lisa Simpson")
     )
-    assertEquals[Any, Any](filledForm.field("name").value, Option("Homer Simpson"))
+    assertEquals[Any, Any](filledForm("name").value, Option("Homer Simpson"))
   }
 
 }

@@ -17,8 +17,8 @@ class JsonObjFormPlayCompatibilitySuite extends munit.FunSuite {
     )
 
     val filledForm = form.bind(jsonObject)
-    assertEquals[Any, Any](filledForm.field("text").value, Option("chicken"))
-    assertEquals[Any, Any](filledForm.field("isChecked").value, Option(true))
+    assertEquals[Any, Any](filledForm("text").value, Option("chicken"))
+    assertEquals[Any, Any](filledForm("isChecked").value, Option(true))
   }
 
   test("empty default value") {
@@ -31,8 +31,8 @@ class JsonObjFormPlayCompatibilitySuite extends munit.FunSuite {
       "isChecked" -> true,
     )
     val filledForm = form.bind(jsonObject)
-    assertEquals[Any, Any](filledForm.field("text").value, Option("Foo"))
-    assertEquals[Any, Any](filledForm.field("isChecked").value, Option(true))
+    assertEquals[Any, Any](filledForm("text").value, Option("Foo"))
+    assertEquals[Any, Any](filledForm("isChecked").value, Option(true))
   }
 
   /*

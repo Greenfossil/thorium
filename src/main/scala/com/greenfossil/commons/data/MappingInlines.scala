@@ -76,43 +76,43 @@ inline def email =
 inline def date =
   Mapping.of[java.util.Date]
 
-inline def date(pattern: String, timeZone: java.util.TimeZone = java.util.TimeZone.getDefault) =
+inline def dateUsing(pattern: String, timeZone: java.util.TimeZone = java.util.TimeZone.getDefault) =
   Mapping.of[java.util.Date](Formatter.dateFormat(pattern, timeZone))
 
 inline def localDate =
   Mapping.of[LocalDate]
 
-inline def localDate(pattern: String) =
+inline def localDateUsing(pattern: String) =
   Mapping.of[LocalDate](Formatter.localDateFormat(pattern))
 
 inline def localDateTime =
   Mapping.of[LocalDateTime]
 
-inline def localDateTime(pattern: String) =
+inline def localDateTimeUsing(pattern: String) =
   Mapping.of[LocalDateTime](Formatter.localDateTimeFormat(pattern))
 
 inline def localTime =
   Mapping.of[LocalTime]
 
-inline def localTime(pattern: String) =
+inline def localTimeUsing(pattern: String) =
   Mapping.of[LocalTime](Formatter.localTimeFormat(pattern))
 
 inline def yearMonth =
   Mapping.of[YearMonth]
 
-inline def yearMonth(pattern: String) =
+inline def yearMonthUsing(pattern: String) =
   Mapping.of[YearMonth](Formatter.yearMonthFormat(pattern))
 
 inline def sqlDate =
   Mapping.of[java.sql.Date]
 
-inline def sqlDate(pattern: String) =
+inline def sqlDateUsing(pattern: String) =
   Mapping.of[java.sql.Date]
 
 inline def sqlTimestamp =
   Mapping.of[java.sql.Timestamp]
 
-inline def sqlTimestamp(pattern: String, timeZone: java.util.TimeZone = java.util.TimeZone.getDefault) =
+inline def sqlTimestampUsing(pattern: String, timeZone: java.util.TimeZone = java.util.TimeZone.getDefault) =
   Mapping.of[java.sql.Timestamp]
 
 inline def uuid =

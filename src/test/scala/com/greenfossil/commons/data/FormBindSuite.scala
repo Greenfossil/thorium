@@ -14,11 +14,11 @@ class FormBindSuite extends munit.FunSuite {
     )
     val boundForm = form.bind("long" -> "1", "text" -> "hello", "seq[1]" -> "1", "seq[2]" -> "2")
 //    assertEquals(boundForm.data.size, 3)
-    val a = boundForm.field("long")
-    val x = boundForm.field("long").value
-    assertEquals[Any, Any](boundForm.field("long").value, Option(1))
-    assertEquals[Any, Any](boundForm.field("text").value, Option("hello"))
-    assertEquals[Any, Any](boundForm.field("seq").value, Option(Seq(1,2)))
+    val a = boundForm("long")
+    val x = boundForm("long").value
+    assertEquals[Any, Any](boundForm("long").value, Option(1))
+    assertEquals[Any, Any](boundForm("text").value, Option("hello"))
+    assertEquals[Any, Any](boundForm("seq").value, Option(Seq(1,2)))
 
 //    assertEquals[Any, Any](boundForm.data.get("long"), Option(1))
 //    assertEquals[Any, Any](boundForm.data.get("text"), Option("hello"))
@@ -34,7 +34,7 @@ class FormBindSuite extends munit.FunSuite {
     )
 
     val boundForm = form.bind("name" -> "Homer", "birthday" -> "1990-01-01")
-    assertEquals[Any, Any](boundForm.field("birthday").value, Some(LocalDate.parse("1990-01-01")))
+    assertEquals[Any, Any](boundForm("birthday").value, Some(LocalDate.parse("1990-01-01")))
     assertEquals(boundForm.value, Some(("Homer", LocalDate.parse("1990-01-01"))))
 //    assertEquals(boundForm.data.size, 2)
   }
@@ -67,13 +67,13 @@ class FormBindSuite extends munit.FunSuite {
     )
 
     val boundForm = form.bind(jsonObject)
-    assertEquals[Any, Any](boundForm.field("name").value, Some("Homer"))
-    assertEquals[Any, Any](boundForm.field("age").value, Some(50))
-    assertEquals[Any, Any](boundForm.field("isActive").value, Some(true))
-    assertEquals[Any, Any](boundForm.field("id").value, Some(123456L))
-    assertEquals[Any, Any](boundForm.field("balance").value, Some(100.12F))
-    assertEquals[Any, Any](boundForm.field("remaining").value, Some(100.00))
-    assertEquals[Any, Any](boundForm.field("birthday").value, Some(LocalDate.parse("1990-01-01")))
+    assertEquals[Any, Any](boundForm("name").value, Some("Homer"))
+    assertEquals[Any, Any](boundForm("age").value, Some(50))
+    assertEquals[Any, Any](boundForm("isActive").value, Some(true))
+    assertEquals[Any, Any](boundForm("id").value, Some(123456L))
+    assertEquals[Any, Any](boundForm("balance").value, Some(100.12F))
+    assertEquals[Any, Any](boundForm("remaining").value, Some(100.00))
+    assertEquals[Any, Any](boundForm("birthday").value, Some(LocalDate.parse("1990-01-01")))
 
     assertEquals(boundForm.value, Some(("Homer", 50, true, 123456L, 100.12F, 100.00, LocalDate.parse("1990-01-01"))))
 //    assertEquals(boundForm.data.size, 7)
@@ -89,19 +89,19 @@ class FormBindSuite extends munit.FunSuite {
     )
 
     val boundMappingForm1 = form.bind("l" -> "1", "s" -> "hello", "xs[1]" -> "1", "xs[2]" -> "2")
-    assertEquals[Any, Any](boundMappingForm1.field("l").value, Option(1))
-    assertEquals[Any, Any](boundMappingForm1.field("s").value, Option("hello"))
-    assertEquals[Any, Any](boundMappingForm1.field("xs").value, Option(Seq(1, 2)))
+    assertEquals[Any, Any](boundMappingForm1("l").value, Option(1))
+    assertEquals[Any, Any](boundMappingForm1("s").value, Option("hello"))
+    assertEquals[Any, Any](boundMappingForm1("xs").value, Option(Seq(1, 2)))
 
     val boundMappingForm2 = form.bind("l" -> "1", "s" -> "hello", "xs[0]" -> "1", "xs[1]" -> "2")
-    assertEquals[Any, Any](boundMappingForm2.field("l").value, Option(1))
-    assertEquals[Any, Any](boundMappingForm2.field("s").value, Option("hello"))
-    assertEquals[Any, Any](boundMappingForm2.field("xs").value, Option(Seq(1, 2)))
+    assertEquals[Any, Any](boundMappingForm2("l").value, Option(1))
+    assertEquals[Any, Any](boundMappingForm2("s").value, Option("hello"))
+    assertEquals[Any, Any](boundMappingForm2("xs").value, Option(Seq(1, 2)))
 
     val jsonboundForm = form.bind(Json.obj("l" -> 1, "s" -> "hello", "xs" -> Json.arr(1, 2)))
-    assertEquals[Any, Any](jsonboundForm.field("l").value, Some(1))
-    assertEquals[Any, Any](jsonboundForm.field("s").value, Some("hello"))
-    assertEquals[Any, Any](jsonboundForm.field("xs").value, Some(Seq(1, 2)))
+    assertEquals[Any, Any](jsonboundForm("l").value, Some(1))
+    assertEquals[Any, Any](jsonboundForm("s").value, Some("hello"))
+    assertEquals[Any, Any](jsonboundForm("xs").value, Some(Seq(1, 2)))
   }
 
 
