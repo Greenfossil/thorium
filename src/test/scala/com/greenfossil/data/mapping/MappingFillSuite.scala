@@ -1,4 +1,4 @@
-package com.greenfossil.commons.data
+package com.greenfossil.data.mapping
 
 import java.time.format.DateTimeFormatter
 import java.time.temporal.{ChronoUnit, TemporalUnit}

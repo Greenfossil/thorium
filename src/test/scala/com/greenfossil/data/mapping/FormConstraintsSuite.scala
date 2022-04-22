@@ -1,4 +1,4 @@
-package com.greenfossil.commons.data
+package com.greenfossil.data.mapping
 
 class FormConstraintsSuite extends munit.FunSuite {
   import Mapping.*

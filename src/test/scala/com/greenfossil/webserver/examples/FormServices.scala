@@ -1,11 +1,11 @@
 package com.greenfossil.webserver.examples
 
-import com.greenfossil.commons.data.*
+import com.greenfossil.data.mapping.*
 import com.greenfossil.webserver.{*, given}
 import com.linecorp.armeria.server.annotation.Get
 
 object FormServices extends Controller {
-  import Mapping.*
+  import com.greenfossil.data.mapping.Mapping.*
 
   @Get("/form")
   def tupleForm = Action { implicit request =>

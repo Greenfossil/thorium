@@ -1,4 +1,4 @@
-package com.greenfossil.commons.data
+package com.greenfossil.data.mapping
 
 class MappingBind4Suite extends munit.FunSuite {
   import Mapping.*
@@ -17,8 +17,8 @@ class MappingBind4Suite extends munit.FunSuite {
 
   test("Seq[Tuple]") {
     val tupleField: Mapping[Seq[(String, Int)]] = repeatedTuple(
-      "name" -> Mapping.fieldOf[String],
-      "number" -> Mapping.fieldOf[Int]
+      "name" -> Mapping.mapTo[String],
+      "number" -> Mapping.mapTo[Int]
     ).name("contact")
 
     val boundField = tupleField.bind(
@@ -33,8 +33,8 @@ class MappingBind4Suite extends munit.FunSuite {
   test("Seq[Mapping]") {
     case class Contact(name: String, number: Int)
     val tupleField: Mapping[Seq[Contact]] = repeatedMapping[Contact](
-      "name" -> Mapping.fieldOf[String],
-      "number" -> Mapping.fieldOf[Int]
+      "name" -> Mapping.mapTo[String],
+      "number" -> Mapping.mapTo[Int]
     ).name("contact")
 
     val boundField = tupleField.bind(

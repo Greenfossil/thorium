@@ -1,11 +1,10 @@
-package com.greenfossil.commons.data
+package com.greenfossil.data.mapping
 
 import java.time.format.DateTimeFormatter
 import java.time.temporal.{ChronoUnit, TemporalUnit}
 import java.time.{LocalDate, LocalDateTime, LocalTime, YearMonth}
 
 class MappingBind1Suite extends munit.FunSuite {
-  import com.greenfossil.commons.data.Mapping
   import Mapping.*
 
   test("int"){

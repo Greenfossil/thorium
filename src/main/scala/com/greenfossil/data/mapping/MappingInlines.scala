@@ -1,9 +1,15 @@
-package com.greenfossil.commons.data
+package com.greenfossil.data.mapping
 
 import java.time.{LocalDate, LocalDateTime, LocalTime, YearMonth}
 import scala.deriving.Mirror
 
 trait MappingInlines { self: Mapping.type =>
+
+  inline def apply[A](name: String): Mapping[A] =
+    mapTo[A].name(name)
+
+  inline def apply[A](name: String, mapping: Mapping[A]): Mapping[A] =
+    mapping.name(name)
 
   /*
 * Extracts Type  't' from Mapping[t]
@@ -31,8 +37,7 @@ trait MappingInlines { self: Mapping.type =>
 
   import scala.compiletime.*
 
-  //todo - renamed
-  inline def fieldOf[A]: Mapping[A] =
+  inline def mapTo[A]: Mapping[A] =
     inline erasedValue[A] match {
       case _: String             => ScalarMapping("String", binder = Formatter.checkRequiredFormat.asInstanceOf[Formatter[A]])
       case _: Int                => ScalarMapping("Int", binder = Formatter.intFormat.asInstanceOf[Formatter[A]])
@@ -52,12 +57,12 @@ trait MappingInlines { self: Mapping.type =>
       case _: Short              => ScalarMapping("Short", binder = Formatter.shortFormat.asInstanceOf[Formatter[A]])
       case _: BigDecimal         => ScalarMapping("BigDecimal", binder = Formatter.bigDecimalFormat.asInstanceOf[Formatter[A]])
       case _: Char               => ScalarMapping("Char", binder = Formatter.charFormat.asInstanceOf[Formatter[A]])
-      case _: Option[a]          => OptionalMapping[a]("?", elemField = fieldOf[a]).asInstanceOf[Mapping[A]]
-      case _: Set[a]             => SeqMapping[a]("[Set", elemField = fieldOf[a]).asInstanceOf[Mapping[A]]
-      case _: IndexedSeq[a]      => SeqMapping[a]("[IndexSeq", elemField = fieldOf[a]).asInstanceOf[Mapping[A]]
-      case _: Vector[a]          => SeqMapping[a]("[Vector", elemField = fieldOf[a]).asInstanceOf[Mapping[A]]
-      case _: List[a]            => SeqMapping[a]("[List", elemField = fieldOf[a]).asInstanceOf[Mapping[A]]
-      case _: Seq[a]             => SeqMapping[a]("[Seq", elemField = fieldOf[a]).asInstanceOf[Mapping[A]]
+      case _: Option[a]          => OptionalMapping[a]("?", elemField = mapTo[a]).asInstanceOf[Mapping[A]]
+      case _: Set[a]             => SeqMapping[a]("[Set", elemField = mapTo[a]).asInstanceOf[Mapping[A]]
+      case _: IndexedSeq[a]      => SeqMapping[a]("[IndexSeq", elemField = mapTo[a]).asInstanceOf[Mapping[A]]
+      case _: Vector[a]          => SeqMapping[a]("[Vector", elemField = mapTo[a]).asInstanceOf[Mapping[A]]
+      case _: List[a]            => SeqMapping[a]("[List", elemField = mapTo[a]).asInstanceOf[Mapping[A]]
+      case _: Seq[a]             => SeqMapping[a]("[Seq", elemField = mapTo[a]).asInstanceOf[Mapping[A]]
       case _: Tuple              => ProductMapping("P-") // "P-"
       case _: Product            => ProductMapping("P+") //"P+" //Product must be tested last
       case _: Any                => ScalarMapping("Any", binder = null)
@@ -66,46 +71,46 @@ trait MappingInlines { self: Mapping.type =>
  * https://www.playframework.com/documentation/2.8.x/api/scala/play/api/data/Forms$.html
  */
   //Numeric
-  inline def boolean = fieldOf[Boolean]
+  inline def boolean = mapTo[Boolean]
 
-  inline def byteNumber = fieldOf[Byte]
+  inline def byteNumber = mapTo[Byte]
 
   inline def byteNumber(min: Byte = Byte.MinValue, max: Byte = Byte.MaxValue, strict: Boolean = false) =
-   fieldOf[Byte]
+   mapTo[Byte]
      .verifying(Constraints.min(min, strict), Constraints.max(max, strict))
 
-  inline def shortNumber = fieldOf[Short]
+  inline def shortNumber = mapTo[Short]
 
   inline def shortNumber(min: Short = Short.MinValue, max: Short = Short.MinValue, strict: Boolean = false) =
-    fieldOf[Short]
+    mapTo[Short]
       .verifying(Constraints.min[Short](min, strict), Constraints.max[Short](max, strict))
 
-  inline def number = fieldOf[Int]
+  inline def number = mapTo[Int]
 
   inline def number(min:Int, max:Int) =
-    fieldOf[Int]
+    mapTo[Int]
       .verifying(Constraints.min(min), Constraints.max(max))
 
-  inline def longNumber = fieldOf[Long]
+  inline def longNumber = mapTo[Long]
 
   inline def longNumber(min: Long = Long.MinValue, max: Long = Long.MaxValue, strict: Boolean = false) =
-    fieldOf[Long]
+    mapTo[Long]
       .verifying(Constraints.min[Long](min, strict), Constraints.max[Long](max, strict))
 
-  inline def double = fieldOf[Double]
+  inline def double = mapTo[Double]
 
-  inline def float = fieldOf[Float]
+  inline def float = mapTo[Float]
 
-  inline def bigDecimal = fieldOf[BigDecimal]
+  inline def bigDecimal = mapTo[BigDecimal]
 
   inline def bigDecimal(precision: Int, scale: Int) =
-    fieldOf[BigDecimal]
+    mapTo[BigDecimal]
       .verifying(Constraints.precision(precision, scale))
 
   //Text
-  inline def char = fieldOf[Char]
+  inline def char = mapTo[Char]
 
-  inline def text:Mapping[String] = fieldOf[String]
+  inline def text:Mapping[String] = mapTo[String]
 
   inline def text(minLength: Int, maxLength: Int, trim: Boolean): Mapping[String] =
     val _text = if trim then text.transform[String](_.trim) else text
@@ -116,64 +121,64 @@ trait MappingInlines { self: Mapping.type =>
     }
 
   inline def nonEmptyText =
-    fieldOf[String]
+    mapTo[String]
       .verifying(Constraints.nonEmpty)
 
   inline def nonEmptyText(minLength: Int = 0, maxLength: Int = Int.MaxValue) =
-    fieldOf[String]
+    mapTo[String]
       .verifying(Constraints.minLength(minLength), Constraints.maxLength(maxLength))
 
   inline def email =
-    fieldOf[String]
+    mapTo[String]
       .verifying(Constraints.emailAddress)
 
   //Temporal
-  inline def date = fieldOf[java.util.Date]
+  inline def date = mapTo[java.util.Date]
 
   inline def dateUsing(pattern: String, timeZone: java.util.TimeZone = java.util.TimeZone.getDefault) =
-    fieldOf[java.util.Date]
+    mapTo[java.util.Date]
       .binder(Formatter.dateFormat(pattern, timeZone))
 
-  inline def localDate = fieldOf[LocalDate]
+  inline def localDate = mapTo[LocalDate]
 
   inline def localDateUsing(pattern: String) =
-    fieldOf[LocalDate]
+    mapTo[LocalDate]
       .binder(Formatter.localDateFormat(pattern))
 
-  inline def localDateTime = fieldOf[LocalDateTime]
+  inline def localDateTime = mapTo[LocalDateTime]
 
   inline def localDateTimeUsing(pattern: String) =
-    fieldOf[LocalDateTime]
+    mapTo[LocalDateTime]
       .binder(Formatter.localDateTimeFormat(pattern))
 
-  inline def localTime = fieldOf[LocalTime]
+  inline def localTime = mapTo[LocalTime]
 
   inline def localTimeUsing(pattern: String) =
-    fieldOf[LocalTime]
+    mapTo[LocalTime]
       .binder(Formatter.localTimeFormat(pattern))
 
-  inline def yearMonth = fieldOf[YearMonth]
+  inline def yearMonth = mapTo[YearMonth]
 
   inline def yearMonthUsing(pattern: String) =
-    fieldOf[YearMonth]
+    mapTo[YearMonth]
       .binder(Formatter.yearMonthFormat(pattern))
 
-  inline def sqlDate = fieldOf[java.sql.Date]
+  inline def sqlDate = mapTo[java.sql.Date]
 
   inline def sqlDateUsing(pattern: String) =
-    fieldOf[java.sql.Date]
+    mapTo[java.sql.Date]
       .binder(Formatter.sqlDateFormat(pattern))
 
-  inline def sqlTimestamp = fieldOf[java.sql.Timestamp]
+  inline def sqlTimestamp = mapTo[java.sql.Timestamp]
 
   inline def sqlTimestampUsing(pattern: String, timeZone: java.util.TimeZone = java.util.TimeZone.getDefault) =
-    fieldOf[java.sql.Timestamp]
+    mapTo[java.sql.Timestamp]
       .binder(Formatter.sqlTimestampFormat(pattern, timeZone))
 
-  inline def uuid = fieldOf[java.util.UUID]
+  inline def uuid = mapTo[java.util.UUID]
 
   inline def checked(msg: String) =
-    fieldOf[Boolean]
+    mapTo[Boolean]
       .verifying(msg, _ == true)
 
   inline def default[A](mapping: Mapping[A], defaultValue: A): Mapping[A] =
@@ -181,23 +186,23 @@ trait MappingInlines { self: Mapping.type =>
       Option(a).getOrElse(defaultValue)
     )
 
-  inline def ignored[A](value: A): Mapping[A] = fieldOf[A].transform[A](_ => value)
+  inline def ignored[A](value: A): Mapping[A] = mapTo[A].transform[A](_ => value)
 
   inline def tuple[A <: Tuple](nameValueTuple: A): Mapping[FieldTypeExtractor[A]] =
-    fieldOf[FieldTypeExtractor[A]]
+    mapTo[FieldTypeExtractor[A]]
       .mappings(toNamedFieldTuple(nameValueTuple), null)
 
   inline def mapping[A](using m: Mirror.ProductOf[A])(nameValueTuple: Tuple.Zip[m.MirroredElemLabels, FieldConstructor[m.MirroredElemTypes]]): Mapping[A] =
-    fieldOf[A]
+    mapTo[A]
       .mappings(toNamedFieldTuple(nameValueTuple), m)
 
-  inline def optional[A]:Mapping[Option[A]] = fieldOf[Option[A]]
+  inline def optional[A]:Mapping[Option[A]] = mapTo[Option[A]]
 
   inline def optional[A](field: Mapping[A]): Mapping[Option[A]] =
     OptionalMapping[A]("?", elemField = field).asInstanceOf[Mapping[Option[A]]]
 
   inline def optionalTuple[A <: Tuple](nameValueTuple: A): Mapping[Option[FieldTypeExtractor[A]]] =
-    fieldOf[Option[FieldTypeExtractor[A]]]
+    mapTo[Option[FieldTypeExtractor[A]]]
       .mappings(toNamedFieldTuple(nameValueTuple), null)
       .asInstanceOf[Mapping[Option[FieldTypeExtractor[A]]]]
 
@@ -206,7 +211,7 @@ trait MappingInlines { self: Mapping.type =>
     val elemField = mapping[A](nameValueTuple)
     OptionalMapping(tpe = "?", elemField = elemField).asInstanceOf[Mapping[Option[A]]]
 
-  inline def seq[A] = fieldOf[Seq[A]]
+  inline def seq[A] = mapTo[Seq[A]]
 
   inline def repeatedTuple[A <: Tuple](nameValueTuple: A) =
     val elemField = tuple[A](nameValueTuple)
@@ -216,13 +221,13 @@ trait MappingInlines { self: Mapping.type =>
     new SeqMapping[A](tpe="[Seq", elemField = mapping[A](nameValueTuple)).asInstanceOf[Mapping[Seq[A]]]
 
   //Collection
-  inline def indexedSeq[A] = fieldOf[IndexedSeq[A]]
+  inline def indexedSeq[A] = mapTo[IndexedSeq[A]]
 
-  inline def list[A] = fieldOf[List[A]]
+  inline def list[A] = mapTo[List[A]]
 
   inline def list[A](a: Mapping[A]): Mapping[List[A]] = ???
 
-  inline def set[A] = fieldOf[Set[A]]
+  inline def set[A] = mapTo[Set[A]]
 
-  inline def vector[A] = fieldOf[Vector[A]]
+  inline def vector[A] = mapTo[Vector[A]]
 }

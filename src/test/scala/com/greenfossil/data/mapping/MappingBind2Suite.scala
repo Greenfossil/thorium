@@ -1,4 +1,4 @@
-package com.greenfossil.commons.data
+package com.greenfossil.data.mapping
 
 /*
  * Test Tuple, CaseClass Field
@@ -8,8 +8,8 @@ class MappingBind2Suite extends munit.FunSuite {
   
   test("Tuple") {
     val tupleField: Mapping[(String, Int)] = tuple(
-      "f1" -> Mapping.fieldOf[String],
-      "f2" -> Mapping.fieldOf[Int]
+      "f1" -> Mapping.mapTo[String],
+      "f2" -> Mapping.mapTo[Int]
     ).name("tupleField")
 
     val boundField = tupleField.bind("tupleField.f1" -> "Hello", "tupleField.f2" -> "1")
@@ -19,8 +19,8 @@ class MappingBind2Suite extends munit.FunSuite {
   test("Mapping") {
     case class Contact(name: String, number: Int)
     val tupleField: Mapping[Contact] = mapping[Contact](
-      "name" -> Mapping.fieldOf[String],
-      "number" -> Mapping.fieldOf[Int]
+      "name" -> Mapping.mapTo[String],
+      "number" -> Mapping.mapTo[Int]
     ).name("contact")
 
     val boundField = tupleField.bind("contact.name" -> "Hello", "contact.number" -> "1")

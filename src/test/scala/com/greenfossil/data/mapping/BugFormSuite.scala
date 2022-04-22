@@ -1,4 +1,4 @@
-package com.greenfossil.commons.data
+package com.greenfossil.data.mapping
 
 class BugFormSuite extends munit.FunSuite {
   import Mapping.*

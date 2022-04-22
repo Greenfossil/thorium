@@ -1,6 +1,6 @@
-package com.greenfossil.commons.data
+package com.greenfossil.data.mapping
 
-import com.greenfossil.commons.data.Formatter.*
+import Formatter.*
 import com.greenfossil.commons.json.{JsArray, JsObject, JsValue}
 
 import java.time.*
@@ -8,12 +8,6 @@ import scala.deriving.Mirror
 import scala.deriving.Mirror.ProductOf
 
 object Mapping extends MappingInlines {
-  
-  inline def apply[A](name: String): Mapping[A] =
-    fieldOf[A].name(name)
-
-  inline def apply[A](name: String, mapping: Mapping[A]): Mapping[A] =
-    mapping.name(name)
 
 }
 

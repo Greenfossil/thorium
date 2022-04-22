@@ -1,7 +1,7 @@
 package com.greenfossil.webserver
 
-import com.greenfossil.commons.data.Mapping
 import com.greenfossil.commons.json.JsValue
+import com.greenfossil.data.mapping.Mapping
 import com.linecorp.armeria.common.HttpMethod
 
 import scala.util.Try

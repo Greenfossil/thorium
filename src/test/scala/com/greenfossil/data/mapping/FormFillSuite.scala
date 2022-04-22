@@ -1,4 +1,4 @@
-package com.greenfossil.commons.data
+package com.greenfossil.data.mapping
 
 import com.greenfossil.commons.json.Json
 
@@ -75,8 +75,8 @@ class FormFillSuite extends munit.FunSuite {
   test("case class 2") {
     case class Foo(l: Long, s: String)
     val form = mapping[Foo](
-      "l" -> Mapping.fieldOf[Long],
-      "s" -> Mapping.fieldOf[String]
+      "l" -> Mapping.mapTo[Long],
+      "s" -> Mapping.mapTo[String]
     )
     val filledForm = form.fill(Foo(1, "hello"))
     assertEquals[Any, Any](filledForm("l").value, Option(1))
