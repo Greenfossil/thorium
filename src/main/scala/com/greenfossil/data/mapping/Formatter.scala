@@ -1,6 +1,7 @@
 package com.greenfossil.data.mapping
 
 import java.sql.Timestamp
+import java.text.SimpleDateFormat
 import java.time.*
 import java.time.format.DateTimeFormatter
 import java.util.UUID
@@ -195,17 +196,13 @@ object Formatter {
    * @param pattern a date pattern, as specified in `format.DateTimeFormatter`.
    * @param timeZone the `java.util.TimeZone` to use for parsing and formatting
    */
-  def dateFormat(pattern: String, timeZone: TimeZone = TimeZone.getDefault): Formatter[Date] = new Formatter[Date] {
+  def dateFormat(pattern: String): Formatter[Date] = new Formatter[Date] {
 
     override val tpe: String = "java.util.Date"
+    
+    val formatter    = new java.text.SimpleDateFormat(pattern)
 
-    val javaTimeZone = timeZone.toZoneId
-    val formatter    = DateTimeFormatter.ofPattern(pattern)
-
-    def dateParse(data: String) = { //FIXME
-      val instant: Instant = ??? // PlayDate.parse(data, formatter).toZonedDateTime(ZoneOffset.UTC)
-      Date.from(instant)
-    }
+    def dateParse(data: String) = formatter.parse(data)
 
     override val format = Some(("format.date", Seq(pattern)))
 

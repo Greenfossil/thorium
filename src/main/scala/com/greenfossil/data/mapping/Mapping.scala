@@ -9,9 +9,14 @@ import scala.deriving.Mirror.ProductOf
 
 object Mapping extends MappingInlines {
 
+  inline def apply[A](name: String): Mapping[A] =
+    mapTo[A].name(name)
+
+  inline def apply[A](name: String, mapping: Mapping[A]): Mapping[A] =
+    mapping.name(name)
 }
 
-trait Mapping[A] extends ConstraintVerifier[Mapping, A]{
+trait Mapping[A] extends ConstraintVerifier[A]{
   val tpe: String
 
   val name: String
@@ -70,10 +75,9 @@ trait Mapping[A] extends ConstraintVerifier[Mapping, A]{
    */
   def apply[A](key: String): Mapping[A]
 
-  def fold[R](hasErrors: Mapping[A] => R, success: A => R): R = value match {
+  def fold[R](hasErrors: Mapping[A] => R, success: A => R): R = value match
     case Some(v) if errors.isEmpty => success(v)
     case _ => hasErrors(this)
-  }
 
   /**
    * Returns `true` if there is an error related to this form.
@@ -93,14 +97,6 @@ trait Mapping[A] extends ConstraintVerifier[Mapping, A]{
    * @param key field name.
    */
   def errors(key: String): Seq[MappingError] = errors.filter(_.key == key)
-
-  /**
-   * Retrieves the first global error, if it exists, i.e. an error without any key.
-   *
-   * @return an error
-   */
-  @deprecated("Should use globalErrors", "")
-  def globalError: Option[MappingError] = globalErrors.headOption
 
   /**
    * Retrieves all global errors, i.e. errors without a key.
@@ -285,7 +281,7 @@ case class ProductMapping[A](tpe: String,
       .collectFirst{case f : Mapping[A]  if f.name == key => f}
       .orNull
 
-  /** FIXME
+  /**
    * Adds an error to this form
    * @param error FormError
    */
@@ -354,7 +350,7 @@ case class OptionalMapping[A](tpe: String,
   override def apply[A](key: String): Mapping[A] =
     elemField.apply(key)
 
-  /** FIXME
+  /**
    * Adds an error to this form
    * @param error FormError
    */
@@ -436,19 +432,16 @@ case class SeqMapping[A](tpe: String,
     copy(constraints = constraints ++ newConstraints)
 
   override def fill(newValue: A): Mapping[A] =
-    newValue match {
+    newValue match
       case xs: Seq[?] =>
         val filledFields = xs.map(x => elemField.fill(x.asInstanceOf[A]))
         val errors = filledFields.collect{case f: Mapping[?] if f.errors.nonEmpty => f.errors}.flatten ++
           applyConstraints(newValue)
         copy(value = Option(newValue), errors = errors, boundFields = filledFields)
-
       case _ =>
         val filledField = elemField.fill(newValue)
         val errors = applyConstraints(newValue)
         copy(value = Option(newValue), errors = errors, boundFields = Seq(filledField))
-
-    }
 
   override def bind(jsValue: JsValue): Mapping[A] =
     bind("", jsValue)
@@ -466,15 +459,27 @@ case class SeqMapping[A](tpe: String,
   override def apply[A](key: String): Mapping[A] =
     elemField.apply(key)
 
-  /** FIXME
+  def boundField(index: Int, elemName: String): Mapping[A] =
+    if boundFields.indices.contains(index)
+    then {
+      boundFields(index) match 
+        case s: ScalarMapping[A] => s
+        case p: ProductMapping[A] =>
+          p.mapping(elemName)
+            .getOrElse(elemField)
+            .asInstanceOf[Mapping[A]]
+    }
+    else elemField
+
+  /**
    * Adds an error to this form
    * @param error FormError
    */
   override def withError(error: MappingError): Mapping[A] =
-    this.copy(errors = this.errors :+ error)
+    this.copy(errors = this.errors :+ error, boundFields = boundFields.map(_.withError(error)))
 
   override def discardingErrors: Mapping[A] =
-    this.copy(errors = Nil)
+    this.copy(errors = Nil, boundFields = boundFields.map(_.discardingErrors))
 }
 
 case class DelegateMapping[A, B](tpe: String,
@@ -527,13 +532,13 @@ case class DelegateMapping[A, B](tpe: String,
   override def apply[A](key: String): Mapping[A] =
     delegate.apply(key)
 
-  /** FIXME
+  /**
    * Adds an error to this form
    * @param error FormError
    */
   override def withError(error: MappingError): Mapping[B] =
-    this.copy(errors = this.errors :+ error)
+    this.copy(errors = this.errors :+ error, delegate = delegate.withError(error))
 
   override def discardingErrors: Mapping[B] =
-    this.copy(errors = Nil)
+    this.copy(errors = Nil, delegate = delegate.discardingErrors)
 }

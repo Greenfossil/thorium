@@ -4,18 +4,17 @@ import com.greenfossil.commons.json.JsValue
 
 /**
  *
- * @tparam T - is either a Form[V] or Field[V]
- * @tparam V - is the param type of T
+ * @tparam A - is the param type of Mapping
  */
-trait ConstraintVerifier[T[_], V] {
+trait ConstraintVerifier[A] {
 
-  val name: String 
-  
-  val constraints: Seq[Constraint[V]]
+  val name: String
 
-  def verifying(newConstraints: Constraint[V]*): T[V]
+  val constraints: Seq[Constraint[A]]
 
-  def verifying(constraint: V => Boolean): T[V] =
+  def verifying(newConstraints: Constraint[A]*): Mapping[A]
+
+  def verifying(constraint: A => Boolean): Mapping[A] =
     verifying("error.unknown", constraint)
 
   /**
@@ -24,12 +23,12 @@ trait ConstraintVerifier[T[_], V] {
    * @param successConstraintPredicate -  true implies no error, false implies error
    * @return
    */
-  def verifying(error: String, successConstraintPredicate: V => Boolean): T[V] =
-    verifying(Constraint{ (a: V) =>
+  def verifying(error: String, successConstraintPredicate: A => Boolean): Mapping[A] =
+    verifying(Constraint{ (a: A) =>
       if successConstraintPredicate(a) then Valid else Invalid(Seq(ValidationError(error)))
     })
 
-  def applyConstraints(value: V): Seq[MappingError] = {
+  def applyConstraints(value: A): Seq[MappingError] = {
     constraints
       .map(_.apply(value))
       .collect{case Invalid(ve) => ve}
@@ -39,9 +38,9 @@ trait ConstraintVerifier[T[_], V] {
 
   def boundFieldsToProduct(
                             newMappings: Mapping[?] *: Tuple,
-                            mirrorOpt: Option[scala.deriving.Mirror.ProductOf[V]],
-                            fn: (Map[String, Any],  Mapping[?] *: Tuple, V, Seq[MappingError]) => T[V]
-                         ): T[V] =
+                            mirrorOpt: Option[scala.deriving.Mirror.ProductOf[A]],
+                            fn: (Map[String, Any],  Mapping[?] *: Tuple, A, Seq[MappingError]) => Mapping[A]
+                         ): Mapping[A] =
 
     val newData: Map[String, Any] = newMappings.toList.collect{ case f: Mapping[?] => f.name -> f.safeValue }.toMap
 
@@ -52,29 +51,19 @@ trait ConstraintVerifier[T[_], V] {
         case f: Mapping[t] => f.safeValue
     }
 
-    val boundValue: V =
+    val boundValue: A =
     // This is to handle Form with single field to return the actual type of the field [T]
       if newMappings.size == 1
       then
-        boundFieldValues(0).asInstanceOf[V]
+        boundFieldValues(0).asInstanceOf[A]
       else
         //If all values are None, implies value is null
         if boundFieldValues.toList.collect{case None => 1}.sum == newMappings.size
-        then null.asInstanceOf[V]
-        else mirrorOpt.map(m => m.fromProduct(boundFieldValues)).getOrElse(boundFieldValues.asInstanceOf[V])
+        then null.asInstanceOf[A]
+        else mirrorOpt.map(m => m.fromProduct(boundFieldValues)).getOrElse(boundFieldValues.asInstanceOf[A])
 
     val formConstraintsErrors = applyConstraints(boundValue)
 
     fn(newData, newMappings, boundValue, formConstraintsErrors ++ fieldsErrors)
-
-
-  /*
- * TODO - query string params is not implemented yet
- */
-  def bindJsValueToMappings(mappings: Mapping[?] *: Tuple, js: JsValue, query: List[(String, String)]): Mapping[?] *: Tuple =
-    mappings.map[[A] =>> Mapping[?]] {
-      [X] => (x: X) => x match
-        case f: Mapping[t] => f.bind(js)
-    }
-
+  
 }

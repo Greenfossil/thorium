@@ -3,37 +3,30 @@ package com.greenfossil.data.mapping
 import java.time.{LocalDate, LocalDateTime, LocalTime, YearMonth}
 import scala.deriving.Mirror
 
-trait MappingInlines { self: Mapping.type =>
-
-  inline def apply[A](name: String): Mapping[A] =
-    mapTo[A].name(name)
-
-  inline def apply[A](name: String, mapping: Mapping[A]): Mapping[A] =
-    mapping.name(name)
-
-  /*
+/*
 * Extracts Type  't' from Mapping[t]
 */
-  type FieldTypeExtractor[Xs <: Tuple] <: Tuple = Xs match {
-    case EmptyTuple => Xs
-    case Mapping[t] *: ts => t *: FieldTypeExtractor[ts]
-    case (String, Mapping[t]) *: ts => t *: FieldTypeExtractor[ts]
-  }
+type FieldTypeExtractor[Xs <: Tuple] <: Tuple = Xs match {
+  case EmptyTuple => Xs
+  case Mapping[t] *: ts => t *: FieldTypeExtractor[ts]
+  case (String, Mapping[t]) *: ts => t *: FieldTypeExtractor[ts]
+}
 
-  /*
-   * Constructs Mapping[t] from a given type 't'
-   */
-  type FieldConstructor[X <:Tuple] <: Tuple = X match {
-    case EmptyTuple => X
-    case t *: ts => Mapping[t] *: FieldConstructor[ts]
-  }
+/*
+ * Constructs Mapping[t] from a given type 't'
+ */
+type FieldConstructor[X <:Tuple] <: Tuple = X match {
+  case EmptyTuple => X
+  case t *: ts => Mapping[t] *: FieldConstructor[ts]
+}
 
-  def toNamedFieldTuple(tuple: Tuple): Mapping[?] *: Tuple =
-    tuple.map[[X] =>> Mapping[?]]([X] => (x: X) =>
-      x match
-        case (name: String, f: Mapping[?]) => f.name(name)
-    ).asInstanceOf[Mapping[?] *: Tuple]
+def toNamedFieldTuple(tuple: Tuple): Mapping[?] *: Tuple =
+  tuple.map[[X] =>> Mapping[?]]([X] => (x: X) =>
+    x match
+      case (name: String, f: Mapping[?]) => f.name(name)
+  ).asInstanceOf[Mapping[?] *: Tuple]
 
+trait MappingInlines {
 
   import scala.compiletime.*
 
@@ -135,9 +128,9 @@ trait MappingInlines { self: Mapping.type =>
   //Temporal
   inline def date = mapTo[java.util.Date]
 
-  inline def dateUsing(pattern: String, timeZone: java.util.TimeZone = java.util.TimeZone.getDefault) =
+  inline def dateUsing(pattern: String) =
     mapTo[java.util.Date]
-      .binder(Formatter.dateFormat(pattern, timeZone))
+      .binder(Formatter.dateFormat(pattern))
 
   inline def localDate = mapTo[LocalDate]
 
@@ -220,14 +213,4 @@ trait MappingInlines { self: Mapping.type =>
   inline def repeatedMapping[A](using m: Mirror.ProductOf[A])(nameValueTuple: Tuple.Zip[m.MirroredElemLabels, FieldConstructor[m.MirroredElemTypes]]) =
     new SeqMapping[A](tpe="[Seq", elemField = mapping[A](nameValueTuple)).asInstanceOf[Mapping[Seq[A]]]
 
-  //Collection
-  inline def indexedSeq[A] = mapTo[IndexedSeq[A]]
-
-  inline def list[A] = mapTo[List[A]]
-
-  inline def list[A](a: Mapping[A]): Mapping[List[A]] = ???
-
-  inline def set[A] = mapTo[Set[A]]
-
-  inline def vector[A] = mapTo[Vector[A]]
 }

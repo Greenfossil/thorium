@@ -25,16 +25,7 @@ case class MappingError(key: String, messages: Seq[String], args: Seq[Any] = Nil
    * @param message The new message.
    */
   def withMessage(message: String): MappingError = MappingError(key, message)
-
-  /**
-   * Displays the formatted message, for use in a template.
-   * FIXME - use locale
-   */
-  def format(using locale: java.util.Locale): String = {
-//    
-//    messages.apply(message, args: _*)
-    ???
-  }
+  
 }
 
 object MappingError {
