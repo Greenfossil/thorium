@@ -132,3 +132,27 @@ trait Request(val requestContext: ServiceRequestContext, val aggregatedHttpReque
   //Raw Buffer - TODO - testcase needed and check for conformance
   def asRaw: HttpData = aggregatedHttpRequest.content()
 }
+
+
+import com.greenfossil.data.mapping.Mapping
+
+extension[A](field: Mapping[A])
+  def bindFromRequest()(using request: Request): Mapping[A] =
+    val queryData: List[(String, String)] =
+      request.method() match {
+        case HttpMethod.POST | HttpMethod.PUT | HttpMethod.PATCH => Nil
+        case _ => request.queryParamsList
+      }
+
+    request match {
+
+      //      case req if req.asMultipartFormData.bodyPart.nonEmpty =>
+      //        bind(req.asMultipartFormData.asFormUrlEncoded ++ querydata)
+
+      case req if Try(req.asJson).isSuccess =>
+        //        bind(req.asJson, querydata)
+        field.bind(request.asJson)
+
+      case req =>
+        field.bind(req.asFormUrlEncoded ++ queryData.groupMap(_._1)(_._2))
+    }

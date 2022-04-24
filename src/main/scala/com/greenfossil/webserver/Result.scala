@@ -53,35 +53,35 @@ object Result {
                  value: String,
                  secure: Boolean,
                  maxAgeOpt: Option[Long],
-                 pathOpt: Option[String],
+                 path: String,
                  domainOpt: Option[String]
                   ): Cookie =
     val cookieBuilder = if secure then Cookie.secureBuilder(name, value) else Cookie.builder(name, value)
-    pathOpt.map(cookieBuilder.path)
+    Option(path).filter(_.nonEmpty).map(cookieBuilder.path)
     maxAgeOpt.map(cookieBuilder.maxAge)
     domainOpt.map(cookieBuilder.domain)
     cookieBuilder.build()
 
   def bakeCookie(name: String, value: String): Cookie =
-    bakeCookie(name, value, false, None, None, None)
+    bakeCookie(name, value, false, None, "/", None)
 
   def bakeCookie(name: String, value: String, path: String): Cookie =
-    bakeCookie(name, value, false, None, Option(path), None)
+    bakeCookie(name, value, false, None, path, None)
 
   def bakeCookie(name: String, value: String, maxAge: Long): Cookie =
     bakeCookie(name, value, maxAge, false)
 
   def bakeCookie(name: String, value: String, secure: Boolean): Cookie =
-    bakeCookie(name, value, secure, None, None, None)
+    bakeCookie(name, value, secure, None, "/", None)
 
   def bakeCookie(name: String, value: String, maxAge: Long, secure: Boolean): Cookie =
-    bakeCookie(name , value, secure, Some(maxAge), None, None)
+    bakeCookie(name , value, secure, Some(maxAge), "/", None)
 
   def bakeDiscardCookie(name: String): Cookie =
     bakeDiscardCookie(name, false)
 
   def bakeDiscardCookie(name: String, secure: Boolean, path: String = "/"): Cookie =
-    bakeCookie(name , "", secure, maxAgeOpt = Option(0L), Option(path), None)
+    bakeCookie(name , "", secure, maxAgeOpt = Option(0L), path, None)
 
   def bakeSessionCookie(session: Session): Option[Cookie] =
     bakeBase64URLEncodedCookie(RequestAttrs.Session.name(), session.data)
