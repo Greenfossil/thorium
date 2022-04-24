@@ -21,14 +21,10 @@ object AnnotatedPathMacroSupport {
         getAnnotatedPath(actionExpr, annList, paramNameValueLookup, onSuccessCallback)
 
       case methodTerm if methodTerm.symbol.flags.is(Flags.Method) =>
-        val sym = methodTerm.symbol
-
         val annList = methodTerm.symbol.annotations
         getAnnotatedPath(actionExpr, annList, Map.empty[String, Term], onSuccessCallback)
 
       case otherTerm =>
-        val sym = otherTerm.symbol
-//        println(s">>>Other term flags ${sym.flags.show}")
         report.errorAndAbort("Unable to find annotations")
     }
 
@@ -48,19 +44,18 @@ object AnnotatedPathMacroSupport {
         successCallback("POST", Expr(List(declaredPath)))
 
       case Some(declaredPath) =>
-        getComputedPathExpr(actionExpr, paramNameValueLookup, declaredPath) match {
+        getComputedPathExpr(actionExpr, paramNameValueLookup, declaredPath) match
           case (computedPathExpr, Nil) =>
             successCallback("POST", computedPathExpr)
 
           case (_, mismatchParams) =>
             report.errorAndAbort(s"Annotated endpoint has params missing [${mismatchParams.mkString(",")}]", actionExpr)
-        }
     }
 
   def searchForAnnotations(using Quotes)(term: quotes.reflect.Term, level: Int): quotes.reflect.Term =
     import quotes.reflect.*
     //  show(s"SearchForAnnotations level: $level", term)
-    term match {
+    term match
       case inlined @ Inlined(_, _, owner) =>
         show(s"Inlined...search level ${level}", inlined)
         searchForAnnotations(owner, level + 1)
@@ -68,7 +63,6 @@ object AnnotatedPathMacroSupport {
       case foundTerm =>
         show("Term found", foundTerm)
         foundTerm
-    }
 
   def getDeclaredPath(using Quotes)(annList: List[quotes.reflect.Term]): Option[String] = {
     import quotes.reflect.*
@@ -117,33 +111,35 @@ object AnnotatedPathMacroSupport {
 
   def showStructure(using Quotes)(msg: String, x: quotes.reflect.Tree | List[quotes.reflect.Tree]): Unit =
     import quotes.reflect.*
-    if debug then
-      x match {
+    if debug 
+    then
+      x match 
         case xs: List[Tree]  =>
           println(s"$msg: ${xs.map(_.show(using Printer.TreeStructure))}")
 
         case term: Tree =>
           println(s"$msg: ${term.show(using Printer.TreeStructure)}")
-
-      }
+          
     else ()
 
   def showCode(using Quotes)(msg: String, x: quotes.reflect.Tree | List[quotes.reflect.Tree] ): Unit =
     import quotes.reflect.*
-    if debug then
-      x match {
+    if debug 
+    then
+      x match
         case xs: List[Tree]  =>
           println(s"$msg: ${xs.map(_.show(using quotes.reflect.Printer.TreeAnsiCode))}")
 
         case term: Tree =>
           println(s"$msg: ${term.show(using quotes.reflect.Printer.TreeAnsiCode)}")
-      }
+
     else ()
 
   def show(using Quotes)(msg: String, x: quotes.reflect.Tree | List[quotes.reflect.Tree]): Unit =
     import quotes.reflect.*
-    if debug then
-      x match {
+    if debug 
+    then
+      x match 
         case xs: List[Tree]  =>
           println(s"===> [List] ${msg}")
           println(s"Code - Size:${xs.size}")
@@ -157,8 +153,7 @@ object AnnotatedPathMacroSupport {
           println(s"Symbol: ${term.symbol.flags.show}")
           println(s"Code: ${term.show(using quotes.reflect.Printer.TreeAnsiCode)}")
           println(s"Struct: ${term.show(using Printer.TreeStructure)}")
-
-      }
+      
     else ()
 
 

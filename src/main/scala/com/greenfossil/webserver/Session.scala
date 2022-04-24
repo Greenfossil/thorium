@@ -1,5 +1,7 @@
 package com.greenfossil.webserver
 
+import scala.annotation.targetName
+
 object Session {
 }
 
@@ -25,17 +27,20 @@ case class Session(data: Map[String, String] = Map.empty) {
    * @param kv the key-value pair to add
    * @return the modified session
    */
-  def +(kv: (String, String)): Session = {
+  @targetName("add")
+  def +(kv: (String, String)): Session = 
     require(kv._2 != null, s"Session value for ${kv._1} cannot be null")
     copy(data + kv)
-  }
   
+  @targetName("add")
   def +(name: String, value: String): Session =
     this.+((name, value))
 
+  @targetName("add")
   def +(newSession: Session): Session =
     copy(data = data ++ newSession.data)
-
+  
+  @targetName("add")
   def +(newSession: Map[String, String]): Session =
     copy(data = data ++ newSession)
 
@@ -44,10 +49,10 @@ case class Session(data: Map[String, String] = Map.empty) {
    *
    * @param kvs an `Iterable` containing key-value pairs to add.
    */
-  def ++(kvs: Iterable[(String, String)]): Session = {
+  @targetName("concat")
+  def ++(kvs: Iterable[(String, String)]): Session = 
     for ((k, v) <- kvs) require(v != null, s"Session value for $k cannot be null")
     copy(data ++ kvs)
-  }
 
   /**
    * Returns a new session with the given key removed.
@@ -60,6 +65,7 @@ case class Session(data: Map[String, String] = Map.empty) {
    * @param key the key to remove
    * @return the modified session
    */
+  @targetName("minus")
   def -(key: String): Session = copy(data - key)
 
   /**
@@ -73,6 +79,7 @@ case class Session(data: Map[String, String] = Map.empty) {
    * @param keys the keys to remove
    * @return the modified session
    */
+  @targetName("diff")
   def --(keys: Iterable[String]): Session = copy(data -- keys)
 
 }

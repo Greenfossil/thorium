@@ -61,7 +61,8 @@ trait Mapping[A] extends ConstraintVerifier[A]{
   def map[B](mappingFn: A => B): Mapping[B] =
     DelegateMapping(tpe = "#", delegate = this, delegateMapping = mappingFn)
 
-  override def toString: String = s"name:$name type:$tpe value:$value"
+  override def toString: String =
+    s"name:$name type:$tpe value:$value"
 
   /*
    * Form APIs
@@ -75,9 +76,10 @@ trait Mapping[A] extends ConstraintVerifier[A]{
    */
   def apply[A](key: String): Mapping[A]
 
-  def fold[R](hasErrors: Mapping[A] => R, success: A => R): R = value match
-    case Some(v) if errors.isEmpty => success(v)
-    case _ => hasErrors(this)
+  def fold[R](hasErrors: Mapping[A] => R, success: A => R): R = 
+    value match
+      case Some(v) if errors.isEmpty => success(v)
+      case _ => hasErrors(this)
 
   /**
    * Returns `true` if there is an error related to this form.
@@ -103,8 +105,7 @@ trait Mapping[A] extends ConstraintVerifier[A]{
    *
    * @return all global errors
    */
-  def globalErrors: Seq[MappingError] =
-    errors.filter(_.key.isEmpty)
+  def globalErrors: Seq[MappingError] = errors.filter(_.key.isEmpty)
 
   /**
    * Adds an error to this form
@@ -140,7 +141,8 @@ case class ScalarMapping[A](tpe: String,
                             format: Option[(String, Seq[Any])] = None,
                             errors: Seq[MappingError] = Nil) extends Mapping[A] {
 
-  override def toString: String = s"name:$name type:$tpe binder:${if binder != null then binder.tpe else null} value:$value"
+  override def toString: String = 
+    s"name:$name type:$tpe binder:${if binder != null then binder.tpe else null} value:$value"
 
   override def name(name: String): Mapping[A] = copy(name = name)
 
@@ -155,15 +157,13 @@ case class ScalarMapping[A](tpe: String,
   override def bind(data:Map[String, Seq[String]]): Mapping[A] =
     bindUsingPrefix("", data)
 
-  override def bindUsingPrefix(prefix: String, data: Map[String, Seq[String]]): Mapping[A] = {
+  override def bindUsingPrefix(prefix: String, data: Map[String, Seq[String]]): Mapping[A] = 
     val pathName = getPathName(prefix, name)
-    binder.bind(pathName, data) match {
+    binder.bind(pathName, data) match 
       case Left(errors) => copy(errors = errors)
       case Right(value) =>
         val errors = applyConstraints(value)
         copy(value = Option(value), errors = errors)
-    }
-  }
 
   override def bind(jsValue: JsValue): Mapping[A] =
     bind("", jsValue)
@@ -255,7 +255,7 @@ case class ProductMapping[A](tpe: String,
       case _ => this
     }
 
-  override def verifying(newConstraints: Constraint[A]*): ProductMapping[A] =
+  override def verifying(newConstraints: Constraint[A]*): Mapping[A] =
     copy(constraints = constraints ++ newConstraints)
 
   override def bind(jsValue: JsValue): Mapping[A] =
@@ -325,12 +325,11 @@ case class OptionalMapping[A](tpe: String,
     copy(value = boundValue, errors = boundFieldErrors ++ errors, elemField = boundField)
 
   override def fill(newValue: A): Mapping[A] =
-    newValue match {
+    newValue match
       case Some(value) =>
         val filledField = elemField.fill(value.asInstanceOf[A])
         copy(value = filledField.value , elemField = filledField, errors = filledField.errors)
       case _ => this
-    }
 
   override def verifying(newConstraints: Constraint[A]*): Mapping[A] =
     copy(constraints = constraints ++ newConstraints)
@@ -402,11 +401,13 @@ case class SeqMapping[A](tpe: String,
      * if index is not available it will place in front
      */
     val sortedFieldNames =
-      dataMap.toList.collect { case (key, _) if key.matches(keyMatchRegex) =>
-        val indexOpt: Option[Int] = Option(key.replaceFirst(keyReplaceRegex, "$3")).filter(_.nonEmpty).flatMap(_.toIntOption)
-        val name = key.replaceFirst(keyReplaceRegex, "$1") // drop the inner field names
-        (indexOpt, name)
-      }
+      dataMap
+        .toList
+        .collect { case (key, _) if key.matches(keyMatchRegex) =>
+          val indexOpt: Option[Int] = Option(key.replaceFirst(keyReplaceRegex, "$3")).filter(_.nonEmpty).flatMap(_.toIntOption)
+          val name = key.replaceFirst(keyReplaceRegex, "$1") // drop the inner field names
+          (indexOpt, name)
+        }
         .sortBy(_._1)
         .map(_._2).distinct
 
@@ -415,10 +416,9 @@ case class SeqMapping[A](tpe: String,
      * if name exists in dataMap, bind each value separately - handles multiple value to one key
      */
     val boundFields: Seq[Mapping[A]] = sortedFieldNames.flatMap{ name =>
-      dataMap.getOrElse(name, Nil) match {
+      dataMap.getOrElse(name, Nil) match
         case Nil => Seq(elemField.name(name).bind(dataMap))
         case values => values.map(value => elemField.name(name).bind(Map(name -> Seq(value))))
-      }
     }
 
     val values = boundFields.collect{case f: Mapping[?] if f.value.isDefined => f.value.get}

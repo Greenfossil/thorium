@@ -154,10 +154,9 @@ object Formatter {
             .left
             .map { e =>
               Seq(
-                precision match {
+                precision match 
                   case Some((p, s)) => MappingError(key, "error.real.precision", Seq(p, s))
                   case None         => MappingError(key, "error.real", Nil)
-                }
               )
             }
         }

@@ -27,10 +27,9 @@ trait Request(val requestContext: ServiceRequestContext, val aggregatedHttpReque
 
   def queryParam(param: String): Option[String] = Option(requestContext.queryParam(param))
 
-  def isXhr: Boolean = {
+  def isXhr: Boolean = 
     // Check header key and value if XHR (case insensitive)
     requestContext.request().headers().contains("X-Requested-With","XMLHttpRequest" )
-  }
 
   def queryParams: QueryParams = requestContext.queryParams()
 
@@ -61,7 +60,7 @@ trait Request(val requestContext: ServiceRequestContext, val aggregatedHttpReque
 
   def endpoint: Endpoint = Endpoint(path)
   
-  def headers: RequestHeaders /*Headers*/ = aggregatedHttpRequest.headers()
+  def headers: RequestHeaders = aggregatedHttpRequest.headers()
 
   def getHeader(name: String): Option[String] = Option(headers.get(name))
 
@@ -146,8 +145,9 @@ extension[A](field: Mapping[A])
 
     request match {
 
-      //      case req if req.asMultipartFormData.bodyPart.nonEmpty =>
-      //        bind(req.asMultipartFormData.asFormUrlEncoded ++ querydata)
+      //TODO - to be tested
+      case req if req.asMultipartFormData.get().bodyPart.nonEmpty =>
+        field.bind(req.asMultipartFormData.get().asFormUrlEncoded ++ queryData.groupMap(_._1)(_._2))
 
       case req if Try(req.asJson).isSuccess =>
         //        bind(req.asJson, querydata)

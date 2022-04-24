@@ -40,11 +40,10 @@ trait Action(fn: Request => HttpResponse | Result | String) extends AnnotatedHtt
       Thread.currentThread().setContextClassLoader(ClassLoader.getSystemClassLoader)
 
       val req = new Request(ctx, aggregateRequest) {}
-      fn(req) match {
+      fn(req) match
         case s: String => HttpResponse.of(s)
         case hr: HttpResponse => hr
         case result:Result => result.toHttpResponse(req)
-      }
     })
     HttpResponse.from(f)
 
@@ -79,6 +78,7 @@ def Redirect(url: String, status: HttpStatus): Result =
 def Redirect(url: String, queryString: Map[String, Seq[String]]): Result =
   Redirect(url, queryString, HttpStatus.SEE_OTHER)
 
+//FIXME
 def Redirect(url: String, queryString: Map[String, Seq[String]], status: HttpStatus): Result =
   ???
 

@@ -22,6 +22,7 @@ object Endpoint {
 
   inline def apply(inline action: AnnotatedHttpService): Endpoint = EndpointMcr(action)
 
+  //FIXME
   inline def apply[A <: Controller](inline fn: A => AnnotatedHttpService): Endpoint = ???
 
   @deprecated("Use Endpoint()", "")

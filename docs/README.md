@@ -4,7 +4,7 @@ Request
 + Session and APIs - P1 - done
 + Flash - P1 - done
 + Parser - Not required
-+ MultiFormData 
++ MultiFormData - done
 + Request.locale - done
 + Form - I18N support
 + Implements HttpConfiguration -
@@ -16,9 +16,9 @@ Form (Data)
 + validation - P1  [Done]
 + Nested form field - done
 + transform - done
-+ implements the rest of Field supported types e.g Temporal, String etc
-+ implement Field validation error messages - Partial
-+ bindFromRequest - binding of numbers can be null (broken)
++ implements the rest of Field supported types e.g Temporal, String etc - done
++ implement Field validation error messages - Partial - done, no locale
++ bindFromRequest - binding of numbers can be null (broken) - to verify
 HttpErrorHandler - done
 ---
 + P1 [DONE - HttpErrorHandler]
@@ -41,3 +41,6 @@ Configuration
 Headers
 ---
 + Removed, now is part of Request
+
+TODO
++ streaming of files (html, csv), images, 

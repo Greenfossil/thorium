@@ -107,11 +107,10 @@ trait MappingInlines {
 
   inline def text(minLength: Int, maxLength: Int, trim: Boolean): Mapping[String] =
     val _text = if trim then text.transform[String](_.trim) else text
-    (minLength, maxLength)  match {
+    (minLength, maxLength)  match 
       case (min, Int.MaxValue) => _text.verifying(Constraints.minLength(min))
       case (0, max)            => _text.verifying(Constraints.maxLength(max))
       case (min, max)          => _text.verifying(Constraints.minLength(min), Constraints.maxLength(max))
-    }
 
   inline def nonEmptyText =
     mapTo[String]

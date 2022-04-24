@@ -28,7 +28,8 @@ trait Constraints {
    */
   def emailAddress(errorMessage: String = "error.email"): Constraint[String] = Constraint[String]("constraint.email") {
     e =>
-      if (e == null) Invalid(ValidationError(errorMessage))
+      if e == null
+      then Invalid(ValidationError(errorMessage))
       else if (e.trim.isEmpty) Invalid(ValidationError(errorMessage))
       else
         emailRegex
@@ -48,7 +49,8 @@ trait Constraints {
    */
   def nonEmpty(errorMessage: String = "error.required"): Constraint[String] =
     Constraint[String]("constraint.required") { o =>
-      if (o == null) Invalid(ValidationError(errorMessage))
+      if o == null
+      then Invalid(ValidationError(errorMessage))
       else if (o.trim.isEmpty) Invalid(ValidationError(errorMessage))
       else Valid
     }
@@ -71,11 +73,10 @@ trait Constraints {
               errorMessage: String = "error.min",
               strictErrorMessage: String = "error.min.strict"
             )(using ordering: scala.math.Ordering[T]): Constraint[T] = Constraint[T]("constraint.min", minValue) { o =>
-    (ordering.compare(o, minValue).signum, strict) match {
+    (ordering.compare(o, minValue).signum, strict) match
       case (1, _) | (0, false) => Valid
       case (_, false)          => Invalid(ValidationError(errorMessage, minValue))
       case (_, true)           => Invalid(ValidationError(strictErrorMessage, minValue))
-    }
   }
 
   /**
@@ -90,11 +91,10 @@ trait Constraints {
               errorMessage: String = "error.max",
               strictErrorMessage: String = "error.max.strict"
             )(using ordering: scala.math.Ordering[T]): Constraint[T] = Constraint[T]("constraint.max", maxValue) { o =>
-    (ordering.compare(o, maxValue).signum, strict) match {
+    (ordering.compare(o, maxValue).signum, strict) match
       case (-1, _) | (0, false) => Valid
       case (_, false)           => Invalid(ValidationError(errorMessage, maxValue))
       case (_, true)            => Invalid(ValidationError(strictErrorMessage, maxValue))
-    }
   }
 
   /**
@@ -106,7 +106,8 @@ trait Constraints {
   def minLength(length: Int, errorMessage: String = "error.minLength"): Constraint[String] =
     Constraint[String]("constraint.minLength", length) { o =>
       require(length >= 0, "string minLength must not be negative")
-      if (o == null) Invalid(ValidationError(errorMessage, length))
+      if o == null
+      then Invalid(ValidationError(errorMessage, length))
       else if (o.size >= length) Valid
       else Invalid(ValidationError(errorMessage, length))
     }
@@ -120,7 +121,8 @@ trait Constraints {
   def maxLength(length: Int, errorMessage: String = "error.maxLength"): Constraint[String] =
     Constraint[String]("constraint.maxLength", length) { o =>
       require(length >= 0, "string maxLength must not be negative")
-      if (o == null) Invalid(ValidationError(errorMessage, length))
+      if o == null
+      then Invalid(ValidationError(errorMessage, length))
       else if (o.size <= length) Valid
       else Invalid(ValidationError(errorMessage, length))
     }
@@ -140,7 +142,8 @@ trait Constraints {
     require(name != null, "name must not be null")
     require(error != null, "error must not be null")
 
-    if (o == null) Invalid(ValidationError(error, regex))
+    if o == null
+    then Invalid(ValidationError(error, regex))
     else regex.unapplySeq(o).map(_ => Valid).getOrElse(Invalid(ValidationError(error, regex)))
   }
 
@@ -154,12 +157,10 @@ trait Constraints {
                  scale: Int,
                  name: String = "constraint.precision",
                  error: String = "error.real.precision",
-               ) :Constraint[BigDecimal] = Constraint[BigDecimal](name, (precision, scale)){ bd =>
-    if (bd.precision - bd.scale > precision - scale) {
-      Invalid(ValidationError(error, precision, scale))
-    }else{
-      Valid
-    }
+               ) :Constraint[BigDecimal] = Constraint[BigDecimal](name, (precision, scale)) { bd =>
+    if bd.precision - bd.scale > precision - scale
+    then Invalid(ValidationError(error, precision, scale))
+    else Valid
   }
 
 }

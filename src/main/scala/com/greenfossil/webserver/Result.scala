@@ -17,7 +17,7 @@ private object CaseInsensitiveOrdered extends Ordering[String] {
   def compare(x: String, y: String): Int = {
     val xl = x.length
     val yl = y.length
-    if (xl < yl) -1 else if (xl > yl) 1 else x.compareToIgnoreCase(y)
+    if xl < yl then -1 else if (xl > yl) 1 else x.compareToIgnoreCase(y)
   }
 }
 
@@ -158,7 +158,7 @@ case class Result(header: ResponseHeader,
    */
   def withCookies(cookies: Cookie*): Result = {
     val filteredCookies = newCookies.filter(cookie => !cookies.exists(_.name == cookie.name))
-    if (cookies.isEmpty) this else copy(newCookies = filteredCookies ++ cookies)
+    if cookies.isEmpty then this else copy(newCookies = filteredCookies ++ cookies)
   }
 
   /**
@@ -230,6 +230,7 @@ case class Result(header: ResponseHeader,
    * @param flash the flash scope to set with this result
    * @return the new result
    */
+  //TODO - check if need to warnFlashingIfNotRedirect
   def flashing(flash: Flash): Result = {
 //    Result.warnFlashingIfNotRedirect(flash, header)
     copy(newFlashOpt = Some(flash))
