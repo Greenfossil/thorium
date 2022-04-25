@@ -105,7 +105,7 @@ trait Mapping[A] extends ConstraintVerifier[A]{
    *
    * @return all global errors
    */
-  def globalErrors: Seq[MappingError] = errors.filter(e => e.key == null)
+  def globalErrors: Seq[MappingError] = errors.filter(e => !Option(e.key).exists(_.nonEmpty))
 
   /**
    * Adds an error to this form
