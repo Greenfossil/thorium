@@ -78,12 +78,10 @@ def Redirect(url: String, status: HttpStatus): Result =
 def Redirect(url: String, queryString: Map[String, Seq[String]]): Result =
   Redirect(url, queryString, HttpStatus.SEE_OTHER)
 
-//FIXME
+//FIXME - ensures queryString is included in the url
 def Redirect(url: String, queryString: Map[String, Seq[String]], status: HttpStatus): Result =
-  ???
+  toResult(status,url).withHeaders()
 
-inline def Redirect[A <: Controller](fn: A => Action): Result =
-  Redirect(Endpoint[A](fn))
 
 /**
  * Inline redirect macro
