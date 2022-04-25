@@ -7,7 +7,7 @@ case class Endpoint(url: String, method: String = "POST") {
   
   def absoluteUrl(authority: String, secure: Boolean): String =
     val protocol = if secure then "https" else "http"
-    s"$protocol://$authority/$secure"
+    s"$protocol://$authority$url"
   
   def absoluteUrl(request: Request): String = 
     absoluteUrl(request.uriAuthority, "https".equalsIgnoreCase(request.uriScheme))

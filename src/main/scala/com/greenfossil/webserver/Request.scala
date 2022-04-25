@@ -146,8 +146,8 @@ extension[A](field: Mapping[A])
     request match {
 
       //TODO - to be tested
-      case req if req.asMultipartFormData.get().bodyPart.nonEmpty =>
-        field.bind(req.asMultipartFormData.get().asFormUrlEncoded ++ queryData.groupMap(_._1)(_._2))
+//      case req if req.asMultipartFormData.get().bodyPart.nonEmpty =>
+//        field.bind(req.asMultipartFormData.get().asFormUrlEncoded ++ queryData.groupMap(_._1)(_._2))
 
       case req if Try(req.asJson).isSuccess =>
         //        bind(req.asJson, querydata)

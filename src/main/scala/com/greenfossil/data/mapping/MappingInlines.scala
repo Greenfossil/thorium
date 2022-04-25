@@ -103,22 +103,23 @@ trait MappingInlines {
   //Text
   inline def char = mapTo[Char]
 
-  inline def text:Mapping[String] = mapTo[String]
+  inline def text:Mapping[String] = text(trimmed = true)
+
+  inline def text(trimmed: Boolean):Mapping[String] = text(0, Int.MaxValue, trimmed)
 
   inline def text(minLength: Int, maxLength: Int, trim: Boolean): Mapping[String] =
-    val _text = if trim then text.transform[String](_.trim) else text
+    val _text = if trim then mapTo[String].transform[String](_.trim) else mapTo[String]
     (minLength, maxLength)  match 
       case (min, Int.MaxValue) => _text.verifying(Constraints.minLength(min))
       case (0, max)            => _text.verifying(Constraints.maxLength(max))
       case (min, max)          => _text.verifying(Constraints.minLength(min), Constraints.maxLength(max))
 
-  inline def nonEmptyText =
-    mapTo[String]
-      .verifying(Constraints.nonEmpty)
+  inline def nonEmptyText: Mapping[String] = nonEmptyText(1, Int.MaxValue, trimmed = true)
 
-  inline def nonEmptyText(minLength: Int = 0, maxLength: Int = Int.MaxValue) =
-    mapTo[String]
-      .verifying(Constraints.minLength(minLength), Constraints.maxLength(maxLength))
+
+  inline def nonEmptyText(minLength: Int, maxLength: Int, trimmed: Boolean): Mapping[String] =
+    val _text = if trimmed then mapTo[String].transform[String](_.trim) else mapTo[String]
+    _text.verifying(Constraints.nonEmpty, Constraints.minLength(minLength), Constraints.maxLength(maxLength))
 
   inline def email =
     mapTo[String]
