@@ -531,9 +531,13 @@ case class DelegateMapping[A, B](tpe: String,
 
   override def apply[A](key: String): Mapping[A] =
     delegate.apply(key)
+  
+  override def safeValue: Any =
+   delegate.value.map(v => delegateMapping(v)).getOrElse(value.orNull)
 
   /**
    * Adds an error to this form
+   *
    * @param error FormError
    */
   override def withError(error: MappingError): Mapping[B] =
