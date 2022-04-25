@@ -174,12 +174,20 @@ trait MappingInlines {
     mapTo[Boolean]
       .verifying(msg, _ == true)
 
+  @deprecated("to be removed")
   inline def default[A](mapping: Mapping[A], defaultValue: A): Mapping[A] =
     DelegateMapping[A, A](tpe = "#", value = Option(defaultValue), delegate =  mapping, a =>
       Option(a).getOrElse(defaultValue)
     )
 
-  inline def ignored[A](value: A): Mapping[A] = mapTo[A].transform[A](_ => value)
+  inline def default[A](defaultValue: A): Mapping[A] =
+    mapTo[A].transform[A](a => Option(a).getOrElse(defaultValue))
+
+  inline def ignored[A](value: A): Mapping[A] =
+    mapTo[A]
+      .transform[A](_ => value)
+      .asInstanceOf[DelegateMapping[A,A]]
+      .copy(value = Option(value))
 
   inline def tuple[A <: Tuple](nameValueTuple: A): Mapping[FieldTypeExtractor[A]] =
     mapTo[FieldTypeExtractor[A]]
