@@ -121,9 +121,7 @@ trait MappingInlines {
     val _text = if trimmed then mapTo[String].transform[String](_.trim) else mapTo[String]
     _text.verifying(Constraints.nonEmpty, Constraints.minLength(minLength), Constraints.maxLength(maxLength))
 
-  inline def email =
-    mapTo[String]
-      .verifying(Constraints.emailAddress)
+  inline def email = text.verifying(Constraints.emailAddress)
 
   //Temporal
   inline def date = mapTo[java.util.Date]
