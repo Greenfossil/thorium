@@ -22,7 +22,7 @@ class WebServerRequestConverter extends RequestConverterFunction:
     val oldCl = currentThread.getContextClassLoader
     currentThread.setContextClassLoader(getClass.getClassLoader)
     try {
-      if (expectedResultType == classOf[com.greenfossil.webserver.Request])
+      if expectedResultType == classOf[com.greenfossil.webserver.Request] then
         new com.greenfossil.webserver.Request(ctx, request){}
       else
         RequestConverterFunction.fallthrough()
