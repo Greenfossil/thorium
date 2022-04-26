@@ -181,7 +181,10 @@ trait MappingInlines {
     )
 
   inline def default[A](defaultValue: A): Mapping[A] =
-    mapTo[A].transform[A](a => Option(a).getOrElse(defaultValue))
+    mapTo[A]
+      .transform[A](a => Option(a).getOrElse(defaultValue))
+      .asInstanceOf[DelegateMapping[A,A]]
+      .copy(value = Option(defaultValue))
 
   inline def ignored[A](value: A): Mapping[A] =
     mapTo[A]
