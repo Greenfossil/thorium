@@ -503,7 +503,7 @@ case class DelegateMapping[A, B](tpe: String,
     throw new IllegalArgumentException("MappingField#binder is not supported for MappingField")
 
   override def fill(newValue:B): Mapping[B] =
-    val filledDelegate = delegate.fill(newValue.asInstanceOf[A])
+    val filledDelegate = if newValue != null then delegate.fill(newValue.asInstanceOf[A]) else delegate
     val _valueOpt = filledDelegate.value.map(delegateMapping).orElse(value)
     val _errors = _valueOpt.map(v => applyConstraints(v)).getOrElse(Nil)
     copy(value =  _valueOpt, delegate = filledDelegate, errors =_errors)
