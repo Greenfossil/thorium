@@ -10,7 +10,7 @@ case class Endpoint(url: String, method: String = "POST") {
     s"$protocol://$authority$url"
   
   def absoluteUrl(request: Request): String = 
-    absoluteUrl(request.uriAuthority, "https".equalsIgnoreCase(request.uriScheme))
+    absoluteUrl(request.uriAuthority, request.secure)
   
 }
 

@@ -43,6 +43,8 @@ trait Request(val requestContext: ServiceRequestContext, val aggregatedHttpReque
   
   def remoteAddress[A <: java.net.SocketAddress]: A = requestContext.remoteAddress()
 
+  def secure: Boolean = "https".equalsIgnoreCase(uriScheme)
+
   def uri: java.net.URI  /*String*/ = aggregatedHttpRequest.uri()
 
   /**
