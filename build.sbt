@@ -4,12 +4,13 @@ lazy val armeriaVersion = "1.16.0"
 lazy val logbackVersion = "1.2.10"
 lazy val munitVersion = "0.7.29"
 
-lazy val dataMapping = RootProject(file("../data-mapping"))
+//lazy val dataMapping = RootProject(file("../data-mapping"))
 
 lazy val webServer = project
   .in(file("."))
   .settings(
     name := "web-server",
+    organization := "com.greenfossil",
     version := "0.1.0-RC1",
 
     scalaVersion := scala3Version,
@@ -18,20 +19,22 @@ lazy val webServer = project
 
     libraryDependencies ++= Seq(
       "com.greenfossil" %% "commons-json" % "0.1.0-RC7",
+      "com.greenfossil" %% "data-mapping" % "0.1.0-RC1",
       "com.linecorp.armeria" %% "armeria-scala" % armeriaVersion,
       "ch.qos.logback" % "logback-classic" % logbackVersion % Runtime,
       "org.scalameta" %% "munit" % munitVersion % Test
     )
-  ).dependsOn(dataMapping)
+  )
+//  .dependsOn(dataMapping)
 
 lazy val nexus = "https://dev2.greenfossil.com:8001/repository/"
 
-resolvers ++= Seq(
+ThisBuild / resolvers ++= Seq(
   "GF Release" at nexus + "public/",
   "GF Snapshot" at nexus + "public-snapshots/"
 )
 
-publishTo := {
+ThisBuild / publishTo := {
   if (isSnapshot.value) Some("snapshots" at nexus + "snapshots/")
   else Some("releases"  at nexus + "releases/")
 }
