@@ -18,17 +18,9 @@ class WebServerRequestConverter extends RequestConverterFunction:
                               request: AggregatedHttpRequest,
                               expectedResultType: Class[?],
                               expectedParameterizedResultType: ParameterizedType): AnyRef =
-    val currentThread = Thread.currentThread()
-    val oldCl = currentThread.getContextClassLoader
-    currentThread.setContextClassLoader(getClass.getClassLoader)
-    try {
-      if expectedResultType == classOf[com.greenfossil.webserver.Request] then
-        new com.greenfossil.webserver.Request(ctx, request){}
-      else
-        RequestConverterFunction.fallthrough()
-    }finally {
-      currentThread.setContextClassLoader(oldCl)
-    }
+    if expectedResultType == classOf[com.greenfossil.webserver.Request]
+    then new com.greenfossil.webserver.Request(ctx, request){}
+    else RequestConverterFunction.fallthrough()
 
 @RequestConverter(classOf[WebServerRequestConverter])
 trait Controller extends AnnotatedHttpServiceSet
@@ -36,9 +28,6 @@ trait Controller extends AnnotatedHttpServiceSet
 trait Action(fn: Request => HttpResponse | Result | String) extends AnnotatedHttpService:
   override def serve(ctx: ServiceRequestContext, req: HttpRequest): HttpResponse =
     val f: CompletableFuture[HttpResponse] = ctx.request().aggregate().thenApply(aggregateRequest => {
-      //Set Class Loader from current thread for Config AppSettings used by DB
-      Thread.currentThread().setContextClassLoader(ClassLoader.getSystemClassLoader)
-
       val req = new Request(ctx, aggregateRequest) {}
       fn(req) match
         case s: String => HttpResponse.of(s)
