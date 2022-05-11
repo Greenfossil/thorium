@@ -39,16 +39,21 @@ case class WebServer(_port: Int,
 
   private def buildServer: Server =
     val sb = Server.builder()
-    if _port > 0 then {
-      sb.http(_port)
-//      sb.https(_port)
-//      sb.tlsSelfSigned()
-    }
-
-    routes.foreach{route => sb.service(route._1, route._2) }
+    if _port > 0 then sb.http(_port)
+    routes.foreach{route => sb.service(route._1, route._2)}
     annotatedServices.foreach{s => sb.annotatedService(s)}
     errorHandlerOpt.foreach{ handler => sb.errorHandler(handler.orElse(ServerErrorHandler.ofDefault()))}
+    sb.build
 
+  private def buildSecureServer: Server =
+    val sb = Server.builder()
+    if _port > 0 then {
+      sb.https(_port)
+      sb.tlsSelfSigned()
+    }
+    routes.foreach{route => sb.service(route._1, route._2)}
+    annotatedServices.foreach{s => sb.annotatedService(s)}
+    errorHandlerOpt.foreach{ handler => sb.errorHandler(handler.orElse(ServerErrorHandler.ofDefault()))}
     sb.build
 
   def start(): WebServer =
@@ -62,6 +67,18 @@ case class WebServer(_port: Int,
     logger.info(s"Starting Server.")
     newServer.start().join()
     copy(server = newServer)
+
+  def startSecure(): WebServer =
+    val newSecureServer = buildSecureServer
+    Runtime.getRuntime.addShutdownHook(Thread(
+      () => {
+        newSecureServer.stop().join
+        logger.info("Server stopped.")
+      }
+    ))
+    logger.info(s"Starting Server.")
+    newSecureServer.start().join()
+    copy(server = newSecureServer)
 
 }
 

@@ -36,15 +36,14 @@ trait Action(fn: Request => HttpResponse | Result | String) extends AnnotatedHtt
     })
     HttpResponse.from(f)
 
-
 object Action {
 
   def apply(fn: Request => HttpResponse | Result | String): Action = 
     new Action(fn){}
-
-  //TODO
-  def async(fn: Request => Result): Future[Action] =
-    ???
+  
+  //TODO - need to add test cases
+  def async(fn: Request => Result)(using executor: ExecutionContext): Future[Action] =
+    Future(new Action(fn){})
 }
 
 
@@ -67,10 +66,8 @@ def Redirect(url: String, status: HttpStatus): Result =
 def Redirect(url: String, queryString: Map[String, Seq[String]]): Result =
   Redirect(url, queryString, HttpStatus.SEE_OTHER)
 
-//FIXME - ensures queryString is included in the url
 def Redirect(url: String, queryString: Map[String, Seq[String]], status: HttpStatus): Result =
-  toResult(status,url).withHeaders()
-
+  toResult(status,url).copy(queryString = queryString)
 
 /**
  * Inline redirect macro

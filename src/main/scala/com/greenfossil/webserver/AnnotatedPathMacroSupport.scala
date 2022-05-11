@@ -1,7 +1,7 @@
 package com.greenfossil.webserver
 
 
-object AnnotatedPathMacroSupport {
+object AnnotatedPathMacroSupport extends MacroSupport(debug =false) {
 
   import com.linecorp.armeria.server.annotation.AnnotatedHttpService
 
@@ -106,55 +106,5 @@ object AnnotatedPathMacroSupport {
     val computedPathExpr: Expr[List[Any]] = Expr.ofList(computedPath)
     (computedPathExpr, mismatchParams)
   }
-
-  val debug = false
-
-  def showStructure(using Quotes)(msg: String, x: quotes.reflect.Tree | List[quotes.reflect.Tree]): Unit =
-    import quotes.reflect.*
-    if debug 
-    then
-      x match 
-        case xs: List[Tree]  =>
-          println(s"$msg: ${xs.map(_.show(using Printer.TreeStructure))}")
-
-        case term: Tree =>
-          println(s"$msg: ${term.show(using Printer.TreeStructure)}")
-          
-    else ()
-
-  def showCode(using Quotes)(msg: String, x: quotes.reflect.Tree | List[quotes.reflect.Tree] ): Unit =
-    import quotes.reflect.*
-    if debug 
-    then
-      x match
-        case xs: List[Tree]  =>
-          println(s"$msg: ${xs.map(_.show(using quotes.reflect.Printer.TreeAnsiCode))}")
-
-        case term: Tree =>
-          println(s"$msg: ${term.show(using quotes.reflect.Printer.TreeAnsiCode)}")
-
-    else ()
-
-  def show(using Quotes)(msg: String, x: quotes.reflect.Tree | List[quotes.reflect.Tree]): Unit =
-    import quotes.reflect.*
-    if debug 
-    then
-      x match 
-        case xs: List[Tree]  =>
-          println(s"===> [List] ${msg}")
-          println(s"Code - Size:${xs.size}")
-          println("  " + xs.map(_.show(using quotes.reflect.Printer.TreeAnsiCode)))
-
-          println(s"Structure - Size:${xs.size}")
-          println("  " + xs.map(_.show(using Printer.TreeStructure)))
-
-        case term: Tree =>
-          println(s"===> [Tree] ${msg}")
-          println(s"Symbol: ${term.symbol.flags.show}")
-          println(s"Code: ${term.show(using quotes.reflect.Printer.TreeAnsiCode)}")
-          println(s"Struct: ${term.show(using Printer.TreeStructure)}")
-      
-    else ()
-
 
 }

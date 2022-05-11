@@ -42,7 +42,7 @@ case class ResponseHeader(headers: TreeMap[String, String], reasonPhrase:Option[
 object Result {
 
   def apply(body: HttpResponse | String): Result =
-    new Result(ResponseHeader(Map.empty), body, None, None, Nil)
+    new Result(ResponseHeader(Map.empty), body, Map.empty, None, None, Nil)
 
   /*
    * Cookie's path must be set to an appropriate uri
@@ -99,6 +99,7 @@ object Result {
 
 case class Result(header: ResponseHeader,
                   body: HttpResponse | String,
+                  queryString: Map[String, Seq[String]] = Map.empty,
                   newSessionOpt: Option[Session] = None,
                   newFlashOpt: Option[Flash] = None,
                   newCookies:Seq[Cookie]){
@@ -114,20 +115,18 @@ case class Result(header: ResponseHeader,
    * @param headers the headers to add to this result.
    * @return the new result
    */
-  def withHeaders(headers: (String, String)*): Result = {
+  def withHeaders(headers: (String, String)*): Result = 
     copy(header = header.copy(headers = header.headers ++ headers))
-  }
 
   /**
    * Add a header with a DateTime formatted using the default http date format
    * @param headers the headers with a DateTime to add to this result.
    * @return the new result.
    */
-  def withDateHeaders(headers: (String, ZonedDateTime)*): Result = {
+  def withDateHeaders(headers: (String, ZonedDateTime)*): Result = 
     copy(header = header.copy(headers = header.headers ++ headers.map {
       case (name, dateTime) => (name, dateTime.format(ResponseHeader.httpDateFormat))
     }))
-  }
 
   /**
    * Discards headers to this result.
@@ -140,9 +139,8 @@ case class Result(header: ResponseHeader,
    * @param name the header to discard from this result.
    * @return the new result
    */
-  def discardingHeader(name: String): Result = {
+  def discardingHeader(name: String): Result = 
     copy(header = header.copy(headers = header.headers - name))
-  }
 
   /**
    * Adds cookies to this result. If the result already contains cookies then cookies with the same name in the new
@@ -156,11 +154,10 @@ case class Result(header: ResponseHeader,
    * @param cookies the cookies to add to this result
    * @return the new result
    */
-  def withCookies(cookies: Cookie*): Result = {
+  def withCookies(cookies: Cookie*): Result = 
     val filteredCookies = newCookies.filter(cookie => !cookies.exists(_.name == cookie.name))
     if cookies.isEmpty then this else copy(newCookies = filteredCookies ++ cookies)
-  }
-
+  
   /**
    * Discards cookies along this result.
    *
@@ -205,7 +202,8 @@ case class Result(header: ResponseHeader,
    * @param session the session to set with this result
    * @return the new result
    */
-  def withSession(session: (String, String)*): Result = withSession(Session(session.toMap))
+  def withSession(session: (String, String)*): Result = 
+    withSession(Session(session.toMap))
 
   /**
    * Discards the existing session for this result.
@@ -217,7 +215,8 @@ case class Result(header: ResponseHeader,
    *
    * @return the new result
    */
-  def withNewSession: Result = withSession(Session())
+  def withNewSession: Result = 
+    withSession(Session())
 
   /**
    * Adds values to the flash scope for this result.
@@ -247,13 +246,15 @@ case class Result(header: ResponseHeader,
    * @param values the flash values to set with this result
    * @return the new result
    */
-  def flashing(values: (String, String)*): Result = flashing(Flash(values.toMap))
+  def flashing(values: (String, String)*): Result = 
+    flashing(Flash(values.toMap))
 
   /**
    * @param request Current request
    * @return The session carried by this result. Reads the request’s session if this result does not modify the session.
    */
-  def session(using request: Request): Session = newSessionOpt.getOrElse(request.session)
+  def session(using request: Request): Session = 
+    newSessionOpt.getOrElse(request.session)
 
   /**
    * Example:
@@ -279,7 +280,7 @@ case class Result(header: ResponseHeader,
   def removingFromSession(keys: String*)(using request: Request): Result =
     withSession(new Session(request.session.data -- keys))
 
-  override def toString = s"Result(${header})"
+  override def toString = s"Result($header)"
 
   def toHttpResponse(req: Request): HttpResponse =
     val httpResp = body match
@@ -311,18 +312,17 @@ case class Result(header: ResponseHeader,
       else None
     }
 
-    val httpResp2 = (sessionCookieOption ++ flashCookieOpt).toList ++ newCookies match {
+    val httpRespWithCookies = (sessionCookieOption ++ flashCookieOpt).toList ++ newCookies match {
       case Nil => httpResp
       case cookies => httpResp.mapHeaders(_.toBuilder.cookies(cookies*).build())
     }
-
-    val httpResp3 =
-      httpResp2.mapHeaders(_.withMutations{builder =>
-        header.headers.map{header =>
-          builder.set(header._1, header._2)
-        }
-      })
-
-    httpResp3
+    
+    val httpRespWithHeaders = httpRespWithCookies.mapHeaders(_.withMutations{builder =>
+      header.headers.map{header =>
+        builder.set(header._1, header._2)
+      }
+    })
+    
+    httpRespWithHeaders
 
 }

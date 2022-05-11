@@ -45,7 +45,7 @@ trait Request(val requestContext: ServiceRequestContext, val aggregatedHttpReque
 
   def secure: Boolean = "https".equalsIgnoreCase(uriScheme)
 
-  def uri: java.net.URI  /*String*/ = aggregatedHttpRequest.uri()
+  def uri: java.net.URI = aggregatedHttpRequest.uri()
 
   /**
     * The host name and port number (if there is any)
@@ -108,8 +108,7 @@ trait Request(val requestContext: ServiceRequestContext, val aggregatedHttpReque
   def locale: Locale = LocaleUtil.getBestMatchLocale(acceptLanguages, availableLanguages, localeVariantOpt)
 
   def method(): HttpMethod = aggregatedHttpRequest.method()
-
-  //https://www.playframework.com/documentation/2.8.x/ScalaBodyParsers
+  
   def  asText: String = aggregatedHttpRequest.contentUtf8()
 
   //application/json
