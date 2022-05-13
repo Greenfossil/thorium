@@ -4,12 +4,14 @@ import com.linecorp.armeria.common.HttpResponse
 import com.linecorp.armeria.server.*
 import com.linecorp.armeria.server.annotation.*
 import org.slf4j.LoggerFactory
+import com.greenfossil.config.AppSettings
 
 import java.util.concurrent.CompletableFuture
 import scala.util.Try
 
 object WebServer {
-  def apply(): WebServer = WebServer(0, null, Nil, Nil, None)
+  lazy val defaultHttpPort = AppSettings.instance.config.getInt("http.port")
+  def apply(): WebServer = WebServer(defaultHttpPort, null, Nil, Nil, None)
   def apply(port: Int): WebServer = WebServer(port, null, Nil, Nil, None)
 }
 
