@@ -16,7 +16,7 @@ lazy val webServer = project
     Compile / javacOptions ++= Seq("-source", "17", "-target", "17"),
 
     libraryDependencies ++= Seq(
-      "com.greenfossil" %% "commons-json" % "0.1.0-RC7",
+      "com.greenfossil" %% "commons-appsettings" % "0.1.0-RC2",
       "com.greenfossil" %% "data-mapping" % "0.1.0-RC4",
       "com.linecorp.armeria" %% "armeria-scala" % armeriaVersion,
       "ch.qos.logback" % "logback-classic" % logbackVersion % Runtime,
