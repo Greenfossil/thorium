@@ -4,8 +4,6 @@ lazy val armeriaVersion = "1.16.0"
 lazy val logbackVersion = "1.2.10"
 lazy val munitVersion = "0.7.29"
 
-//lazy val dataMapping = RootProject(file("../data-mapping"))
-
 lazy val webServer = project
   .in(file("."))
   .settings(
@@ -25,7 +23,6 @@ lazy val webServer = project
       "org.scalameta" %% "munit" % munitVersion % Test
     )
   )
-//  .dependsOn(dataMapping)
 
 lazy val nexus = "https://dev2.greenfossil.com:8001/repository/"
 
