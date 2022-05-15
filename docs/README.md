@@ -45,3 +45,8 @@ Headers
 TODO
 + streaming of files (html, csv), images, 
 + Endpoint url - to implement urlencoded
+
+
+Need to ensure Address is not recyle
+[error] 	com.greenfossil.webserver.SessionSuite - need to have assertions
+

@@ -18,11 +18,6 @@ object HeadersServices extends Controller {
 
 }
 
-//@main def headersMain =
-//  val server = WebServer(8080)
-//    .addAnnotatedService(HeadersServices)
-//    .start()
-
 class HeadersSuite extends munit.FunSuite {
   test("header, session, flash"){
     val server = WebServer()

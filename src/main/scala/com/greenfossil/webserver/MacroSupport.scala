@@ -2,7 +2,7 @@ package com.greenfossil.webserver
 
 import scala.quoted.Quotes
 
-trait MacroSupport(debug: Boolean) {
+trait MacroSupport(debug: Boolean):
 
   def findEnclosingTerm(using quotes: Quotes)(sym: quotes.reflect.Symbol): quotes.reflect.Symbol =
     import quotes.reflect.*
@@ -58,4 +58,3 @@ trait MacroSupport(debug: Boolean) {
 
     else ()
 
-}

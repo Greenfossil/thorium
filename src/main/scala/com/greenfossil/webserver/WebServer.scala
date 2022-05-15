@@ -6,11 +6,10 @@ import org.slf4j.LoggerFactory
 
 import scala.util.Try
 
-object WebServer {
+object WebServer:
   lazy val defaultHttpPort = AppSettings.instance.config.getInt("http.port")
   def apply(): WebServer = WebServer(defaultHttpPort, null, Nil, Nil, None)
   def apply(port: Int): WebServer = WebServer(port, null, Nil, Nil, None)
-}
 
 case class WebServer(_port: Int,
                      server: Server,

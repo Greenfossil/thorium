@@ -8,8 +8,7 @@ object AnnotatedPathMacroSupport extends MacroSupport(debug =false) {
                                                                              onSuccessCallback: (String, Expr[List[Any]]) =>  Expr[R]
                                                                             )(using Quotes): Expr[R] =
     import quotes.reflect.*
-    searchForAnnotations(actionExpr.asTerm, 1) match {
-
+    searchForAnnotations(actionExpr.asTerm, 1) match
       case applyTerm @ Apply(_, paramValues) =>
         show("ApplyTerm", applyTerm)
         val paramNames: List[String] = applyTerm.symbol.paramSymss.head.map(_.name)
@@ -23,7 +22,7 @@ object AnnotatedPathMacroSupport extends MacroSupport(debug =false) {
 
       case otherTerm =>
         report.errorAndAbort("Unable to find annotations")
-    }
+
 
   def getAnnotatedPath[A <: Action : Type, R : Type](using Quotes)(
     actionExpr: Expr[A],
@@ -32,7 +31,7 @@ object AnnotatedPathMacroSupport extends MacroSupport(debug =false) {
     successCallback: (String, Expr[List[Any]]) =>  Expr[R]
   ): Expr[R] =
     import quotes.reflect.*
-    getDeclaredPath(annList) match {
+    getDeclaredPath(annList) match
       case None =>
         report.errorAndAbort(s"No annotated path found ${actionExpr}", actionExpr)
 
@@ -47,7 +46,6 @@ object AnnotatedPathMacroSupport extends MacroSupport(debug =false) {
 
           case (_, mismatchParams) =>
             report.errorAndAbort(s"Annotated endpoint has params missing [${mismatchParams.mkString(",")}]", actionExpr)
-    }
 
   def searchForAnnotations(using Quotes)(term: quotes.reflect.Term, level: Int): quotes.reflect.Term =
     import quotes.reflect.*

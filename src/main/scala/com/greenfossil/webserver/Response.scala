@@ -48,8 +48,7 @@ def Unauthorized[C](body: C)(using w: Writeable[C]): Result =
 
 private def toResult[C](status: HttpStatus, body: C)(using w: Writeable[C]): Result =
   if /*Redirect*/ status.code() >= 300 && status.code() <= 308
-  then
-    Result(HttpResponse.ofRedirect(status, body.asInstanceOf[String]))
+  then Result(HttpResponse.ofRedirect(status, body.asInstanceOf[String]))
   else
     val (mediaType, bytes) = w.content(body)
     Result(HttpResponse.of(status, mediaType, bytes))

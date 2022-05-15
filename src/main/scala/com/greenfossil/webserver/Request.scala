@@ -1,9 +1,7 @@
 package com.greenfossil.webserver
 
-import com.greenfossil.commons.json.{JsObject, JsValue, Json}
-import com.linecorp.armeria.common.*
-import com.linecorp.armeria.common.multipart.{AggregatedMultipart, BodyPart}
-import com.linecorp.armeria.common.stream.StreamMessage
+import com.greenfossil.commons.json.{JsValue, Json}
+import com.linecorp.armeria.common.{AggregatedHttpRequest, Cookie, HttpMethod, HttpData, MediaType, QueryParams, RequestHeaders}
 import com.linecorp.armeria.server.ServiceRequestContext
 
 import java.net.SocketAddress
@@ -11,7 +9,7 @@ import java.time.ZoneId
 import java.util.Locale.LanguageRange
 import java.util.concurrent.CompletableFuture
 import java.util.stream.Collectors
-import java.util.{Base64, Locale}
+import java.util.Locale
 import scala.util.Try
 
 object RequestAttrs {

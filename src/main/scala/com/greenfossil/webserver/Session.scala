@@ -2,9 +2,6 @@ package com.greenfossil.webserver
 
 import scala.annotation.targetName
 
-object Session {
-}
-
 /**
  * TODO - generate an Id or nounce???
  * HTTP Session.

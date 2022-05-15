@@ -7,7 +7,7 @@ import java.io.{File, InputStream}
 import java.nio.charset.Charset
 import scala.util.Try
 
-case class MultipartFormData(aggMultipart: AggregatedMultipart) {
+case class MultipartFormData(aggMultipart: AggregatedMultipart):
   import scala.jdk.CollectionConverters.*
 
   def bodyPart: Seq[AggregatedBodyPart] = aggMultipart.bodyParts().asScala.toSeq
@@ -42,13 +42,11 @@ case class MultipartFormData(aggMultipart: AggregatedMultipart) {
     def saveFileTo(dirPathStr: String, targetFilename: String, createDirectoryIfNotExist: Boolean): Try[File] = Try {
       val path = Paths.get(dirPathStr)
       val filePath = Paths.get(s"$dirPathStr/$targetFilename")
-      if Files.exists(path) then {
-        copyInputStreamToPath(inputStream, filePath)
-      }
-      else if createDirectoryIfNotExist then {
+      if Files.exists(path)
+      then copyInputStreamToPath(inputStream, filePath)
+      else if createDirectoryIfNotExist then
         Files.createDirectory(path)
         copyInputStreamToPath(inputStream, filePath)
-      }
       else throw new FileSystemNotFoundException
     }
   }
@@ -61,5 +59,3 @@ case class MultipartFormData(aggMultipart: AggregatedMultipart) {
       if part.filename() != null
     } yield  TemporaryFile(name, part.filename(), part.contentType(), part)
     xs.toList
-
-}

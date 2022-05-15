@@ -4,7 +4,7 @@ import com.linecorp.armeria.server.ServiceRequestContext
 import com.linecorp.armeria.server.annotation.{RequestConverterFunction, ResponseConverterFunction}
 
 //FIXME - handle ExceptionHandlerFunction
-object ArmeriaConverters extends RequestConverterFunction, ResponseConverterFunction {
+object ArmeriaConverters extends RequestConverterFunction, ResponseConverterFunction:
   import com.linecorp.armeria.common.{AggregatedHttpRequest, HttpHeaders, HttpResponse, ResponseHeaders}
   import java.lang.reflect.ParameterizedType
   import java.util.concurrent.CompletableFuture
@@ -19,10 +19,9 @@ object ArmeriaConverters extends RequestConverterFunction, ResponseConverterFunc
   override def convertResponse(ctx: ServiceRequestContext, headers: ResponseHeaders,
                                result: Any,
                                trailers: HttpHeaders): HttpResponse =
-    result match {
+    result match
       case action: Action => toResponse(action, ctx)
       case _ => ResponseConverterFunction.fallthrough()
-    }
 
   def toResponse(action: Action, reqContext: ServiceRequestContext): HttpResponse =
     val f: CompletableFuture[HttpResponse] = reqContext.request().aggregate().thenApply(aggregateRequest => {
@@ -34,4 +33,3 @@ object ArmeriaConverters extends RequestConverterFunction, ResponseConverterFunc
         case result:Result => result.toHttpResponse(req)
     })
     HttpResponse.from(f)
-}

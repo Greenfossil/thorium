@@ -2,10 +2,9 @@ package com.greenfossil.webserver
 
 import java.util.Locale
 import java.util.Locale.{Builder, LanguageRange}
-import scala.jdk.CollectionConverters.*
 
-trait LocaleUtil {
 
+trait LocaleUtil:
   /**
    * Get best matched locale from the accepted language ranges and available language tags. 
    *
@@ -21,9 +20,8 @@ trait LocaleUtil {
    * Get best matched locale from the accepted language ranges and available locales.
    */
   def getBestMatchLocale(acceptedLanguageRanges: Seq[LanguageRange], availableLocales: Seq[Locale], variantOpt: Option[String]): Locale =
+    import scala.jdk.CollectionConverters.*
     val bestMatchLocale = Option(Locale.lookup(acceptedLanguageRanges.asJava, availableLocales.asJava)).getOrElse(Locale.getDefault)
     new Builder().setLocale(bestMatchLocale).setVariant(variantOpt.getOrElse("")).build()
-
-}
 
 object LocaleUtil extends LocaleUtil
