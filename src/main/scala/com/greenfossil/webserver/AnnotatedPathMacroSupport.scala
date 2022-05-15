@@ -1,13 +1,10 @@
 package com.greenfossil.webserver
 
-
 object AnnotatedPathMacroSupport extends MacroSupport(debug =false) {
-
-  import com.linecorp.armeria.server.annotation.AnnotatedHttpService
 
   import scala.quoted.*
 
-  def computeActionAnnotatedPath[A <: AnnotatedHttpService : Type, R : Type](actionExpr: Expr[A],
+  def computeActionAnnotatedPath[A <: Action : Type, R : Type](actionExpr: Expr[A],
                                                                              onSuccessCallback: (String, Expr[List[Any]]) =>  Expr[R]
                                                                             )(using Quotes): Expr[R] =
     import quotes.reflect.*
@@ -28,7 +25,7 @@ object AnnotatedPathMacroSupport extends MacroSupport(debug =false) {
         report.errorAndAbort("Unable to find annotations")
     }
 
-  def getAnnotatedPath[A <: AnnotatedHttpService : Type, R : Type](using Quotes)(
+  def getAnnotatedPath[A <: Action : Type, R : Type](using Quotes)(
     actionExpr: Expr[A],
     annList: List[quotes.reflect.Term],
     paramNameValueLookup: Map[String, quotes.reflect.Term],
@@ -74,7 +71,7 @@ object AnnotatedPathMacroSupport extends MacroSupport(debug =false) {
     }.flatten
   }
 
-  def getComputedPathExpr[A <: AnnotatedHttpService : Type](using Quotes)(
+  def getComputedPathExpr[A <: Action : Type](using Quotes)(
     actionExpr: Expr[A],
     paramNameValueLookup: Map[String, quotes.reflect.Term],
     declaredPath: String): (Expr[List[Any]], Seq[String])  = {

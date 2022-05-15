@@ -1,8 +1,5 @@
 package com.greenfossil.webserver
 
-import com.linecorp.armeria.server.annotation.AnnotatedHttpService
-
-
 case class Endpoint(url: String, method: String = "POST") {
   
   def absoluteUrl(authority: String, secure: Boolean): String =
@@ -20,6 +17,6 @@ object Endpoint {
 
   val Logout = Endpoint("/logout")
 
-  inline def apply(inline action: AnnotatedHttpService): Endpoint = EndpointMcr(action)
+  inline def apply(inline action: Action): Endpoint = EndpointMcr(action)
 
 }

@@ -22,7 +22,7 @@ object BasicServices extends Controller {
     Ok(json)
   }
 
-  @Get("/redirect")
+  @Get("/redirect") //curl -v -L http://localhost:8080/redirect
   def redirectText = Action { request =>
 //    Redirect(redirectText2)
     Redirect("/redirectText2")

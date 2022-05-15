@@ -1,7 +1,6 @@
 package com.greenfossil.webserver
 
 import com.linecorp.armeria.common.{HttpResponse, HttpStatus}
-import com.linecorp.armeria.server.annotation.AnnotatedHttpService
 
 /*
  * Response
@@ -30,7 +29,7 @@ def Redirect(url: String, queryString: Map[String, Seq[String]], status: HttpSta
  * @param action
  * @return
  */
-inline def Redirect[A <: AnnotatedHttpService](inline action: A): Result =
+inline def Redirect[A <: Action](inline action: A): Result =
   Redirect(Endpoint(action))
 
 def Redirect(endpoint: Endpoint): Result = Redirect(endpoint.url)

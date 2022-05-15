@@ -1,7 +1,7 @@
 package com.greenfossil.webserver
 
 import com.greenfossil.commons.json.Json
-import com.linecorp.armeria.common.{Cookie, HttpRequest, HttpResponse, HttpStatus}
+import com.linecorp.armeria.common.{Cookie, HttpResponse}
 
 import java.time.format.DateTimeFormatter
 import java.time.{ZoneOffset, ZonedDateTime}

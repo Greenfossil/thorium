@@ -1,12 +1,9 @@
 package com.greenfossil.webserver
 
-import com.linecorp.armeria.common.HttpResponse
-import com.linecorp.armeria.server.*
-import com.linecorp.armeria.server.annotation.*
-import org.slf4j.LoggerFactory
 import com.greenfossil.config.AppSettings
+import com.linecorp.armeria.server.{HttpService, Server, ServerErrorHandler}
+import org.slf4j.LoggerFactory
 
-import java.util.concurrent.CompletableFuture
 import scala.util.Try
 
 object WebServer {
@@ -33,17 +30,21 @@ case class WebServer(_port: Int,
   def addServices(newRoutes: Seq[(String, HttpService)]): WebServer  =
     copy(routes = routes ++ newRoutes)
 
-  def addAnnotatedService(annotatedService: AnnotatedHttpServiceSet): WebServer =
+  def addAnnotatedService(annotatedService: Controller): WebServer =
     copy(annotatedServices = annotatedServices :+ annotatedService)
 
   def setErrorHandler(h: ServerErrorHandler): WebServer =
     copy(errorHandlerOpt = Some(h))
+
+  import scala.jdk.CollectionConverters.*
 
   private def buildServer: Server =
     val sb = Server.builder()
     if _port > 0 then sb.http(_port)
     routes.foreach{route => sb.service(route._1, route._2)}
     annotatedServices.foreach{s => sb.annotatedService(s)}
+    sb.annotatedServiceExtensions(List(ArmeriaConverters).asJava, List(ArmeriaConverters).asJava,
+      Nil.asJava)
     errorHandlerOpt.foreach{ handler => sb.errorHandler(handler.orElse(ServerErrorHandler.ofDefault()))}
     sb.build
 
@@ -55,6 +56,8 @@ case class WebServer(_port: Int,
     }
     routes.foreach{route => sb.service(route._1, route._2)}
     annotatedServices.foreach{s => sb.annotatedService(s)}
+    sb.annotatedServiceExtensions(List(ArmeriaConverters).asJava, List(ArmeriaConverters).asJava,
+      Nil.asJava)
     errorHandlerOpt.foreach{ handler => sb.errorHandler(handler.orElse(ServerErrorHandler.ofDefault()))}
     sb.build
 
@@ -86,7 +89,3 @@ case class WebServer(_port: Int,
 
 //TODO - https://armeria.dev/docs/advanced-production-checklist
 class ServerConfig(val maxNumConnections: Int, maxRequestLength: Int, requestTimeoutInSecs: Int)
-
-
-
-
