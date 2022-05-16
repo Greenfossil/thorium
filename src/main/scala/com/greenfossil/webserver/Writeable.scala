@@ -5,10 +5,6 @@ import com.linecorp.armeria.common.MediaType
 trait Writeable[-C] :
   def content(x: C):(MediaType, Array[Byte])
 
-////FIXME
-//given [C](using w: Writeable[C]): Writeable[List[C]] with
-//  def content(x: List[C]) = ???
-
 given Writeable[String] with
   def content(x: String) = (MediaType.PLAIN_TEXT_UTF_8, x.getBytes)
 
