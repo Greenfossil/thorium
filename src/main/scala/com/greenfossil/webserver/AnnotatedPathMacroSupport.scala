@@ -4,7 +4,7 @@ object AnnotatedPathMacroSupport extends MacroSupport(debug =false) {
 
   import scala.quoted.*
 
-  def computeActionAnnotatedPath[A <: Action : Type, R : Type](actionExpr: Expr[A],
+  def computeActionAnnotatedPath[A <: EssentialAction : Type, R : Type](actionExpr: Expr[A],
                                                                              onSuccessCallback: (String, Expr[List[Any]]) =>  Expr[R]
                                                                             )(using Quotes): Expr[R] =
     import quotes.reflect.*
@@ -24,7 +24,7 @@ object AnnotatedPathMacroSupport extends MacroSupport(debug =false) {
         report.errorAndAbort("Unable to find annotations")
 
 
-  def getAnnotatedPath[A <: Action : Type, R : Type](using Quotes)(
+  def getAnnotatedPath[A <: EssentialAction : Type, R : Type](using Quotes)(
     actionExpr: Expr[A],
     annList: List[quotes.reflect.Term],
     paramNameValueLookup: Map[String, quotes.reflect.Term],
@@ -69,7 +69,7 @@ object AnnotatedPathMacroSupport extends MacroSupport(debug =false) {
     }.flatten
   }
 
-  def getComputedPathExpr[A <: Action : Type](using Quotes)(
+  def getComputedPathExpr[A <: EssentialAction : Type](using Quotes)(
     actionExpr: Expr[A],
     paramNameValueLookup: Map[String, quotes.reflect.Term],
     declaredPath: String): (Expr[List[Any]], Seq[String])  = {

@@ -17,6 +17,6 @@ object Endpoint {
 
   val Logout = Endpoint("/logout")
 
-  inline def apply(inline action: Action): Endpoint = EndpointMcr(action)
+  inline def apply(inline action: EssentialAction): Endpoint = EndpointMcr(action)
 
 }
