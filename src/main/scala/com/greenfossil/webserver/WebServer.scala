@@ -88,3 +88,27 @@ case class WebServer(_port: Int,
 
 //TODO - https://armeria.dev/docs/advanced-production-checklist
 class ServerConfig(val maxNumConnections: Int, maxRequestLength: Int, requestTimeoutInSecs: Int)
+
+
+import com.linecorp.armeria.server.ServiceRequestContext
+import com.linecorp.armeria.server.annotation.{RequestConverterFunction, ResponseConverterFunction}
+
+//FIXME - handle ExceptionHandlerFunction
+private object ArmeriaConverters extends RequestConverterFunction, ResponseConverterFunction:
+  import com.linecorp.armeria.common.{AggregatedHttpRequest, HttpHeaders, HttpResponse, ResponseHeaders}
+  import java.lang.reflect.ParameterizedType
+  import java.util.concurrent.CompletableFuture
+
+  override def convertRequest(ctx: ServiceRequestContext, request: AggregatedHttpRequest,
+                              expectedResultType: Class[_],
+                              expectedParameterizedResultType: ParameterizedType): AnyRef =
+    if expectedResultType == classOf[com.greenfossil.webserver.Request]
+    then new com.greenfossil.webserver.Request(ctx, request) {}
+    else RequestConverterFunction.fallthrough()
+
+  override def convertResponse(ctx: ServiceRequestContext, headers: ResponseHeaders,
+                               result: Any,
+                               trailers: HttpHeaders): HttpResponse =
+    result match
+      case action: EssentialAction => action.serve(ctx, null)
+      case _ => ResponseConverterFunction.fallthrough()
