@@ -62,8 +62,8 @@ case class WebServer(_port: Int,
     val sb = Server.builder()
     if _port > 0 then {
       sb.https(_port)
-      sb.tlsSelfSigned()
     }
+    sb.tlsSelfSigned()
     routes.foreach{route => sb.service(route._1, route._2)}
     annotatedServices.foreach{s => sb.annotatedService(s)}
     sb.annotatedServiceExtensions(List(ArmeriaConverters).asJava, List(ArmeriaConverters).asJava,
