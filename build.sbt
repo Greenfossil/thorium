@@ -9,7 +9,7 @@ lazy val webServer = project
   .settings(
     name := "web-server",
     organization := "com.greenfossil",
-    version := "0.1.0-RC2",
+    version := "0.1.0-RC3-SNAPSHOT",
 
     scalaVersion := scala3Version,
 
@@ -35,5 +35,7 @@ ThisBuild / publishTo := {
   if (isSnapshot.value) Some("snapshots" at nexus + "snapshots/")
   else Some("releases"  at nexus + "releases/")
 }
+
+//Test / parallelExecution := false
 
 credentials += Credentials("Sonatype Nexus Repository Manager", "dev2.greenfossil.com", "dev", "ayerrajah")

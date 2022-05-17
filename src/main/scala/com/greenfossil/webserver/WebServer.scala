@@ -8,7 +8,18 @@ import scala.util.Try
 
 object WebServer:
   lazy val defaultHttpPort = AppSettings.instance.config.getInt("http.port")
-  def apply(): WebServer = WebServer(defaultHttpPort, null, Nil, Nil, None)
+
+  /**
+   * A random port will be created
+   * @return
+   */
+  def apply(): WebServer = WebServer(0, null, Nil, Nil, None)
+
+  /**
+   *
+   * @param port
+   * @return
+   */
   def apply(port: Int): WebServer = WebServer(port, null, Nil, Nil, None)
 
 case class WebServer(_port: Int,
