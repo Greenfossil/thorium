@@ -10,22 +10,30 @@ object WebServer:
    * A random port will be created
    * @return
    */
-  def apply(): WebServer = WebServer(0, null, Nil, Nil, None)
+  def apply(): WebServer = WebServer(0, null, Nil, Nil, None, Environment.simple(), HttpConfiguration())
 
   /**
    *
    * @param port
    * @return
    */
-  def apply(port: Int): WebServer = WebServer(port, null, Nil, Nil, None)
+  def apply(port: Int): WebServer = WebServer(port, null, Nil, Nil, None, Environment.simple(), HttpConfiguration())
 
 case class WebServer(_port: Int,
                      server: Server,
                      routes: Seq[(String, HttpService)],
                      annotatedServices: Seq[Any] = Nil,
-                     errorHandlerOpt: Option[ServerErrorHandler]) {
+                     errorHandlerOpt: Option[ServerErrorHandler],
+                     environment: Environment,
+                     httpConfiguration: HttpConfiguration) {
 
   private val logger = LoggerFactory.getLogger("webserver")
+
+  def mode = environment.mode
+  
+  def isDev  = mode == Mode.Dev
+  def isTest = mode == Mode.Test
+  def isProd = mode == Mode.Prod
 
   export server.{start as _, toString as _ , *}
   
