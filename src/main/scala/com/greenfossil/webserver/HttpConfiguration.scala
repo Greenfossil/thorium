@@ -1,10 +1,60 @@
 package com.greenfossil.webserver
 
 import scala.concurrent.duration.FiniteDuration
+import com.typesafe.config.*
+import org.slf4j.{Logger, LoggerFactory}
 
-class HttpConfiguration {
+import java.nio.charset.StandardCharsets
+import java.security.MessageDigest
+import java.time
+import java.util.Base64
+import scala.util.*
+
+type SameSiteCookie = "Strict" | "Lax"
+
+private given Conversion[java.time.Duration, scala.concurrent.duration.FiniteDuration] with
+  override def apply(javaDur: time.Duration): FiniteDuration =
+    scala.concurrent.duration.Duration.fromNanos(javaDur.toNanos)
+
+object HttpConfiguration{
+
+  def fromConfig(config: Config, environment: Environment): HttpConfiguration = {
+    HttpConfiguration(
+      context = config.getString("app.http.context"),
+      httpPort = Try(config.getInt("app.http.port")).getOrElse(8080),
+      sessionConfig = SessionConfiguration(
+        cookieName = config.getString("app.http.session.cookieName"),
+        secure = config.getBoolean("app.http.session.secure"),
+        maxAge = Option(config.getDuration("app.http.session.maxAge")),
+        httpOnly = config.getBoolean("app.http.session.httpOnly"),
+        domain = Option(config.getString("app.http.session.domain")),
+        sameSite = Option(config.getString("app.http.session.sameSite")).map(_.asInstanceOf[SameSiteCookie]),
+        path = config.getString("app.http.session.path"),
+        jwt = JWTConfigurationParser(config, "app.http.session.jwt")
+      ),
+      flashConfig = FlashConfiguration(
+        cookieName = config.getString("app.http.flash.cookieName"),
+        secure = config.getBoolean("app.http.flash.secure"),
+        httpOnly = config.getBoolean("app.http.flash.httpOnly"),
+        domain = Option(config.getString("app.http.flash.domain")),
+        sameSite = Option(config.getString("app.http.flash.sameSite")).map(_.asInstanceOf[SameSiteCookie]),
+        path = config.getString("app.http.flash.path"),
+        jwt = JWTConfigurationParser(config, "app.http.flash.jwt")
+      ),
+      secretConfig = getSecretConfiguration(config, environment)
+    )
+
+  }
 
 }
+
+case class HttpConfiguration(
+  context: String = "/",
+  httpPort: Int = 8080,
+  sessionConfig: SessionConfiguration = SessionConfiguration(),
+  flashConfig: FlashConfiguration = FlashConfiguration(),
+  secretConfig: SecretConfiguration = SecretConfiguration()
+)
 
 /**
  * The session configuration
@@ -19,16 +69,15 @@ class HttpConfiguration {
  * @param jwt        The JWT specific information
  */
 case class SessionConfiguration(
-                                 cookieName: String = "PLAY_SESSION",
-                                 secure: Boolean = false,
-                                 maxAge: Option[FiniteDuration] = None, //Expiry?
-                                 httpOnly: Boolean = true,
-                                 domain: Option[String] = None,
-                                 path: String = "/",
-//                                 sameSite: Option[SameSite] = Some(SameSite.Lax),
-//                                 jwt: JWTConfiguration = JWTConfiguration()
-                               )
-
+   cookieName: String = "APP_SESSION",
+   secure: Boolean = false,
+   maxAge: Option[FiniteDuration] = None,
+   httpOnly: Boolean = true,
+   domain: Option[String] = None,
+   path: String = "/",
+   sameSite: Option[SameSiteCookie] = Some("Lax"),
+   jwt: JWTConfiguration = JWTConfiguration()
+)
 
 /**
  * The flash configuration
@@ -42,31 +91,29 @@ case class SessionConfiguration(
  * @param jwt        The JWT specific information
  */
 case class FlashConfiguration(
-                               cookieName: String = "PLAY_FLASH",
-                               secure: Boolean = false,
-                               httpOnly: Boolean = true,
-                               domain: Option[String] = None,
-                               path: String = "/",
-//                               sameSite: Option[SameSite] = Some(SameSite.Lax),
-//                               jwt: JWTConfiguration = JWTConfiguration()
-                             )
+   cookieName: String = "APP_FLASH",
+   secure: Boolean = false,
+   httpOnly: Boolean = true,
+   domain: Option[String] = None,
+   path: String = "/",
+   sameSite: Option[SameSiteCookie] = Some("Lax"),
+   jwt: JWTConfiguration = JWTConfiguration()
+)
 
 /**
  * The application secret. Must be set. A value of "changeme" will cause the application to fail to start in
  * production.
  *
- * With the Play secret we want to:
- *
  * 1. Encourage the practice of *not* using the same secret in dev and prod.
  * 2. Make it obvious that the secret should be changed.
  * 3. Ensure that in dev mode, the secret stays stable across restarts.
  * 4. Ensure that in dev mode, sessions do not interfere with other applications that may be or have been running
- *   on localhost.  Eg, if I start Play app 1, and it stores a PLAY_SESSION cookie for localhost:9000, then I stop
- *   it, and start Play app 2, when it reads the PLAY_SESSION cookie for localhost:9000, it should not see the
- *   session set by Play app 1.  This can be achieved by using different secrets for the two, since if they are
+ *   on localhost.  Eg, if start App 1, and it stores a APP_SESSION cookie for localhost:8080, then stop
+ *   it, and start App 2, when it reads the APP_SESSION cookie for localhost:8080, it should not see the
+ *   session set by App 1.  This can be achieved by using different secrets for the two, since if they are
  *   different, they will simply ignore the session cookie set by the other.
  *
- * To achieve 1 and 2, we will, in Activator templates, set the default secret to be "changeme".  This should make
+ * To achieve 1 and 2, set the default secret to be "changeme".  This should make
  * it obvious that the secret needs to be changed and discourage using the same secret in dev and prod.
  *
  * For safety, if the secret is not set, or if it's changeme, and we are in prod mode, then we will fail fatally.
@@ -77,7 +124,7 @@ case class FlashConfiguration(
  *
  * To achieve 4, using the location of application.conf to generate the secret should ensure this.
  *
- * Play secret is checked for a minimum length in production:
+ * App secret is checked for a minimum length in production:
  *
  * 1. If the key is fifteen characters or fewer, a warning will be logged.
  * 2. If the key is eight characters or fewer, then an error is thrown and the configuration is invalid.
@@ -86,6 +133,26 @@ case class FlashConfiguration(
  * @param provider the JCE provider to use. If null, uses the platform default
  */
 case class SecretConfiguration(secret: String = "changeme", provider: Option[String] = None)
+
+object SecretConfiguration {
+
+  // https://crypto.stackexchange.com/a/34866 = 32 bytes (256 bits)
+  // https://security.stackexchange.com/a/11224 = (128 bits is more than enough)
+  // but if we have less than 8 bytes in production then it's not even 64 bits.
+  // which is almost certainly not from base64'ed /dev/urandom in any case, and is most
+  // probably a hardcoded text password.
+  // https://tools.ietf.org/html/rfc2898#section-4.1
+  val SHORTEST_SECRET_LENGTH = 9
+
+  // https://crypto.stackexchange.com/a/34866 = 32 bytes (256 bits)
+  // https://security.stackexchange.com/a/11224 = (128 bits is more than enough)
+  // 86 bits of random input is enough for a secret.  This rounds up to 11 bytes.
+  // If we assume base64 encoded input, this comes out to at least 15 bytes, but
+  // it's highly likely to be a user inputted string, which has much, much lower
+  // entropy.
+  val SHORT_SECRET_LENGTH = 16
+
+}
 
 /**
  * The JSON Web Token configuration
@@ -104,15 +171,150 @@ case class JWTConfiguration(
                            )
 
 object JWTConfigurationParser {
-  def apply(config: Configuration, parent: String): JWTConfiguration = {
-//    JWTConfiguration(
-//      signatureAlgorithm = config.get[String](s"${parent}.signatureAlgorithm"),
-//      expiresAfter = config.get[Option[FiniteDuration]](s"${parent}.expiresAfter"),
-//      clockSkew = config.get[FiniteDuration](s"${parent}.clockSkew"),
-//      dataClaim = config.get[String](s"${parent}.dataClaim")
-//    )
-    ???
+  def apply(config: Config, parent: String): JWTConfiguration =
+    JWTConfiguration(
+      signatureAlgorithm = config.getString(s"${parent}.signatureAlgorithm"),
+      expiresAfter = Option(config.getDuration(s"${parent}.expiresAfter")),
+      clockSkew = config.getDuration(s"${parent}.clockSkew"),
+      dataClaim = config.getString(s"${parent}.dataClaim")
+    )
+}
+
+private def configError(
+  message: String,
+  origin: Option[ConfigOrigin] = None,
+  e: Option[Throwable] = None
+): ExceptionSource = {
+  /*
+    The stable values here help us from putting a reference to a ConfigOrigin inside the anonymous ExceptionSource.
+    This is necessary to keep the Exception serializable, because ConfigOrigin is not serializable.
+   */
+  val originLine       = origin.map(_.lineNumber: java.lang.Integer).orNull
+  val originSourceName = origin.map(_.filename).orNull
+  val originUrlOpt     = origin.flatMap(o => Option(o.url))
+
+  def readUrlAsString(url: java.net.URL): String =
+    scala.util.Using
+    Using.resource(url.openStream()){is =>
+      val len = is.available()
+      val buffer = Array.ofDim[Byte](is.available())
+      is.read(buffer)
+      new String(buffer)
+    }
+
+  new ExceptionSource {
+    val title = "Configuration error"
+    val description = message
+    val cause = e.orNull
+    val id = nextId
+    def line              = originLine
+    def position          = null
+    def input             = originUrlOpt.map(readUrlAsString).orNull
+    def sourceName        = originSourceName
+    override def toString = "Configuration error: " + getMessage
   }
 }
 
-case class Configuration(config: String) //Typesafe config
+/**
+ * Computes the MD5 digest for a byte array.
+ *
+ * @param bytes the data to hash
+ * @return the MD5 digest, encoded as a hex string
+ */
+private def md5(text: String): String =
+  val digest = MessageDigest.getInstance("MD5").digest(text.getBytes(StandardCharsets.UTF_8))
+  new String(Base64.getEncoder.encode(digest))
+
+private def getSecretConfiguration(config: Config, environment: Environment): SecretConfiguration = {
+  val logger: Logger = LoggerFactory.getLogger("app.configuration")
+  /**
+   * Creates a configuration error for a specific configuration key.
+   *
+   * For example:
+   * {{{
+   * val configuration = Configuration.load()
+   * throw configuration.reportError("engine.connectionUrl", "Cannot connect!")
+   * }}}
+   *
+   * @param path the configuration key, related to this error
+   * @param message the error message
+   * @param e the related exception
+   * @return a configuration exception
+   */
+  def reportError(path: String, message: String, e: Option[Throwable] = None) = {
+    val origin = Option(if (config.hasPath(path)) config.getValue(path).origin else config.root.origin)
+    configError(message, origin, e)
+  }
+
+  val Blank = """\s*""".r
+
+  val secret =
+    Option(config.getString("app.http.secret.key")) match {
+      case Some("changeme") | Some(Blank()) | None if  environment.mode == Mode.Prod =>
+        val message =
+          """
+            |The application secret has not been set, and we are in prod mode. Your application is not secure.
+            |To set the application secret, please read http://playframework.com/documentation/latest/ApplicationSecret
+          """.stripMargin
+        throw reportError("app.http.secret", message)
+
+      case Some(s) if s.length < SecretConfiguration.SHORTEST_SECRET_LENGTH && environment.mode == Mode.Prod =>
+        val message =
+          """
+            |The application secret is too short and does not have the recommended amount of entropy.  Your application is not secure.
+            |To set the application secret, please read http://playframework.com/documentation/latest/ApplicationSecret
+          """.stripMargin
+        throw reportError("app.http.secret", message)
+
+      case Some(s) if s.length < SecretConfiguration.SHORT_SECRET_LENGTH && environment.mode == Mode.Prod =>
+        val message =
+          """
+            |Your secret key is very short, and may be vulnerable to dictionary attacks.  Your application may not be secure.
+            |The application secret should ideally be 32 bytes of completely random input, encoded in base64.
+            |To set the application secret, please read http://playframework.com/documentation/latest/ApplicationSecret
+          """.stripMargin
+        logger.warn(message)
+        s
+
+      case Some(s)
+        if s.length < SecretConfiguration.SHORTEST_SECRET_LENGTH && !s.equals("changeme") && s.trim.nonEmpty && environment.mode == Mode.Dev =>
+        val message =
+          """
+            |The application secret is too short and does not have the recommended amount of entropy.  Your application is not secure
+            |and it will fail to start in production mode.
+            |To set the application secret, please read http://playframework.com/documentation/latest/ApplicationSecret
+          """.stripMargin
+        logger.warn(message)
+        s
+
+      case Some(s)
+        if s.length < SecretConfiguration.SHORT_SECRET_LENGTH && !s.equals("changeme") && s.trim.nonEmpty && environment.mode == Mode.Dev =>
+        val message =
+          """
+            |Your secret key is very short, and may be vulnerable to dictionary attacks.  Your application may not be secure.
+            |The application secret should ideally be 32 bytes of completely random input, encoded in base64. While the application
+            |will be able to start in production mode, you will also see a warning when it is starting.
+            |To set the application secret, please read http://playframework.com/documentation/latest/ApplicationSecret
+          """.stripMargin
+        logger.warn(message)
+        s
+
+      case Some("changeme") | Some(Blank()) | None =>
+        val appConfLocation = environment.resource("application.conf")
+        // Try to generate a stable secret. Security is not the issue here, since this is just for tests and dev mode.
+        val secret = appConfLocation.fold(
+          // No application.conf?  Oh well, just use something hard coded.
+          "she sells sea shells on the sea shore"
+        )(_.toString)
+        val md5Secret = md5(secret)
+        logger.debug(
+          s"Generated dev mode secret $md5Secret for app at ${appConfLocation.getOrElse("unknown location")}"
+        )
+        md5Secret
+      case Some(s) => s
+    }
+
+  val provider = Option(config.getString("app.http.secret.provider"))
+
+  SecretConfiguration(String.valueOf(secret), provider)
+}

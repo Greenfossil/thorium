@@ -16,7 +16,7 @@ lazy val webServer = project
     Compile / javacOptions ++= Seq("-source", "17", "-target", "17"),
 
     libraryDependencies ++= Seq(
-      "com.greenfossil" %% "commons-appsettings" % "0.1.0-RC2",
+      "com.typesafe" % "config" % "1.4.2",
       "com.greenfossil" %% "data-mapping" % "0.1.0-RC4",
       "com.linecorp.armeria" %% "armeria-scala" % armeriaVersion,
       "ch.qos.logback" % "logback-classic" % logbackVersion % Runtime,
@@ -35,7 +35,5 @@ ThisBuild / publishTo := {
   if (isSnapshot.value) Some("snapshots" at nexus + "snapshots/")
   else Some("releases"  at nexus + "releases/")
 }
-
-//Test / parallelExecution := false
 
 credentials += Credentials("Sonatype Nexus Repository Manager", "dev2.greenfossil.com", "dev", "ayerrajah")

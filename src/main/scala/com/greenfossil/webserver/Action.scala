@@ -29,6 +29,8 @@ trait EssentialAction extends HttpService:
     })
     HttpResponse.from(f)
 
+  inline def url:String = Endpoint.apply(this).url
+
   /**
    * This method is only invoked EssentialAction.serve
    * @param request

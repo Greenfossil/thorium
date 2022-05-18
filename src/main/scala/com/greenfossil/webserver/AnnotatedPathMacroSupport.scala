@@ -1,12 +1,12 @@
 package com.greenfossil.webserver
 
-object AnnotatedPathMacroSupport extends MacroSupport(debug =false) {
+object AnnotatedPathMacroSupport extends MacroSupport(globalDebug = false) {
 
   import scala.quoted.*
 
   def computeActionAnnotatedPath[A <: EssentialAction : Type, R : Type](actionExpr: Expr[A],
-                                                                             onSuccessCallback: (String, Expr[List[Any]]) =>  Expr[R]
-                                                                            )(using Quotes): Expr[R] =
+                                                                        onSuccessCallback: (String, Expr[List[Any]]) =>  Expr[R])
+                                                                       (using Quotes): Expr[R] =
     import quotes.reflect.*
     searchForAnnotations(actionExpr.asTerm, 1) match
       case applyTerm @ Apply(_, paramValues) =>
@@ -21,7 +21,11 @@ object AnnotatedPathMacroSupport extends MacroSupport(debug =false) {
         getAnnotatedPath(actionExpr, annList, Map.empty[String, Term], onSuccessCallback)
 
       case otherTerm =>
-        report.errorAndAbort("Unable to find annotations")
+        show("otherTerm", otherTerm, true)
+        val ref = Ref(otherTerm.symbol)
+        val term = searchForAnnotations(ref, 1)
+        show("search term", term, true)
+        report.errorAndAbort("Unable to find any Essential Action path annotations")
 
 
   def getAnnotatedPath[A <: EssentialAction : Type, R : Type](using Quotes)(
@@ -92,6 +96,7 @@ object AnnotatedPathMacroSupport extends MacroSupport(debug =false) {
       val parts = declaredPath.split("/:")
       parts.tail.foldLeft(List[Expr[Any]](Expr(parts.head))) { (accPath, part) =>
         val newParts = part.split("/").toList match
+          case Nil =>  Nil
           case pathParamName +: rightParts => getPathParamExpr(pathParamName) +: rightParts.map(p => Expr(p))
 
         accPath ++ newParts

@@ -2,7 +2,7 @@ package com.greenfossil.webserver
 
 import scala.quoted.Quotes
 
-trait MacroSupport(debug: Boolean):
+trait MacroSupport(globalDebug: Boolean):
 
   def findEnclosingTerm(using quotes: Quotes)(sym: quotes.reflect.Symbol): quotes.reflect.Symbol =
     import quotes.reflect.*
@@ -13,7 +13,7 @@ trait MacroSupport(debug: Boolean):
 
   def showStructure(using quotes:Quotes)(msg: String, x: quotes.reflect.Tree | List[quotes.reflect.Tree]): Unit =
     import quotes.reflect.*
-    if debug
+    if globalDebug
     then
       x match
         case xs: List[Tree]  =>
@@ -26,7 +26,7 @@ trait MacroSupport(debug: Boolean):
 
   def showCode(using quotes:Quotes)(msg: String, x: quotes.reflect.Tree | List[quotes.reflect.Tree] ): Unit =
     import quotes.reflect.*
-    if debug
+    if globalDebug
     then
       x match
         case xs: List[Tree]  =>
@@ -37,7 +37,7 @@ trait MacroSupport(debug: Boolean):
 
     else ()
 
-  def show(using quotes:Quotes)(msg: String, x: quotes.reflect.Tree | List[quotes.reflect.Tree]): Unit =
+  def show(using quotes:Quotes)(msg: String, x: quotes.reflect.Tree | List[quotes.reflect.Tree], debug: Boolean = globalDebug): Unit =
     import quotes.reflect.*
     if debug
     then

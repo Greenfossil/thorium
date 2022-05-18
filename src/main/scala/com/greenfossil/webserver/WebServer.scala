@@ -1,14 +1,11 @@
 package com.greenfossil.webserver
 
-import com.greenfossil.config.AppSettings
 import com.linecorp.armeria.server.{HttpService, Server, ServerErrorHandler}
 import org.slf4j.LoggerFactory
 
 import scala.util.Try
 
 object WebServer:
-  lazy val defaultHttpPort = AppSettings.instance.config.getInt("http.port")
-
   /**
    * A random port will be created
    * @return
