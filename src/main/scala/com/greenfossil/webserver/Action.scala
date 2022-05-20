@@ -14,22 +14,20 @@ type ActionResponse =  HttpResponse | Result | String
 trait EssentialAction extends HttpService:
   /**
    * Armeria invocation during an incoming request
-   * @param ctx
+   * @param svcRequestContext
    * @param httpRequest
    * @return
    */
-  override def serve(ctx: ServiceRequestContext, httpRequest: HttpRequest): HttpResponse =
-    val f: CompletableFuture[HttpResponse] = ctx.request().aggregate().thenApply(aggregateRequest => {
+  override def serve(svcRequestContext: ServiceRequestContext, httpRequest: HttpRequest): HttpResponse =
+    val f: CompletableFuture[HttpResponse] = svcRequestContext.request().aggregate().thenApply(aggregateRequest => {
       Thread.currentThread().setContextClassLoader(getClass.getClassLoader)
-      val req = new Request(ctx, aggregateRequest) {}
+      val req = new Request(svcRequestContext, aggregateRequest) {}
       apply(req) match
         case s: String => HttpResponse.of(s)
         case hr: HttpResponse => hr
         case result:Result => result.toHttpResponse(req)
     })
     HttpResponse.from(f)
-
-  inline def url:String = Endpoint.apply(this).url
 
   /**
    * This method is only invoked EssentialAction.serve

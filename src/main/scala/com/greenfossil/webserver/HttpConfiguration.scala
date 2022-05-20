@@ -79,6 +79,10 @@ case class SessionConfiguration(
    jwt: JWTConfiguration = JWTConfiguration()
 )
 
+object SessionConfiguration {
+  def apply = ???
+}
+
 /**
  * The flash configuration
  *

@@ -17,9 +17,15 @@ object RequestAttrs {
   val TZ = AttributeKey.valueOf[ZoneId]("tz")
   val Session = AttributeKey.valueOf[Session]("session")
   val Flash = AttributeKey.valueOf[Flash]("flash")
+  val Env = AttributeKey.valueOf[Environment]("env")
+  val HttpConfig = AttributeKey.valueOf[HttpConfiguration]("httpConfig")
 }
 
 trait Request(val requestContext: ServiceRequestContext, val aggregatedHttpRequest: AggregatedHttpRequest) {
+  
+  def env: Environment = requestContext.attr(RequestAttrs.Env)
+  
+  def httpConfiguration: HttpConfiguration = requestContext.attr(RequestAttrs.HttpConfig)
 
   def contentType: MediaType = requestContext.request().contentType()
 
