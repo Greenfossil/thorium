@@ -12,7 +12,7 @@ object BasicServices extends Controller {
   
   @Get("/hello")
   def helloText = Action { request =>
-    Ok("HelloWorld!")
+    "HelloWorld!"
   }
 
   @Get("/hello-json")
@@ -24,13 +24,12 @@ object BasicServices extends Controller {
 
   @Get("/redirect") //curl -v -L http://localhost:8080/redirect
   def redirectText = Action { request =>
-//    Redirect(redirectText2)
-    Redirect("/redirectText2")
+    Redirect(redirectText2)
   }
 
   @Get("/redirectText2")
   def redirectText2 = Action { request =>
-    Ok("You are at Text2!")
+    "You are at Text2!"
   }
 
   //curl -v -d "user=user1&pass=abcd" -X POST  http://localhost:8080/form 
@@ -38,7 +37,7 @@ object BasicServices extends Controller {
   def form = Action { request =>
     val f = request.asFormUrlEncoded
     println(s"form = ${f}")
-    Ok(s"Form f ${f}")
+    s"Form f ${f}"
   }
 
   //https://stackoverflow.com/questions/19116016/what-is-the-right-way-to-post-multipart-form-data-using-curl
@@ -54,7 +53,7 @@ object BasicServices extends Controller {
         println(s"map = ${map}")
         val files = form.files
         println(s"files = ${files}")
-        Ok("Received Multiopart")
+        "Received Multipart form"
     )
   }
 

@@ -7,7 +7,7 @@ import com.linecorp.armeria.server.annotation.{Get, Post}
 object FormServices extends Controller {
   import com.greenfossil.data.mapping.Mapping.*
 
-  @Post("/form") //curl -v -d "name=homer&id=8" -X POST  http://localhost:8080/form
+  @Post("/form") //curl -d "name=homer&id=8" -X POST  http://localhost:8080/form
   def tupleForm = Action { implicit request =>
     val form = tuple(
       "name" -> text,
@@ -16,11 +16,11 @@ object FormServices extends Controller {
     val boundForm = form.bindFromRequest()
     boundForm.fold(
       error => BadRequest("Errors"),
-      value => Ok(value.toString)
+      value => value.toString
     )
   }
 
-  @Post("/class")
+  @Post("/class") //curl -X POST -d name=homer -d id=8 http://localhost:8080/class
   def classForm = Action { implicit request =>
     case class Foo(name: String, id: Long)
     val form = mapping[Foo](
@@ -30,7 +30,7 @@ object FormServices extends Controller {
     val boundForm = form.bindFromRequest()
     boundForm.fold(
       error => BadRequest("Errors"),
-      value => Ok(s"HelloWorld $value")
+      value => s"HelloWorld $value"
     )
   }
 

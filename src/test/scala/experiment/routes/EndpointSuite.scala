@@ -1,4 +1,4 @@
-package experiment.macros
+package experiment.routes
 
 class EndpointSuite {
   //Endpoint - softwaremill - https://blog.softwaremill.com/three-easy-endpoints-a6cbd52b0a6e

@@ -90,7 +90,6 @@ trait Request(val requestContext: ServiceRequestContext, val aggregatedHttpReque
 
   val session: Session = cookies.find(c => c.name() == RequestAttrs.Session.name()).flatMap{c =>
     val sessionJwt: JsValue = Json.parseBase64URL(c.value())
-    println(s"Request sessionJwt = ${sessionJwt}, cookie = ${c.value}")
     sessionJwt.asOpt[Map[String, String]].map(Session(_))
   }.getOrElse(Session())
 
@@ -130,7 +129,7 @@ trait Request(val requestContext: ServiceRequestContext, val aggregatedHttpReque
       .aggregate()
       .thenApply(mp => MultipartFormData(mp))
     
-  def asMultipartFormData(fn: MultipartFormData => Result): Result =
+  def asMultipartFormData(fn: MultipartFormData => ActionResponse): ActionResponse =
     asMultipartFormData.thenApply(fn(_)).get
 
   //Raw Buffer - TODO - testcase needed and check for conformance
