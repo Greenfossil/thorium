@@ -10,4 +10,4 @@ given Writeable[String] with
 
 import com.greenfossil.commons.json.JsValue
 given Writeable[JsValue] with
-  def content(x: JsValue) = (MediaType.JSON, x.toJson.getBytes)
+  def content(x: JsValue) = (MediaType.JSON, x.stringify.getBytes)

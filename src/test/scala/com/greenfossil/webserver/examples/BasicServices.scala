@@ -53,7 +53,7 @@ object BasicServices extends Controller {
         println(s"map = ${map}")
         val files = form.files
         println(s"files = ${files}")
-        "Received Multipart form"
+        Ok("Received Multipart form")
     )
   }
 

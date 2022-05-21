@@ -1,12 +1,13 @@
 package com.greenfossil.webserver
 
 import com.linecorp.armeria.common.{AggregatedHttpRequest, HttpHeaders, HttpResponse, ResponseHeaders}
-import com.linecorp.armeria.server.annotation.{RequestConverterFunction, ResponseConverterFunction}
+import com.linecorp.armeria.server.annotation.{ExceptionHandlerFunction, RequestConverterFunction, ResponseConverterFunction}
 import com.linecorp.armeria.server.{HttpService, Server, ServerErrorHandler, ServiceRequestContext}
 import com.typesafe.config.Config
 import org.slf4j.LoggerFactory
 
 import java.lang.reflect.ParameterizedType
+import java.util
 import scala.util.Try
 
 object WebServer:
@@ -33,7 +34,10 @@ case class WebServer(_port: Int,
                      annotatedServices: Seq[Any] = Nil,
                      errorHandlerOpt: Option[ServerErrorHandler],
                      environment: Environment,
-                     httpConfiguration: HttpConfiguration) {
+                     httpConfiguration: HttpConfiguration,
+                     requestConverters: Seq[RequestConverterFunction] = Nil,
+                     responseConverters: Seq[ResponseConverterFunction] = Nil,
+                     exceptionHandlers: Seq[ExceptionHandlerFunction] = Nil) {
 
   private val logger = LoggerFactory.getLogger("webserver")
 
@@ -45,7 +49,7 @@ case class WebServer(_port: Int,
 
   export server.{start as _, toString as _ , *}
 
-  lazy val requestConverter: RequestConverterFunction =
+  lazy val defaultRequestConverter: RequestConverterFunction =
     (svcRequestContext: ServiceRequestContext,
      aggHttpRequest: AggregatedHttpRequest,
      expectedResultType: Class[_],
@@ -57,7 +61,7 @@ case class WebServer(_port: Int,
           then new com.greenfossil.webserver.Request(svcRequestContext, aggHttpRequest) {}
           else RequestConverterFunction.fallthrough()
 
-  lazy val responseConverter: ResponseConverterFunction =
+  lazy val defaultResponseConverter: ResponseConverterFunction =
     (svcRequestContext: ServiceRequestContext, headers: ResponseHeaders, result: Any, trailers: HttpHeaders) =>
       //embed the env and http config
       svcRequestContext.setAttr(RequestAttrs.Env, environment)
@@ -65,7 +69,7 @@ case class WebServer(_port: Int,
       result match
         case action: EssentialAction => action.serve(svcRequestContext, null)
         case _ => ResponseConverterFunction.fallthrough()
-  
+
   def port: Int = server.activeLocalPort()
 
   def addService(endpoint: String, action: HttpService): WebServer =
@@ -80,15 +84,32 @@ case class WebServer(_port: Int,
   def setErrorHandler(h: ServerErrorHandler): WebServer =
     copy(errorHandlerOpt = Some(h))
 
+  def addRequestConverters(newRequestConverters: RequestConverterFunction*): WebServer =
+    copy(requestConverters = newRequestConverters ++ this.requestConverters)
+
+  def addResponseConverters(newResponseConverters: ResponseConverterFunction*): WebServer =
+    copy(responseConverters = newResponseConverters ++ this.responseConverters)
+
+  def addExceptionHandlers(newExceptionHandlers: ExceptionHandlerFunction*): WebServer =
+    copy(exceptionHandlers = newExceptionHandlers ++ this.exceptionHandlers)
+
   import scala.jdk.CollectionConverters.*
+
+  lazy val allRequestConverters: util.List[RequestConverterFunction] =
+    (defaultRequestConverter +: requestConverters).asJava
+
+  lazy val allResponseConverters: util.List[ResponseConverterFunction] =
+    (defaultResponseConverter +: responseConverters).asJava
+
+  lazy val allExceptionHandlers: util.List[ExceptionHandlerFunction] =
+    exceptionHandlers.asJava
 
   private def buildServer: Server =
     val sb = Server.builder()
     if _port > 0 then sb.http(_port)
     routes.foreach{route => sb.service(route._1, route._2)}
     annotatedServices.foreach{s => sb.annotatedService(s)}
-    sb.annotatedServiceExtensions(List(requestConverter).asJava, List(responseConverter).asJava,
-      Nil.asJava)
+    sb.annotatedServiceExtensions(allRequestConverters, allResponseConverters, allExceptionHandlers)
     errorHandlerOpt.foreach{ handler => sb.errorHandler(handler.orElse(ServerErrorHandler.ofDefault()))}
     sb.build
 
@@ -100,8 +121,7 @@ case class WebServer(_port: Int,
     sb.tlsSelfSigned()
     routes.foreach{route => sb.service(route._1, route._2)}
     annotatedServices.foreach{s => sb.annotatedService(s)}
-    sb.annotatedServiceExtensions(List(requestConverter).asJava, List(responseConverter).asJava,
-      Nil.asJava)
+    sb.annotatedServiceExtensions(allRequestConverters, allResponseConverters, allExceptionHandlers)
     errorHandlerOpt.foreach{ handler => sb.errorHandler(handler.orElse(ServerErrorHandler.ofDefault()))}
     sb.build
 
@@ -133,27 +153,3 @@ case class WebServer(_port: Int,
 
 //TODO - https://armeria.dev/docs/advanced-production-checklist
 class ServerConfig(val maxNumConnections: Int, maxRequestLength: Int, requestTimeoutInSecs: Int)
-
-
-//import com.linecorp.armeria.server.ServiceRequestContext
-//import com.linecorp.armeria.server.annotation.{RequestConverterFunction, ResponseConverterFunction}
-//
-////FIXME - handle ExceptionHandlerFunction
-//private object ArmeriaConverters extends RequestConverterFunction, ResponseConverterFunction:
-//  import com.linecorp.armeria.common.{AggregatedHttpRequest, HttpHeaders, HttpResponse, ResponseHeaders}
-//  import java.lang.reflect.ParameterizedType
-//  import java.util.concurrent.CompletableFuture
-//
-//  override def convertRequest(svcRequestContext: ServiceRequestContext, aggHttpRequest: AggregatedHttpRequest,
-//                              expectedResultType: Class[_],
-//                              expectedParameterizedResultType: ParameterizedType): AnyRef =
-//    if expectedResultType == classOf[com.greenfossil.webserver.Request]
-//    then new com.greenfossil.webserver.Request(svcRequestContext, aggHttpRequest) {}
-//    else RequestConverterFunction.fallthrough()
-//
-//  override def convertResponse(ctx: ServiceRequestContext, headers: ResponseHeaders,
-//                               result: Any,
-//                               trailers: HttpHeaders): HttpResponse =
-//    result match
-//      case action: EssentialAction => action.serve(ctx, null)
-//      case _ => ResponseConverterFunction.fallthrough()

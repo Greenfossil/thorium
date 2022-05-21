@@ -8,6 +8,7 @@ Request
 + Request.locale - done
 + Form - I18N support
 + Implements HttpConfiguration -
++ Need to handle Content-Type better - e.g. Json, Array, InputStream
 
 Form (Data)
 ---

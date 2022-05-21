@@ -1,7 +1,7 @@
 package com.greenfossil.webserver
 
 import com.greenfossil.commons.json.Json
-import com.linecorp.armeria.common.{Cookie, HttpResponse}
+import com.linecorp.armeria.common.{Cookie, HttpResponse, HttpStatus}
 
 import java.time.format.DateTimeFormatter
 import java.time.{ZoneOffset, ZonedDateTime}
@@ -98,7 +98,7 @@ object Result {
 }
 
 case class Result(header: ResponseHeader,
-                  body: HttpResponse | String,
+                  body: HttpResponse | String | Array[Byte],
                   queryString: Map[String, Seq[String]] = Map.empty,
                   newSessionOpt: Option[Session] = None,
                   newFlashOpt: Option[Flash] = None,
@@ -285,6 +285,7 @@ case class Result(header: ResponseHeader,
   def toHttpResponse(req: Request): HttpResponse =
     val httpResp = body match
       case httpResponse: HttpResponse => httpResponse
+      case bytes: Array[Byte] => HttpResponse.of(HttpStatus.OK, req.contentType, bytes)
       case string: String => HttpResponse.of(string)
 
     /*

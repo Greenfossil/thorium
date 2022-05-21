@@ -9,7 +9,7 @@ import scala.concurrent.{ExecutionContext, Future}
 
 trait Controller
 
-type ActionResponse =  HttpResponse | Result | String
+type ActionResponse =  HttpResponse | Result | String | Array[Byte]
 
 trait EssentialAction extends HttpService:
   /**
