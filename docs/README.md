@@ -9,6 +9,7 @@ Request
 + Form - I18N support
 + Implements HttpConfiguration -
 + Need to handle Content-Type better - e.g. Json, Array, InputStream
++ Need to improve the handling of Result/HttpResponse to enable better handling of HttpErrorHandler
 
 Form (Data)
 ---
