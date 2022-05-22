@@ -75,9 +75,11 @@ case class WebServer(_port: Int,
   def addService(endpoint: String, action: HttpService): WebServer =
     copy(routes = routes :+ (endpoint, action))
 
-  def addServices(newRoutes: Seq[(String, HttpService)]): WebServer  =
-    copy(routes = routes ++ newRoutes)
+  def addServices(services: (Controller| Tuple2[String, HttpService]) *): WebServer  =
+    val (controllers: Seq[Controller], newRoutes: Seq[(String, HttpService)]) = services.partition(s => s.isInstanceOf[Controller])
+    copy(routes = routes ++ newRoutes, annotatedServices = annotatedServices ++ controllers)
 
+  @deprecated("use addServices instead")
   def addAnnotatedService(annotatedService: Controller): WebServer =
     copy(annotatedServices = annotatedServices :+ annotatedService)
 

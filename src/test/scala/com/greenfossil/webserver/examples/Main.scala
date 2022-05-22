@@ -4,8 +4,8 @@ import com.greenfossil.webserver.*
 
 @main def main =
   val server = WebServer(8080)
-    .addAnnotatedService(BasicServices)
-    .addAnnotatedService(FormServices)
-    .addAnnotatedService(SimpleServices)
+    .addServices(BasicServices)
+    .addServices(FormServices)
+    .addServices(SimpleServices)
     .start()
   println(s"Server started... ${Thread.currentThread()}")

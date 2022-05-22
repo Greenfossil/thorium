@@ -34,6 +34,6 @@ object Redirect2Services extends Controller {
 
 @main def redirectMain =
     val server = WebServer(8080)
-      .addAnnotatedService(Redirect1Services)
-      .addAnnotatedService(Redirect2Services)
+      .addServices(Redirect1Services)
+      .addServices(Redirect2Services)
       .start()

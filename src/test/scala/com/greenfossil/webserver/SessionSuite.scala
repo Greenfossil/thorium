@@ -41,7 +41,7 @@ class SessionSuite extends munit.FunSuite {
 
   test("Session, Flash propagation") {
     val server = WebServer()
-      .addAnnotatedService(SessionServices)
+      .addServices(SessionServices)
       .start()
 
     import com.linecorp.armeria.client.WebClient

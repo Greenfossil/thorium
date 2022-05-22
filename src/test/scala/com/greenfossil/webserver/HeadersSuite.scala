@@ -21,7 +21,7 @@ object HeadersServices extends Controller {
 class HeadersSuite extends munit.FunSuite {
   test("header, session, flash"){
     val server = WebServer()
-      .addAnnotatedService(HeadersServices)
+      .addServices(HeadersServices)
       .start()
 
     import com.linecorp.armeria.client.WebClient
