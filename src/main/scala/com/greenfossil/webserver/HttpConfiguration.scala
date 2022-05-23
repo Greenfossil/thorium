@@ -1,6 +1,7 @@
 package com.greenfossil.webserver
 
 import scala.concurrent.duration.FiniteDuration
+import scala.concurrent.duration.*
 import com.typesafe.config.*
 import org.slf4j.{Logger, LoggerFactory}
 
@@ -17,11 +18,17 @@ private given Conversion[java.time.Duration, scala.concurrent.duration.FiniteDur
     scala.concurrent.duration.Duration.fromNanos(javaDur.toNanos)
 
 object HttpConfiguration{
+  
+  def usingPort(port: Int): HttpConfiguration = 
+    HttpConfiguration().copy(httpPort = port)
 
   def fromConfig(config: Config, environment: Environment): HttpConfiguration = {
     HttpConfiguration(
       context = config.getString("app.http.context"),
       httpPort = Try(config.getInt("app.http.port")).getOrElse(8080),
+      maxNumConnectionOpt = Option(config.getInt("app.http.maxNumConnection")),
+      maxRequestLength = config.getInt("app.http.maxRequestLength"),
+      requestTimeout = config.getDuration("app.http.requestTimeout"),
       sessionConfig = SessionConfiguration(
         cookieName = config.getString("app.http.session.cookieName"),
         secure = config.getBoolean("app.http.session.secure"),
@@ -41,19 +48,36 @@ object HttpConfiguration{
         path = config.getString("app.http.flash.path"),
         jwt = JWTConfigurationParser(config, "app.http.flash.jwt")
       ),
-      secretConfig = getSecretConfiguration(config, environment)
+      secretConfig = getSecretConfiguration(config, environment),
+      environment = environment
     )
 
   }
 
 }
 
+/**
+ *
+ * @param context
+ * @param httpPort The HTTP port number
+ * @param maxConnection The maximum number of accepted HTTP connections
+ * @param maxRequestLength The maximum allowed length of HTTP content in bytes
+ * @param requestTimeout Number of seconds before HTTP request times out
+ * @param sessionConfig The session configuration
+ * @param flashConfig The flash configuration
+ * @param secretConfig The application secret
+ * @param environment The application environment
+ */
 case class HttpConfiguration(
-  context: String = "/",
-  httpPort: Int = 8080,
-  sessionConfig: SessionConfiguration = SessionConfiguration(),
-  flashConfig: FlashConfiguration = FlashConfiguration(),
-  secretConfig: SecretConfiguration = SecretConfiguration()
+   context: String = "/",
+   httpPort: Int = 8080,
+   maxNumConnectionOpt: Option[Int] = None,
+   maxRequestLength: Int = 10485760,
+   requestTimeout: FiniteDuration = 10.seconds,
+   sessionConfig: SessionConfiguration = SessionConfiguration(),
+   flashConfig: FlashConfiguration = FlashConfiguration(),
+   secretConfig: SecretConfiguration = SecretConfiguration(),
+   environment: Environment = Environment.simple()
 )
 
 /**
@@ -166,7 +190,6 @@ object SecretConfiguration {
  * @param clockSkew The amount of clock skew to permit for expiration / not before checks
  * @param dataClaim The claim key corresponding to the data map passed in by the user
  */
-import scala.concurrent.duration.*
 case class JWTConfiguration(
                              signatureAlgorithm: String = "HS256",
                              expiresAfter: Option[FiniteDuration] = None,

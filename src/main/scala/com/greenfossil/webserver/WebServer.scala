@@ -15,25 +15,19 @@ object WebServer:
    * A random port will be created
    * @return
    */
-  def apply(): WebServer = WebServer(0, null, Nil, Nil, None, Environment.simple(), HttpConfiguration())
+  def apply(): WebServer = WebServer(null, Nil, Nil, None, HttpConfiguration())
 
   def apply(config: Config): WebServer =
     val environment = Environment.simple()
-    WebServer(0, null, Nil, Nil, None, environment, HttpConfiguration.fromConfig(config, environment))
+    WebServer(null, Nil, Nil, None, HttpConfiguration.fromConfig(config, environment))
+    
+  def apply(port: Int): WebServer =
+    WebServer(null, Nil, Nil, None, HttpConfiguration.usingPort(port))
 
-  /**
-   *
-   * @param port
-   * @return
-   */
-  def apply(port: Int): WebServer = WebServer(port, null, Nil, Nil, None, Environment.simple(), HttpConfiguration())
-
-case class WebServer(_port: Int,
-                     server: Server,
+case class WebServer(server: Server,
                      routes: Seq[(String, HttpService)],
                      annotatedServices: Seq[Any] = Nil,
                      errorHandlerOpt: Option[ServerErrorHandler],
-                     environment: Environment,
                      httpConfiguration: HttpConfiguration,
                      requestConverters: Seq[RequestConverterFunction] = Nil,
                      responseConverters: Seq[ResponseConverterFunction] = Nil,
@@ -41,7 +35,7 @@ case class WebServer(_port: Int,
 
   private val logger = LoggerFactory.getLogger("webserver")
 
-  def mode = environment.mode
+  def mode = httpConfiguration.environment.mode
 
   def isDev  = mode == Mode.Dev
   def isTest = mode == Mode.Test
@@ -55,7 +49,7 @@ case class WebServer(_port: Int,
      expectedResultType: Class[_],
      expectedParameterizedResultType: ParameterizedType) =>
           //embed the env and http config
-          svcRequestContext.setAttr(RequestAttrs.Env, environment)
+          svcRequestContext.setAttr(RequestAttrs.Env, httpConfiguration.environment)
           svcRequestContext.setAttr(RequestAttrs.HttpConfig, httpConfiguration)
           if expectedResultType == classOf[com.greenfossil.webserver.Request]
           then new com.greenfossil.webserver.Request(svcRequestContext, aggHttpRequest) {}
@@ -64,7 +58,7 @@ case class WebServer(_port: Int,
   lazy val defaultResponseConverter: ResponseConverterFunction =
     (svcRequestContext: ServiceRequestContext, headers: ResponseHeaders, result: Any, trailers: HttpHeaders) =>
       //embed the env and http config
-      svcRequestContext.setAttr(RequestAttrs.Env, environment)
+      svcRequestContext.setAttr(RequestAttrs.Env, httpConfiguration.environment)
       svcRequestContext.setAttr(RequestAttrs.HttpConfig, httpConfiguration)
       result match
         case action: EssentialAction => action.serve(svcRequestContext, null)
@@ -106,9 +100,13 @@ case class WebServer(_port: Int,
   lazy val allExceptionHandlers: util.List[ExceptionHandlerFunction] =
     exceptionHandlers.asJava
 
+  import com.linecorp.armeria.scala.implicits.finiteDurationToJavaDuration
   private def buildServer: Server =
     val sb = Server.builder()
-    if _port > 0 then sb.http(_port)
+    if httpConfiguration.httpPort > 0 then sb.http(httpConfiguration.httpPort)
+    sb.maxRequestLength(httpConfiguration.maxRequestLength)
+    httpConfiguration.maxNumConnectionOpt.foreach(maxConn => sb.maxNumConnections(maxConn))
+    sb.requestTimeout(httpConfiguration.requestTimeout)
     routes.foreach{route => sb.service(route._1, route._2)}
     annotatedServices.foreach{s => sb.annotatedService(s)}
     sb.annotatedServiceExtensions(allRequestConverters, allResponseConverters, allExceptionHandlers)
@@ -117,10 +115,11 @@ case class WebServer(_port: Int,
 
   private def buildSecureServer: Server =
     val sb = Server.builder()
-    if _port > 0 then {
-      sb.https(_port)
-    }
+    if httpConfiguration.httpPort > 0 then sb.https(httpConfiguration.httpPort)
     sb.tlsSelfSigned()
+    sb.maxRequestLength(httpConfiguration.maxRequestLength)
+    httpConfiguration.maxNumConnectionOpt.foreach(maxConn => sb.maxNumConnections(maxConn))
+    sb.requestTimeout(httpConfiguration.requestTimeout)
     routes.foreach{route => sb.service(route._1, route._2)}
     annotatedServices.foreach{s => sb.annotatedService(s)}
     sb.annotatedServiceExtensions(allRequestConverters, allResponseConverters, allExceptionHandlers)
