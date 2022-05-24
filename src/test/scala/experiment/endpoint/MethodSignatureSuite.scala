@@ -25,8 +25,8 @@ object TestActionController extends Controller {
     getPath(action3)
   }
 
-  def getPath(action: Action): String =
-    EndpointMcr(action).toString
+  def getPath(action: Action): String = ???
+//    EndpointMcr(action).toString
 
 }
 

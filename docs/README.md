@@ -11,6 +11,7 @@ Request
 + Need to handle Content-Type better - e.g. Json, Array, InputStream
 + Need to improve the handling of Result/HttpResponse to enable better handling of HttpErrorHandler
 + Deprecated WebServer.addAnnotatedService - use WebServer.addServices
++ Add Armeria HTTP configurations - for use in production
 
 Form (Data)
 ---
