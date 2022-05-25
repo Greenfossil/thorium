@@ -118,9 +118,9 @@ case class Result(header: ResponseHeader,
    * @param cookiesName the cookies to discard along to this result
    * @return the new result
    */
-  def discardingCookies[A <: String | Cookie](cookies: A*): Result = {
+  def discardingCookies[A <: String | Cookie](cookies: A*)(using request: Request): Result = {
     val _cookies: Seq[Cookie] = cookies.map{
-        case name:String => CookieUtil.bakeCookie(name, "", 0)
+        case name: String => CookieUtil.bakeCookie(name, "", Option(0L))
         case c: Cookie => c
     }
     withCookies(_cookies*)
@@ -232,6 +232,7 @@ case class Result(header: ResponseHeader,
   override def toString = s"Result($header)"
 
   def toHttpResponse(req: Request): HttpResponse =
+    given Request = req
     val httpResp = body match
       case httpResponse: HttpResponse => httpResponse
       case bytes: Array[Byte] => HttpResponse.of(HttpStatus.OK, req.contentType, bytes)
@@ -244,7 +245,7 @@ case class Result(header: ResponseHeader,
     val sessionCookieOption: Option[Cookie] = newSessionOpt.map{ newSession =>
         //If newSession isEmtpy, expire session cookie
         if newSession.isEmpty then
-          CookieUtil.bakeDiscardCookie(RequestAttrs.Session.name())
+          CookieUtil.bakeDiscardCookie(req.httpConfiguration.sessionConfig.cookieName)
         else
           //Append new session will to session cookie
           val session = req.session + newSession
@@ -258,7 +259,7 @@ case class Result(header: ResponseHeader,
     }.orElse{
       //Expire the current flash cookie
       if req.flash.nonEmpty
-      then Some(CookieUtil.bakeDiscardCookie(RequestAttrs.Flash.name()))
+      then Some(CookieUtil.bakeDiscardCookie(req.httpConfiguration.flashConfig.cookieName))
       else None
     }
 

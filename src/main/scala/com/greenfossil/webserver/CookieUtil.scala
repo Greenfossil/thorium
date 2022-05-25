@@ -2,28 +2,38 @@ package com.greenfossil.webserver
 
 import com.greenfossil.commons.json.Json
 import com.linecorp.armeria.common.Cookie
+import scala.concurrent.duration.*
 
 object CookieUtil {
-  /*
-   * Cookie's path must be set to an appropriate uri
-   * Defaults to "/" so cookie will follow to all sub-directories
-   * https://www.rfc-editor.org/rfc/rfc6265#section-5.1.4
-   */
-  def bakeCookie(name: String, value: String, secure: Boolean, maxAgeOpt: Option[Long],
-                 path: String, domainOpt: Option[String]): Cookie =
-    bakeCookie(name = name, value = value, secure = secure, maxAgeOpt = maxAgeOpt, path = path, domainOpt = domainOpt,
-      sameSiteOption = None, httpOnly = true, hostOnly = false)
 
+  def bakeCookie(name: String, value: String)(using request: Request): Cookie =
+    val cookieConfiguration = request.httpConfiguration.cookieConfig
+    bakeCookie(name, value, cookieConfiguration.maxAge.map(_._1))
 
-  def bakeCookie(name: String, value: String, secure: Boolean, maxAgeOpt: Option[Long], httpOnly: Boolean,
-                 path: String, domainOpt: Option[String]): Cookie =
-    bakeCookie(name = name, value = value, secure = secure, maxAgeOpt = maxAgeOpt, path = path, domainOpt = domainOpt,
-      sameSiteOption = None, httpOnly = httpOnly, hostOnly = false)
+  def bakeCookie(name: String, value: String, maxAgeOpt: Option[Long])(using request: Request): Cookie =
+    val cookieConfiguration = request.httpConfiguration.cookieConfig
+    bakeCookie(name = name, value = value, secure = cookieConfiguration.secure, maxAgeOpt = maxAgeOpt, path = cookieConfiguration.path,
+      domainOpt = cookieConfiguration.domain, sameSiteOpt = cookieConfiguration.sameSite, httpOnly = cookieConfiguration.httpOnly, hostOnly = cookieConfiguration.httpOnly)
 
-  def bakeCookie(name: String, value: String, secure: Boolean, maxAgeOpt: Option[Long], httpOnly: Boolean, hostOnly: Boolean,
-                 path: String, domainOpt: Option[String]): Cookie =
-    bakeCookie(name = name, value = value, secure = secure, maxAgeOpt = maxAgeOpt, path = path, domainOpt = domainOpt,
-      sameSiteOption = None, httpOnly = httpOnly, hostOnly = hostOnly)
+  def bakeDiscardCookie(name: String)(using request: Request): Cookie =
+    bakeCookie(name , "", maxAgeOpt = Option(0L))
+
+  def bakeSessionCookie(session: Session)(using request: Request): Option[Cookie] =
+    val sessionConfiguration = request.httpConfiguration.sessionConfig
+    bakeBase64URLEncodedCookie(sessionConfiguration.cookieName, session.data, sessionConfiguration.secure, sessionConfiguration.maxAge.map(_.length),
+      sessionConfiguration.path, sessionConfiguration.domain, sessionConfiguration.sameSite, sessionConfiguration.httpOnly)
+
+  def bakeFlashCookie(flash: Flash)(using request: Request): Option[Cookie] =
+    val flashConfiguration = request.httpConfiguration.flashConfig
+    bakeBase64URLEncodedCookie(flashConfiguration.cookieName, flash.data, flashConfiguration.secure, None,
+      flashConfiguration.path, flashConfiguration.domain, flashConfiguration.sameSite, flashConfiguration.httpOnly)
+
+  def bakeBase64URLEncodedCookie(name:String, data: Map[String, String], secure: Boolean, maxAgeOpt: Option[Long], path: String,
+                                 domainOpt: Option[String], sameSiteOpt: Option["Strict" | "Lax" | "None"], httpOnly: Boolean, hostOnly: Boolean = false): Option[Cookie] =
+    if data.isEmpty then None
+    else
+      val jwt = Json.toJson(data).encodeBase64URL
+      Option(bakeCookie(name, jwt, secure, maxAgeOpt, path, domainOpt, sameSiteOpt, httpOnly, hostOnly))
 
   /*
    * source - https://developer.mozilla.org/en-US/docs/Web/HTTP/Cookies
@@ -72,7 +82,7 @@ object CookieUtil {
                   * (i.e., if SameSite=None then the Secure attribute must also be set).
                   * If no SameSite attribute is set, the cookie is treated as Lax.
                   */
-                 sameSiteOption: Option["Strict" | "Lax" | "None"] = None ,
+                 sameSiteOpt: Option["Strict" | "Lax" | "None"] = None,
 
                  /*
                   * Use the HttpOnly attribute to prevent access to cookie values via JavaScript.
@@ -89,47 +99,14 @@ object CookieUtil {
                  hostOnly: Boolean
                 ): Cookie =
     val cookieBuilder =
-      if secure || sameSiteOption.contains("None")
+      if secure || sameSiteOpt.contains("None")
       then Cookie.secureBuilder(name, value)
       else Cookie.builder(name, value)
     Option(path).filter(_.nonEmpty).map(cookieBuilder.path)
     maxAgeOpt.map(cookieBuilder.maxAge)
     domainOpt.map(cookieBuilder.domain)
-    sameSiteOption.map(cookieBuilder.sameSite)
+    sameSiteOpt.map(cookieBuilder.sameSite)
     cookieBuilder.httpOnly(httpOnly)
     cookieBuilder.hostOnly(hostOnly)
     cookieBuilder.build()
-
-  def bakeCookie(name: String, value: String): Cookie =
-    bakeCookie(name, value, false, None, "/", None)
-
-  def bakeCookie(name: String, value: String, path: String): Cookie =
-    bakeCookie(name, value, false, None, path, None)
-
-  def bakeCookie(name: String, value: String, maxAge: Long): Cookie =
-    bakeCookie(name, value, maxAge, false)
-
-  def bakeCookie(name: String, value: String, secure: Boolean): Cookie =
-    bakeCookie(name, value, secure, None, "/", None)
-
-  def bakeCookie(name: String, value: String, maxAge: Long, secure: Boolean): Cookie =
-    bakeCookie(name , value, secure, Some(maxAge), "/", None)
-
-  def bakeDiscardCookie(name: String): Cookie =
-    bakeDiscardCookie(name, secure = false, path = "/" )
-
-  def bakeDiscardCookie(name: String, secure: Boolean, path: String): Cookie =
-    bakeCookie(name , "", secure, maxAgeOpt = Option(0L), path, None)
-
-  def bakeSessionCookie(session: Session): Option[Cookie] =
-    bakeBase64URLEncodedCookie(name = RequestAttrs.Session.name(), data = session.data, path = "/")
-
-  def bakeFlashCookie(flash: Flash): Option[Cookie] =
-    bakeBase64URLEncodedCookie(name = RequestAttrs.Flash.name(), data = flash.data, path = "/")
-
-  def bakeBase64URLEncodedCookie(name:String, data: Map[String, String], path: String): Option[Cookie] =
-    if data.isEmpty then None
-    else
-      val jwt = Json.toJson(data).encodeBase64URL
-      Option(bakeCookie(name,jwt, path))
 }

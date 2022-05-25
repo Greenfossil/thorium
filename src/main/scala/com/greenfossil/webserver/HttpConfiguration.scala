@@ -19,7 +19,7 @@ private given Conversion[java.time.Duration, scala.concurrent.duration.FiniteDur
 
 object HttpConfiguration{
   
-  def usingPort(port: Int): HttpConfiguration = 
+  def usingPort(port: Int): HttpConfiguration =
     HttpConfiguration().copy(httpPort = port)
 
   def fromConfig(config: Config, environment: Environment): HttpConfiguration = {
@@ -29,14 +29,24 @@ object HttpConfiguration{
       maxNumConnectionOpt = Option(config.getInt("app.http.maxNumConnection")),
       maxRequestLength = config.getInt("app.http.maxRequestLength"),
       requestTimeout = config.getDuration("app.http.requestTimeout"),
+      cookieConfig = CookieConfiguration(
+        secure = config.getBoolean("app.http.cookie.secure"),
+        maxAge = Option(config.getDuration("app.http.cookie.maxAge")),
+        httpOnly = config.getBoolean("app.http.cookie.httpOnly"),
+        domain = Option(config.getString("app.http.cookie.domain")),
+        path = config.getString("app.http.cookie.path"),
+        sameSite = Option(config.getString("app.http.cookie.sameSite")).map(_.asInstanceOf[SameSiteCookie]),
+        hostOnly = config.getBoolean("app.http.cookie.hostOnly"),
+        jwt = JWTConfigurationParser(config, "app.http.cookie.jwt")
+      ),
       sessionConfig = SessionConfiguration(
         cookieName = config.getString("app.http.session.cookieName"),
         secure = config.getBoolean("app.http.session.secure"),
         maxAge = Option(config.getDuration("app.http.session.maxAge")),
         httpOnly = config.getBoolean("app.http.session.httpOnly"),
         domain = Option(config.getString("app.http.session.domain")),
-        sameSite = Option(config.getString("app.http.session.sameSite")).map(_.asInstanceOf[SameSiteCookie]),
         path = config.getString("app.http.session.path"),
+        sameSite = Option(config.getString("app.http.session.sameSite")).map(_.asInstanceOf[SameSiteCookie]),
         jwt = JWTConfigurationParser(config, "app.http.session.jwt")
       ),
       flashConfig = FlashConfiguration(
@@ -44,8 +54,8 @@ object HttpConfiguration{
         secure = config.getBoolean("app.http.flash.secure"),
         httpOnly = config.getBoolean("app.http.flash.httpOnly"),
         domain = Option(config.getString("app.http.flash.domain")),
-        sameSite = Option(config.getString("app.http.flash.sameSite")).map(_.asInstanceOf[SameSiteCookie]),
         path = config.getString("app.http.flash.path"),
+        sameSite = Option(config.getString("app.http.flash.sameSite")).map(_.asInstanceOf[SameSiteCookie]),
         jwt = JWTConfigurationParser(config, "app.http.flash.jwt")
       ),
       secretConfig = getSecretConfiguration(config, environment),
@@ -74,10 +84,34 @@ case class HttpConfiguration(
    maxNumConnectionOpt: Option[Int] = None,
    maxRequestLength: Int = 10485760,
    requestTimeout: FiniteDuration = 10.seconds,
+   cookieConfig: CookieConfiguration = CookieConfiguration(),
    sessionConfig: SessionConfiguration = SessionConfiguration(),
    flashConfig: FlashConfiguration = FlashConfiguration(),
    secretConfig: SecretConfiguration = SecretConfiguration(),
    environment: Environment = Environment.simple()
+)
+
+/**
+ * The cookie configuration
+ *
+ * @param secure     Whether the session cookie should set the secure flag or not
+ * @param maxAge     The max age of the session, none, use "session" sessions
+ * @param httpOnly   Whether the HTTP only attribute of the cookie should be set
+ * @param domain     The domain to set for the session cookie, if defined
+ * @param path       The path for which this cookie is valid
+ * @param sameSite   The cookie's SameSite attribute
+ * @param hostOnly   The cookie's host-only attribute
+ * @param jwt        The JWT specific information
+ */
+case class CookieConfiguration(
+   secure: Boolean = false,
+   maxAge: Option[FiniteDuration] = None,
+   httpOnly: Boolean = true,
+   domain: Option[String] = None,
+   path: String = "/",
+   sameSite: Option[SameSiteCookie] = Some("Lax"),
+   hostOnly: Boolean = false,
+   jwt: JWTConfiguration = JWTConfiguration()
 )
 
 /**
@@ -102,10 +136,6 @@ case class SessionConfiguration(
    sameSite: Option[SameSiteCookie] = Some("Lax"),
    jwt: JWTConfiguration = JWTConfiguration()
 )
-
-object SessionConfiguration {
-  def apply = ???
-}
 
 /**
  * The flash configuration
