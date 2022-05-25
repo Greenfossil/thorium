@@ -13,7 +13,7 @@ object CookieUtil {
   def bakeCookie(name: String, value: String, maxAgeOpt: Option[Long])(using request: Request): Cookie =
     val cookieConfiguration = request.httpConfiguration.cookieConfig
     bakeCookie(name = name, value = value, secure = cookieConfiguration.secure, maxAgeOpt = maxAgeOpt, path = cookieConfiguration.path,
-      domainOpt = cookieConfiguration.domain, sameSiteOpt = cookieConfiguration.sameSite, httpOnly = cookieConfiguration.httpOnly, hostOnly = cookieConfiguration.httpOnly)
+      domainOpt = cookieConfiguration.domain, sameSiteOpt = cookieConfiguration.sameSite, httpOnly = cookieConfiguration.httpOnly, hostOnly = cookieConfiguration.hostOnly)
 
   def bakeDiscardCookie(name: String)(using request: Request): Cookie =
     bakeCookie(name , "", maxAgeOpt = Option(0L))
@@ -21,15 +21,15 @@ object CookieUtil {
   def bakeSessionCookie(session: Session)(using request: Request): Option[Cookie] =
     val sessionConfiguration = request.httpConfiguration.sessionConfig
     bakeBase64URLEncodedCookie(sessionConfiguration.cookieName, session.data, sessionConfiguration.secure, sessionConfiguration.maxAge.map(_.length),
-      sessionConfiguration.path, sessionConfiguration.domain, sessionConfiguration.sameSite, sessionConfiguration.httpOnly)
+      sessionConfiguration.path, sessionConfiguration.domain, sessionConfiguration.sameSite, sessionConfiguration.httpOnly, false)
 
   def bakeFlashCookie(flash: Flash)(using request: Request): Option[Cookie] =
     val flashConfiguration = request.httpConfiguration.flashConfig
     bakeBase64URLEncodedCookie(flashConfiguration.cookieName, flash.data, flashConfiguration.secure, None,
-      flashConfiguration.path, flashConfiguration.domain, flashConfiguration.sameSite, flashConfiguration.httpOnly)
+      flashConfiguration.path, flashConfiguration.domain, flashConfiguration.sameSite, flashConfiguration.httpOnly, false)
 
   def bakeBase64URLEncodedCookie(name:String, data: Map[String, String], secure: Boolean, maxAgeOpt: Option[Long], path: String,
-                                 domainOpt: Option[String], sameSiteOpt: Option["Strict" | "Lax" | "None"], httpOnly: Boolean, hostOnly: Boolean = false): Option[Cookie] =
+                                 domainOpt: Option[String], sameSiteOpt: Option["Strict" | "Lax" | "None"], httpOnly: Boolean, hostOnly: Boolean): Option[Cookie] =
     if data.isEmpty then None
     else
       val jwt = Json.toJson(data).encodeBase64URL

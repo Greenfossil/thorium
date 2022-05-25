@@ -88,6 +88,7 @@ trait Request(val requestContext: ServiceRequestContext, val aggregatedHttpReque
     requestContext.setAttr(RequestAttrs.TZ, tz)
   }
 
+  //FIXME - Session will be encrypted, need to do decrytion
   val session: Session = cookies.find(c => c.name() == RequestAttrs.Session.name()).flatMap{c =>
     val sessionJwt: JsValue = Json.parseBase64URL(c.value())
     sessionJwt.asOpt[Map[String, String]].map(Session(_))
