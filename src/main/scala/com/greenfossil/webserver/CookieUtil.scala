@@ -1,10 +1,20 @@
 package com.greenfossil.webserver
 
 import com.greenfossil.commons.json.Json
-import com.linecorp.armeria.common.Cookie
+import com.linecorp.armeria.common.{Cookie, CookieBuilder}
 import scala.concurrent.duration.*
 
 object CookieUtil {
+
+  /**
+    *
+    * @param name
+    * @param value
+    * @return - A cookie builder, it will create secure cookie by default,
+    *         to finish creating cookie by invoking build() method
+    */
+  def builder(name: String, value: String): CookieBuilder =
+    Cookie.secureBuilder(name, value)
 
   def bakeCookie(name: String, value: String)(using request: Request): Cookie =
     val cookieConfiguration = request.httpConfiguration.cookieConfig
@@ -98,10 +108,8 @@ object CookieUtil {
                   */
                  hostOnly: Boolean
                 ): Cookie =
-    val cookieBuilder =
-      if secure || sameSiteOpt.contains("None")
-      then Cookie.secureBuilder(name, value)
-      else Cookie.builder(name, value)
+    val cookieBuilder = Cookie.secureBuilder(name, value)
+    cookieBuilder.secure(secure || sameSiteOpt.contains("None"))
     Option(path).filter(_.nonEmpty).map(cookieBuilder.path)
     maxAgeOpt.map(cookieBuilder.maxAge)
     domainOpt.map(cookieBuilder.domain)

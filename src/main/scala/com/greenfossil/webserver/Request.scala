@@ -22,7 +22,9 @@ object RequestAttrs {
 }
 
 trait Request(val requestContext: ServiceRequestContext, val aggregatedHttpRequest: AggregatedHttpRequest) {
-  
+
+  import scala.jdk.CollectionConverters.*
+
   def env: Environment = requestContext.attr(RequestAttrs.Env)
   
   def httpConfiguration: HttpConfiguration = requestContext.attr(RequestAttrs.HttpConfig)
@@ -31,13 +33,16 @@ trait Request(val requestContext: ServiceRequestContext, val aggregatedHttpReque
 
   def queryParam(param: String): Option[String] = Option(requestContext.queryParam(param))
 
+  def queryParams(param: String): List[String] = requestContext.queryParams(param).asScala.toList
+
   def isXhr: Boolean = 
     // Check header key and value if XHR (case insensitive)
     requestContext.request().headers().contains("X-Requested-With","XMLHttpRequest" )
 
   def queryParams: QueryParams = requestContext.queryParams()
 
-  import scala.jdk.CollectionConverters.*
+  def queryString: String = queryParams.toQueryString
+
   def queryParamsList: List[(String, String)] = 
     queryParams.stream()
       .map(e => e.getKey -> e.getValue)
@@ -74,8 +79,11 @@ trait Request(val requestContext: ServiceRequestContext, val aggregatedHttpReque
   def acceptLanguages: Seq[LanguageRange] = 
     aggregatedHttpRequest.acceptLanguages().asScala.toSeq
 
-  def cookies: Set[Cookie] =
+  lazy val cookies: Set[Cookie] =
     aggregatedHttpRequest.headers().cookies().asInstanceOf[java.util.Set[Cookie]].asScala.toSet
+
+  def findCookie(name: String): Option[Cookie] =
+    cookies.find(c => c.name() == name)
 
   /*
    * Setup attrs
