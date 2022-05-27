@@ -1,5 +1,6 @@
 package com.greenfossil.webserver
 
+import com.greenfossil.commons.CryptoSupport
 import com.greenfossil.commons.json.Json
 import com.linecorp.armeria.common.{Cookie, CookieBuilder}
 import scala.concurrent.duration.*
@@ -39,10 +40,11 @@ object CookieUtil {
       flashConfiguration.path, flashConfiguration.domain, flashConfiguration.sameSite, flashConfiguration.httpOnly, false)
 
   def bakeBase64URLEncodedCookie(name:String, data: Map[String, String], secure: Boolean, maxAgeOpt: Option[Long], path: String,
-                                 domainOpt: Option[String], sameSiteOpt: Option["Strict" | "Lax" | "None"], httpOnly: Boolean, hostOnly: Boolean): Option[Cookie] =
+                                 domainOpt: Option[String], sameSiteOpt: Option["Strict" | "Lax" | "None"], httpOnly: Boolean, hostOnly: Boolean)
+                                (using request: Request): Option[Cookie] =
     if data.isEmpty then None
     else
-      val jwt = Json.toJson(data).encodeBase64URL
+      val jwt = CryptoSupport.base64EncryptAES(request.httpConfiguration.secretConfig.secret, Json.toJson(data).toString)
       Option(bakeCookie(name, jwt, secure, maxAgeOpt, path, domainOpt, sameSiteOpt, httpOnly, hostOnly))
 
   /*

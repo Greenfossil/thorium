@@ -3,7 +3,7 @@ package com.greenfossil.webserver
 import scala.annotation.targetName
 
 object Flash:
-  def apply(): Flash = new Flash(Map.empty)
+  def apply(): Flash = new Flash(Map.empty.withDefaultValue(""))
 
 case class Flash(data: Map[String, String]):
   export data.{+ as _, *}

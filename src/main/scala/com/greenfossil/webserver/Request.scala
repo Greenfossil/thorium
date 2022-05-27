@@ -1,5 +1,6 @@
 package com.greenfossil.webserver
 
+import com.greenfossil.commons.CryptoSupport
 import com.greenfossil.commons.json.{JsValue, Json}
 import com.linecorp.armeria.common.{AggregatedHttpRequest, Cookie, HttpMethod, HttpData, MediaType, QueryParams, RequestHeaders}
 import com.linecorp.armeria.server.ServiceRequestContext
@@ -97,13 +98,14 @@ trait Request(val requestContext: ServiceRequestContext, val aggregatedHttpReque
   }
 
   //FIXME - Session will be encrypted, need to do decrytion
-  val session: Session = cookies.find(c => c.name() == RequestAttrs.Session.name()).flatMap{c =>
-    val sessionJwt: JsValue = Json.parseBase64URL(c.value())
-    sessionJwt.asOpt[Map[String, String]].map(Session(_))
+  lazy val session: Session = cookies.find(c => c.name() == httpConfiguration.sessionConfig.cookieName).flatMap{c =>
+    Json.parse(CryptoSupport.base64DecryptAES(httpConfiguration.secretConfig.secret, c.value()))
+      .asOpt[Map[String, String]].map(Session(_))
   }.getOrElse(Session())
 
-  val flash: Flash = cookies.find(c => c.name() == RequestAttrs.Flash.name()).flatMap{c =>
-    Json.parseBase64URL(c.value()).asOpt[Map[String, String]].map(Flash(_))
+  lazy val flash: Flash = cookies.find(c => c.name() == httpConfiguration.flashConfig.cookieName).flatMap{c =>
+    Json.parse(CryptoSupport.base64DecryptAES(httpConfiguration.secretConfig.secret, c.value()))
+      .asOpt[Map[String, String]].map(Flash(_))
   }.getOrElse(Flash())
 
   @deprecated("use remoteAddress instead")

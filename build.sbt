@@ -3,6 +3,7 @@ val scala3Version = "3.1.1"
 lazy val armeriaVersion = "1.16.0"
 lazy val logbackVersion = "1.2.10"
 lazy val munitVersion = "0.7.29"
+lazy val commonsCryptoVersion = "0.1.0-RC2"
 
 lazy val webServer = project
   .in(file("."))
@@ -18,6 +19,7 @@ lazy val webServer = project
     libraryDependencies ++= Seq(
       "com.typesafe" % "config" % "1.4.2",
       "com.greenfossil" %% "data-mapping" % "0.1.0-RC4",
+      "com.greenfossil" %% "commons-crypto" % commonsCryptoVersion,
       "com.linecorp.armeria" %% "armeria-scala" % armeriaVersion,
       "ch.qos.logback" % "logback-classic" % logbackVersion % Runtime,
       "org.scalameta" %% "munit" % munitVersion % Test
