@@ -2,10 +2,10 @@ package com.greenfossil.webserver
 
 import com.greenfossil.commons.CryptoSupport
 import com.greenfossil.commons.json.{JsValue, Json}
-import com.linecorp.armeria.common.{AggregatedHttpRequest, Cookie, HttpMethod, HttpData, MediaType, QueryParams, RequestHeaders}
+import com.linecorp.armeria.common.{AggregatedHttpRequest, Cookie, HttpData, HttpHeaderNames, HttpMethod, MediaType, QueryParams, RequestHeaders}
 import com.linecorp.armeria.server.ServiceRequestContext
 
-import java.net.SocketAddress
+import java.net.{InetAddress, SocketAddress}
 import java.time.ZoneId
 import java.util.Locale.LanguageRange
 import java.util.concurrent.CompletableFuture
@@ -51,7 +51,7 @@ trait Request(val requestContext: ServiceRequestContext, val aggregatedHttpReque
       .asScala
       .toList
   
-  def remoteAddress[A <: java.net.SocketAddress]: A = requestContext.remoteAddress()
+  def remoteAddress: InetAddress = requestContext.remoteAddress()
 
   def secure: Boolean = "https".equalsIgnoreCase(uriScheme)
 
@@ -115,15 +115,19 @@ trait Request(val requestContext: ServiceRequestContext, val aggregatedHttpReque
     getHeader("X-Alt-Referer")
       .orElse(getHeader("referer"))
 
+  def method: HttpMethod = aggregatedHttpRequest.method()
+
+  def userAgent: Option[String] = Option(headers.get(HttpHeaderNames.USER_AGENT))
+
+  def authorization: Option[String] = Option(headers.get(HttpHeaderNames.AUTHORIZATION))
+
   def availableLanguages: Seq[Locale] = Seq(Locale.getDefault)
 
   def localeVariantOpt: Option[String] = None
 
   def locale: Locale = LocaleUtil.getBestMatchLocale(acceptLanguages, availableLanguages, localeVariantOpt)
-
-  def method(): HttpMethod = aggregatedHttpRequest.method()
   
-  def  asText: String = aggregatedHttpRequest.contentUtf8()
+  def asText: String = aggregatedHttpRequest.contentUtf8()
 
   //application/json
   def asJson: JsValue = Json.parse(asText)
@@ -153,7 +157,7 @@ import com.greenfossil.data.mapping.Mapping
 extension[A](field: Mapping[A])
   def bindFromRequest()(using request: Request): Mapping[A] =
     val queryData: List[(String, String)] =
-      request.method() match {
+      request.method match {
         case HttpMethod.POST | HttpMethod.PUT | HttpMethod.PATCH => Nil
         case _ => request.queryParamsList
       }
