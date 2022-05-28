@@ -3,6 +3,7 @@ package com.greenfossil.webserver
 import com.greenfossil.commons.CryptoSupport
 import com.greenfossil.commons.json.Json
 import com.linecorp.armeria.common.{Cookie, CookieBuilder}
+
 import scala.concurrent.duration.*
 
 object CookieUtil {

@@ -1,7 +1,5 @@
 package com.greenfossil.webserver
 
-import scala.concurrent.duration.FiniteDuration
-import scala.concurrent.duration.*
 import com.typesafe.config.*
 import org.slf4j.{Logger, LoggerFactory}
 
@@ -9,6 +7,7 @@ import java.nio.charset.StandardCharsets
 import java.security.MessageDigest
 import java.time
 import java.util.Base64
+import scala.concurrent.duration.*
 import scala.util.*
 
 type SameSiteCookie = "Strict" | "Lax"

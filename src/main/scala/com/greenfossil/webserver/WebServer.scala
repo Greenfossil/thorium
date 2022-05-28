@@ -1,8 +1,8 @@
 package com.greenfossil.webserver
 
 import com.linecorp.armeria.common.{AggregatedHttpRequest, HttpHeaders, HttpResponse, ResponseHeaders}
+import com.linecorp.armeria.server.*
 import com.linecorp.armeria.server.annotation.{ExceptionHandlerFunction, RequestConverterFunction, ResponseConverterFunction}
-import com.linecorp.armeria.server.{HttpService, Server, ServerErrorHandler, ServiceRequestContext}
 import com.typesafe.config.Config
 import org.slf4j.LoggerFactory
 
@@ -25,7 +25,7 @@ object WebServer:
     WebServer(null, Nil, Nil, None, HttpConfiguration.usingPort(port))
 
 case class WebServer(server: Server,
-                     routes: Seq[(String, HttpService)],
+                     services: Seq[(String, HttpService)],
                      annotatedServices: Seq[Any] = Nil,
                      errorHandlerOpt: Option[ServerErrorHandler],
                      httpConfiguration: HttpConfiguration,
@@ -41,7 +41,7 @@ case class WebServer(server: Server,
   def isTest = mode == Mode.Test
   def isProd = mode == Mode.Prod
 
-  export server.{start as _, toString as _ , *}
+  export server.{start as _, toString as _ , serviceConfigs => _,  *}
 
   lazy val defaultRequestConverter: RequestConverterFunction =
     (svcRequestContext: ServiceRequestContext,
@@ -67,11 +67,11 @@ case class WebServer(server: Server,
   def port: Int = server.activeLocalPort()
 
   def addService(endpoint: String, action: HttpService): WebServer =
-    copy(routes = routes :+ (endpoint, action))
+    copy(services = services :+ (endpoint, action))
 
-  def addServices(services: (Controller| Tuple2[String, HttpService]) *): WebServer  =
-    val (controllers: Seq[Controller], newRoutes: Seq[(String, HttpService)]) = services.partition(s => s.isInstanceOf[Controller])
-    copy(routes = routes ++ newRoutes, annotatedServices = annotatedServices ++ controllers)
+  def addServices(newServices: (Controller| Tuple2[String, HttpService]) *): WebServer  =
+    val (controllers: Seq[Controller], newSvcs: Seq[(String, HttpService)]) = newServices.partition(s => s.isInstanceOf[Controller])
+    copy(services = services ++ newSvcs, annotatedServices = annotatedServices ++ controllers)
 
   @deprecated("use addServices instead")
   def addAnnotatedService(annotatedService: Controller): WebServer =
@@ -91,6 +91,12 @@ case class WebServer(server: Server,
 
   import scala.jdk.CollectionConverters.*
 
+  def serviceConfigs: Seq[ServiceConfig] = server.serviceConfigs().asScala.toList
+
+  def serviceRoutes: Seq[Route] = serviceConfigs.map(_.route()).distinct
+
+  import scala.jdk.CollectionConverters.*
+
   lazy val allRequestConverters: util.List[RequestConverterFunction] =
     (defaultRequestConverter +: requestConverters).asJava
 
@@ -107,7 +113,7 @@ case class WebServer(server: Server,
     sb.maxRequestLength(httpConfiguration.maxRequestLength)
     httpConfiguration.maxNumConnectionOpt.foreach(maxConn => sb.maxNumConnections(maxConn))
     sb.requestTimeout(httpConfiguration.requestTimeout)
-    routes.foreach{route => sb.service(route._1, route._2)}
+    services.foreach{ route => sb.service(route._1, route._2)}
     annotatedServices.foreach{s => sb.annotatedService(s)}
     sb.annotatedServiceExtensions(allRequestConverters, allResponseConverters, allExceptionHandlers)
     errorHandlerOpt.foreach{ handler => sb.errorHandler(handler.orElse(ServerErrorHandler.ofDefault()))}
@@ -120,7 +126,7 @@ case class WebServer(server: Server,
     sb.maxRequestLength(httpConfiguration.maxRequestLength)
     httpConfiguration.maxNumConnectionOpt.foreach(maxConn => sb.maxNumConnections(maxConn))
     sb.requestTimeout(httpConfiguration.requestTimeout)
-    routes.foreach{route => sb.service(route._1, route._2)}
+    services.foreach{ route => sb.service(route._1, route._2)}
     annotatedServices.foreach{s => sb.annotatedService(s)}
     sb.annotatedServiceExtensions(allRequestConverters, allResponseConverters, allExceptionHandlers)
     errorHandlerOpt.foreach{ handler => sb.errorHandler(handler.orElse(ServerErrorHandler.ofDefault()))}
