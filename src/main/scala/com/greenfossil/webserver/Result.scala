@@ -1,11 +1,12 @@
 package com.greenfossil.webserver
 
 import com.greenfossil.commons.json.Json
-import com.linecorp.armeria.common.{Cookie, HttpResponse, HttpStatus}
+import com.linecorp.armeria.common.{Cookie, HttpResponse, HttpStatus, MediaType}
 
 import java.time.format.DateTimeFormatter
 import java.time.{ZoneOffset, ZonedDateTime}
 import scala.collection.immutable.TreeMap
+import scala.util.Try
 
 /**
  * Case Insensitive Ordering. We first compare by length, then
@@ -38,11 +39,10 @@ object ResponseHeader {
 
 case class ResponseHeader(headers: TreeMap[String, String], reasonPhrase:Option[String] = None)
 
-
 object Result {
 
   def apply(body: HttpResponse | String | Array[Byte]): Result =
-    new Result(ResponseHeader(Map.empty), body, Map.empty, None, None, Nil)
+    new Result(ResponseHeader(Map.empty), body, Map.empty, None, None, Nil, None)
 
 }
 
@@ -51,7 +51,9 @@ case class Result(header: ResponseHeader,
                   queryString: Map[String, Seq[String]] = Map.empty,
                   newSessionOpt: Option[Session] = None,
                   newFlashOpt: Option[Flash] = None,
-                  newCookies:Seq[Cookie]){
+                  newCookies:Seq[Cookie],
+                  contentTypeOpt: Option[MediaType] = None
+                 ){
 
   /**
    * Adds headers to this result.
@@ -90,6 +92,9 @@ case class Result(header: ResponseHeader,
    */
   def discardingHeader(name: String): Result = 
     copy(header = header.copy(headers = header.headers - name))
+
+  def as(contentType: MediaType): Result =
+    copy(contentTypeOpt = Some(contentType))
 
   /**
    * Adds cookies to this result. If the result already contains cookies then cookies with the same name in the new
@@ -231,6 +236,52 @@ case class Result(header: ResponseHeader,
 
   override def toString = s"Result($header)"
 
+  /*
+   * Forward Session, if not new values
+   * Discard session is newSession isEmpty or append new values
+   */
+  private def getNewSessionCookie(using req: Request): Option[Cookie] = newSessionOpt.map{ newSession =>
+    //If newSession isEmtpy, expire session cookie
+    if newSession.isEmpty then
+      CookieUtil.bakeDiscardCookie(req.httpConfiguration.sessionConfig.cookieName)
+    else
+      //Append new session will to session cookie
+      val session = req.session + newSession
+      CookieUtil.bakeSessionCookie(session).orNull
+  }
+
+  private def getNewFlashCookie(using req: Request): Option[Cookie] = newFlashOpt.flatMap{newFlash =>
+    //Create a new flash cookie
+    CookieUtil.bakeFlashCookie(newFlash)
+  }.orElse{
+    //Expire the current flash cookie
+    if req.flash.nonEmpty
+    then Some(CookieUtil.bakeDiscardCookie(req.httpConfiguration.flashConfig.cookieName))
+    else None
+  }
+
+  private def getAllCookies(using req: Request): Seq[Cookie] = (getNewSessionCookie ++ getNewFlashCookie).toList ++ newCookies
+
+  private def addCookiesToHttpResponse(cookies: Seq[Cookie], resp: HttpResponse): HttpResponse =
+    if cookies.isEmpty then resp
+    else resp.mapHeaders(_.toBuilder.cookies(cookies*).build())
+
+  private def addHeadersToHttpResponse(responseHeader: ResponseHeader, resp: HttpResponse): HttpResponse =
+    if responseHeader.headers.isEmpty then resp
+    else resp.mapHeaders(_.withMutations{builder =>
+      responseHeader.headers.map{ header =>
+        builder.set(header._1, header._2)
+      }
+    })
+
+  private def addContentTypeToHttpResponse(contextTypeOpt: Option[MediaType], resp: HttpResponse): HttpResponse =
+    contextTypeOpt match
+      case Some(contentType) =>
+        resp.mapHeaders(_.withMutations { builder =>
+          builder.contentType(contentType)
+        })
+      case None => resp
+
   def toHttpResponse(req: Request): HttpResponse =
     given Request = req
     val httpResp = body match
@@ -238,42 +289,12 @@ case class Result(header: ResponseHeader,
       case bytes: Array[Byte] => HttpResponse.of(HttpStatus.OK, req.contentType, bytes)
       case string: String => HttpResponse.of(string)
 
-    /*
-     * Forward Session, if not new values
-     * Discard session is newSession isEmpty or append new values
-     */
-    val sessionCookieOption: Option[Cookie] = newSessionOpt.map{ newSession =>
-        //If newSession isEmtpy, expire session cookie
-        if newSession.isEmpty then
-          CookieUtil.bakeDiscardCookie(req.httpConfiguration.sessionConfig.cookieName)
-        else
-          //Append new session will to session cookie
-          val session = req.session + newSession
-          CookieUtil.bakeSessionCookie(session).orNull
-    }
+    val result:Try[HttpResponse] = for {
+      respWithCookies <- Try(addCookiesToHttpResponse(getAllCookies, httpResp))
+      respWithHeaders <- Try(addHeadersToHttpResponse(header, respWithCookies))
+      respWithContentType <- Try(addContentTypeToHttpResponse(contentTypeOpt, respWithHeaders))
+    } yield respWithContentType
 
-
-    val flashCookieOpt: Option[Cookie] = newFlashOpt.flatMap{newFlash =>
-      //Create a new flash cookie
-      CookieUtil.bakeFlashCookie(newFlash)
-    }.orElse{
-      //Expire the current flash cookie
-      if req.flash.nonEmpty
-      then Some(CookieUtil.bakeDiscardCookie(req.httpConfiguration.flashConfig.cookieName))
-      else None
-    }
-
-    val httpRespWithCookies = (sessionCookieOption ++ flashCookieOpt).toList ++ newCookies match {
-      case Nil => httpResp
-      case cookies => httpResp.mapHeaders(_.toBuilder.cookies(cookies*).build())
-    }
-    
-    val httpRespWithHeaders = httpRespWithCookies.mapHeaders(_.withMutations{builder =>
-      header.headers.map{header =>
-        builder.set(header._1, header._2)
-      }
-    })
-    
-    httpRespWithHeaders
+    result.getOrElse(httpResp)
 
 }

@@ -74,7 +74,7 @@ trait Request(val requestContext: ServiceRequestContext, val aggregatedHttpReque
   
   def headers: RequestHeaders = aggregatedHttpRequest.headers()
 
-  def getHeader(name: String): Option[String] = Option(headers.get(name))
+  def getHeader(name: CharSequence): Option[String] = Option(headers.get(name))
 
   //https://www.javatips.net/api/java.util.locale.languagerange
   def acceptLanguages: Seq[LanguageRange] = 
