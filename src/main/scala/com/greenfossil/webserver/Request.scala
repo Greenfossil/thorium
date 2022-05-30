@@ -5,7 +5,7 @@ import com.greenfossil.commons.json.{JsValue, Json}
 import com.linecorp.armeria.common.*
 import com.linecorp.armeria.server.ServiceRequestContext
 
-import java.net.{InetAddress, SocketAddress}
+import java.net.{InetAddress, InetSocketAddress, SocketAddress}
 import java.time.ZoneId
 import java.util.Locale
 import java.util.Locale.LanguageRange
@@ -51,7 +51,8 @@ trait Request(val requestContext: ServiceRequestContext, val aggregatedHttpReque
       .asScala
       .toList
   
-  def remoteAddress: InetAddress = requestContext.remoteAddress()
+  def remoteAddress: InetAddress =
+    requestContext.remoteAddress[InetSocketAddress]().getAddress
 
   def secure: Boolean = "https".equalsIgnoreCase(uriScheme)
 
