@@ -1,6 +1,6 @@
 package com.greenfossil.webserver
 
-import com.linecorp.armeria.common.{HttpRequest, HttpResponse}
+import com.linecorp.armeria.common.{HttpData, HttpRequest, HttpResponse}
 import com.linecorp.armeria.server.{HttpService, ServiceRequestContext}
 import org.slf4j.LoggerFactory
 
@@ -26,6 +26,7 @@ trait EssentialAction extends HttpService:
         case s: String => HttpResponse.of(s)
         case hr: HttpResponse => hr
         case result:Result => result.toHttpResponse(req)
+        case bytes: Array[Byte] => HttpResponse.of(HttpData.wrap(bytes))
     })
     HttpResponse.from(f)
 
