@@ -21,7 +21,7 @@ object HttpConfiguration{
   def usingPort(port: Int): HttpConfiguration =
     HttpConfiguration().copy(httpPort = port)
 
-  def fromConfig(config: Config, environment: Environment): HttpConfiguration = {
+  def from(config: Config, environment: Environment): HttpConfiguration = {
     HttpConfiguration(
       context = config.getString("app.http.context"),
       httpPort = Try(config.getInt("app.http.port")).getOrElse(8080),

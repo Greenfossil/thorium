@@ -3,7 +3,7 @@ package com.greenfossil.webserver
 import java.io.{File, InputStream}
 
 enum Mode:
-  case Dev, Test, Prod
+  case Dev, Test, Prod, Demo
 
 case class Environment(rootPath: File, classLoader: ClassLoader, mode: Mode) {
 
@@ -78,6 +78,16 @@ case class Environment(rootPath: File, classLoader: ClassLoader, mode: Mode) {
     Option(classLoader.getResourceAsStream(n))
   }
 
+  def isProd: Boolean = mode == Mode.Prod
+
+  def isTest: Boolean = mode == Mode.Test
+
+  def isDemo: Boolean = mode == Mode.Demo
+
+  def isDev: Boolean = mode == Mode.Dev
+
+  def modeName: String = mode.toString.toLowerCase
+
 }
 
 object Environment {
@@ -88,7 +98,10 @@ object Environment {
    * Uses the same classloader that the environment classloader is defined in, and the current working directory as the
    * path.
    */
-  def simple(path: File = new File("."), mode: Mode = Mode.Test) =
+  def simple(path: File = new File("."), mode: Mode = Mode.Test): Environment =
     Environment(path, Environment.getClass.getClassLoader, mode)
+
+  def from(classLoader: ClassLoader): Environment =
+    Environment(new File("."), Environment.getClass.getClassLoader,  Mode.Test)
 }
 

@@ -2,7 +2,6 @@ package com.greenfossil.webserver
 
 import com.linecorp.armeria.common.{HttpData, HttpRequest, HttpResponse}
 import com.linecorp.armeria.server.{HttpService, ServiceRequestContext}
-import org.slf4j.LoggerFactory
 
 import java.util.concurrent.CompletableFuture
 import scala.concurrent.{ExecutionContext, Future}
@@ -20,7 +19,6 @@ trait EssentialAction extends HttpService:
    */
   override def serve(svcRequestContext: ServiceRequestContext, httpRequest: HttpRequest): HttpResponse =
     val f: CompletableFuture[HttpResponse] = svcRequestContext.request().aggregate().thenApply(aggregateRequest => {
-      Thread.currentThread().setContextClassLoader(getClass.getClassLoader)
       val req = new Request(svcRequestContext, aggregateRequest) {}
       apply(req) match
         case s: String => HttpResponse.of(s)

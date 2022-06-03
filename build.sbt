@@ -18,7 +18,7 @@ lazy val webServer = project
 
     libraryDependencies ++= Seq(
       "com.typesafe" % "config" % "1.4.2",
-      "com.greenfossil" %% "data-mapping" % "0.1.0-RC4",
+      "com.greenfossil" %% "data-mapping" % "0.1.0-RC5",
       "com.greenfossil" %% "commons-crypto" % commonsCryptoVersion,
       "com.linecorp.armeria" %% "armeria-scala" % armeriaVersion,
       "ch.qos.logback" % "logback-classic" % logbackVersion % Runtime,

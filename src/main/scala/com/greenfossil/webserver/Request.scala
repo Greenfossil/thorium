@@ -18,17 +18,19 @@ object RequestAttrs {
   val TZ = AttributeKey.valueOf[ZoneId]("tz")
   val Session = AttributeKey.valueOf[Session]("session")
   val Flash = AttributeKey.valueOf[Flash]("flash")
-  val Env = AttributeKey.valueOf[Environment]("env")
-  val HttpConfig = AttributeKey.valueOf[HttpConfiguration]("httpConfig")
+  val Config = AttributeKey.valueOf[Configuration]("config")
 }
 
 trait Request(val requestContext: ServiceRequestContext, val aggregatedHttpRequest: AggregatedHttpRequest) {
 
   import scala.jdk.CollectionConverters.*
 
-  def env: Environment = requestContext.attr(RequestAttrs.Env)
+  def config: Configuration = requestContext.attr(RequestAttrs.Config)
+
+  def env: Environment = config.environment
   
-  def httpConfiguration: HttpConfiguration = requestContext.attr(RequestAttrs.HttpConfig)
+  def httpConfiguration: HttpConfiguration = config.httpConfiguration
+
 
   def contentType: MediaType = requestContext.request().contentType()
 
