@@ -20,7 +20,7 @@ object CookieUtil {
 
   def bakeCookie(name: String, value: String)(using request: Request): Cookie =
     val cookieConfiguration = request.httpConfiguration.cookieConfig
-    bakeCookie(name, value, cookieConfiguration.maxAge.map(_._1))
+    bakeCookie(name, value, cookieConfiguration.maxAge.map(_.getSeconds))
 
   def bakeCookie(name: String, value: String, maxAgeOpt: Option[Long])(using request: Request): Cookie =
     val cookieConfiguration = request.httpConfiguration.cookieConfig
@@ -32,7 +32,7 @@ object CookieUtil {
 
   def bakeSessionCookie(session: Session)(using request: Request): Option[Cookie] =
     val sessionConfiguration = request.httpConfiguration.sessionConfig
-    bakeBase64URLEncodedCookie(sessionConfiguration.cookieName, session.data, sessionConfiguration.secure, sessionConfiguration.maxAge.map(_.length),
+    bakeBase64URLEncodedCookie(sessionConfiguration.cookieName, session.data, sessionConfiguration.secure, sessionConfiguration.maxAge.map(_.getSeconds),
       sessionConfiguration.path, sessionConfiguration.domain, sessionConfiguration.sameSite, sessionConfiguration.httpOnly, false)
 
   def bakeFlashCookie(flash: Flash)(using request: Request): Option[Cookie] =

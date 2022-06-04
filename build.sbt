@@ -18,7 +18,7 @@ lazy val webServer = project
 
     libraryDependencies ++= Seq(
       "com.typesafe" % "config" % "1.4.2",
-      "com.greenfossil" %% "data-mapping" % "0.1.0-RC5",
+      "com.greenfossil" %% "data-mapping" % "0.1.0-RC6-SNAPSHOT",
       "com.greenfossil" %% "commons-crypto" % commonsCryptoVersion,
       "com.linecorp.armeria" %% "armeria-scala" % armeriaVersion,
       "ch.qos.logback" % "logback-classic" % logbackVersion % Runtime,
@@ -27,6 +27,8 @@ lazy val webServer = project
   )
 
 lazy val nexus = "https://dev2.greenfossil.com:8001/repository/"
+
+parallelExecution := false
 
 ThisBuild / resolvers ++= Seq(
   "GF Release" at nexus + "public/",

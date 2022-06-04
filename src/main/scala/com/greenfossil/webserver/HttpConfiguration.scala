@@ -6,15 +6,12 @@ import org.slf4j.{Logger, LoggerFactory}
 import java.nio.charset.StandardCharsets
 import java.security.MessageDigest
 import java.time
+import java.time.Duration
 import java.util.Base64
 import scala.concurrent.duration.*
 import scala.util.*
 
 type SameSiteCookie = "Strict" | "Lax"
-
-private given Conversion[java.time.Duration, scala.concurrent.duration.FiniteDuration] with
-  override def apply(javaDur: time.Duration): FiniteDuration =
-    scala.concurrent.duration.Duration.fromNanos(javaDur.toNanos)
 
 object HttpConfiguration{
   
@@ -24,37 +21,37 @@ object HttpConfiguration{
   def from(config: Config, environment: Environment): HttpConfiguration = {
     HttpConfiguration(
       context = config.getString("app.http.context"),
-      httpPort = Try(config.getInt("app.http.port")).getOrElse(8080),
-      maxNumConnectionOpt = Option(config.getInt("app.http.maxNumConnection")),
+      httpPort = config.getInt("app.http.port"),
+      maxNumConnectionOpt = config.getIntOpt("app.http.maxNumConnection"),
       maxRequestLength = config.getInt("app.http.maxRequestLength"),
       requestTimeout = config.getDuration("app.http.requestTimeout"),
       cookieConfig = CookieConfiguration(
-        secure = config.getBoolean("app.http.cookie.secure"),
-        maxAge = Option(config.getDuration("app.http.cookie.maxAge")),
-        httpOnly = config.getBoolean("app.http.cookie.httpOnly"),
-        domain = Option(config.getString("app.http.cookie.domain")),
-        path = config.getString("app.http.cookie.path"),
-        sameSite = Option(config.getString("app.http.cookie.sameSite")).map(_.asInstanceOf[SameSiteCookie]),
-        hostOnly = config.getBoolean("app.http.cookie.hostOnly"),
-        jwt = JWTConfigurationParser(config, "app.http.cookie.jwt")
+        secure = config.getBoolean("app.http.cookies.secure"),
+        maxAge = config.getDurationOpt("app.http.cookies.maxAge"),
+        httpOnly = config.getBoolean("app.http.cookies.httpOnly"),
+        domain = config.getStringOpt("app.http.cookies.domain"),
+        path = config.getString("app.http.cookies.path"),
+        sameSite = config.getStringOpt("app.http.cookies.sameSite").map(_.asInstanceOf[SameSiteCookie]),
+        hostOnly = config.getBoolean("app.http.cookies.hostOnly"),
+        jwt = JWTConfigurationParser(config, "app.http.cookies.jwt")
       ),
       sessionConfig = SessionConfiguration(
         cookieName = config.getString("app.http.session.cookieName"),
         secure = config.getBoolean("app.http.session.secure"),
-        maxAge = Option(config.getDuration("app.http.session.maxAge")),
+        maxAge = config.getDurationOpt("app.http.session.maxAge"),
         httpOnly = config.getBoolean("app.http.session.httpOnly"),
-        domain = Option(config.getString("app.http.session.domain")),
+        domain = config.getStringOpt("app.http.session.domain"),
         path = config.getString("app.http.session.path"),
-        sameSite = Option(config.getString("app.http.session.sameSite")).map(_.asInstanceOf[SameSiteCookie]),
+        sameSite = config.getStringOpt("app.http.session.sameSite").map(_.asInstanceOf[SameSiteCookie]),
         jwt = JWTConfigurationParser(config, "app.http.session.jwt")
       ),
       flashConfig = FlashConfiguration(
         cookieName = config.getString("app.http.flash.cookieName"),
         secure = config.getBoolean("app.http.flash.secure"),
         httpOnly = config.getBoolean("app.http.flash.httpOnly"),
-        domain = Option(config.getString("app.http.flash.domain")),
+        domain = config.getStringOpt("app.http.flash.domain"),
         path = config.getString("app.http.flash.path"),
-        sameSite = Option(config.getString("app.http.flash.sameSite")).map(_.asInstanceOf[SameSiteCookie]),
+        sameSite = config.getStringOpt("app.http.flash.sameSite").map(_.asInstanceOf[SameSiteCookie]),
         jwt = JWTConfigurationParser(config, "app.http.flash.jwt")
       ),
       secretConfig = getSecretConfiguration(config, environment),
@@ -82,7 +79,7 @@ case class HttpConfiguration(
    httpPort: Int = 8080,
    maxNumConnectionOpt: Option[Int] = None,
    maxRequestLength: Int = 10485760,
-   requestTimeout: FiniteDuration = 10.seconds,
+   requestTimeout: Duration = Duration.ofSeconds(10),
    cookieConfig: CookieConfiguration = CookieConfiguration(),
    sessionConfig: SessionConfiguration = SessionConfiguration(),
    flashConfig: FlashConfiguration = FlashConfiguration(),
@@ -104,7 +101,7 @@ case class HttpConfiguration(
  */
 case class CookieConfiguration(
    secure: Boolean = false,
-   maxAge: Option[FiniteDuration] = None,
+   maxAge: Option[Duration] = None,
    httpOnly: Boolean = true,
    domain: Option[String] = None,
    path: String = "/",
@@ -128,7 +125,7 @@ case class CookieConfiguration(
 case class SessionConfiguration(
    cookieName: String = "APP_SESSION",
    secure: Boolean = false,
-   maxAge: Option[FiniteDuration] = None,
+   maxAge: Option[Duration] = None,
    httpOnly: Boolean = true,
    domain: Option[String] = None,
    path: String = "/",
@@ -221,8 +218,8 @@ object SecretConfiguration {
  */
 case class JWTConfiguration(
                              signatureAlgorithm: String = "HS256",
-                             expiresAfter: Option[FiniteDuration] = None,
-                             clockSkew: FiniteDuration = 30.seconds,
+                             expiresAfter: Option[Duration] = None,
+                             clockSkew: Duration = Duration.ofSeconds(30),
                              dataClaim: String = "data"
                            )
 
@@ -230,7 +227,7 @@ object JWTConfigurationParser {
   def apply(config: Config, parent: String): JWTConfiguration =
     JWTConfiguration(
       signatureAlgorithm = config.getString(s"${parent}.signatureAlgorithm"),
-      expiresAfter = Option(config.getDuration(s"${parent}.expiresAfter")),
+      expiresAfter = config.getDurationOpt(s"${parent}.expiresAfter"),
       clockSkew = config.getDuration(s"${parent}.clockSkew"),
       dataClaim = config.getString(s"${parent}.dataClaim")
     )
@@ -370,7 +367,7 @@ private def getSecretConfiguration(config: Config, environment: Environment): Se
       case Some(s) => s
     }
 
-  val provider = Option(config.getString("app.http.secret.provider"))
+  val provider = config.getStringOpt("app.http.secret.provider")
 
   SecretConfiguration(String.valueOf(secret), provider)
 }

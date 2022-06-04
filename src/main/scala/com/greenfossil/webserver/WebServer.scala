@@ -103,7 +103,6 @@ case class WebServer(server: Server,
   lazy val allExceptionHandlers: util.List[ExceptionHandlerFunction] =
     exceptionHandlers.asJava
 
-  import com.linecorp.armeria.scala.implicits.finiteDurationToJavaDuration
   private def buildServer: Server =
     buildServer(false)
 
