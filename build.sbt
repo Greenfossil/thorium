@@ -17,7 +17,7 @@ lazy val webServer = project
     Compile / javacOptions ++= Seq("-source", "17", "-target", "17"),
 
     libraryDependencies ++= Seq(
-      "com.typesafe" % "config" % "1.4.2",
+      "com.greenfossil" %% "typesafe-config-ext" % "0.1.0-SNAPSHOT",
       "com.greenfossil" %% "data-mapping" % "0.1.0-RC6-SNAPSHOT",
       "com.greenfossil" %% "commons-crypto" % commonsCryptoVersion,
       "com.linecorp.armeria" %% "armeria-scala" % armeriaVersion,
