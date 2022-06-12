@@ -70,10 +70,6 @@ case class WebServer(server: Server,
     val (controllers: Seq[Controller], newSvcs: Seq[(String, HttpService)]) = newServices.partition(s => s.isInstanceOf[Controller])
     copy(services = services ++ newSvcs, annotatedServices = annotatedServices ++ controllers)
 
-  @deprecated("use addServices instead")
-  def addAnnotatedService(annotatedService: Controller): WebServer =
-    copy(annotatedServices = annotatedServices :+ annotatedService)
-
   def setErrorHandler(h: ServerErrorHandler): WebServer =
     copy(errorHandlerOpt = Some(h))
 
@@ -110,7 +106,6 @@ case class WebServer(server: Server,
     buildServer(true)
 
   private def buildServer(secure:Boolean): Server =
-    Thread.currentThread().setContextClassLoader(this.getClass.getClassLoader)
     val sb = Server.builder()
     if configuration.httpPort > 0 then {
       if secure then
@@ -121,7 +116,13 @@ case class WebServer(server: Server,
     sb.maxRequestLength(configuration.maxRequestLength)
     configuration.maxNumConnectionOpt.foreach(maxConn => sb.maxNumConnections(maxConn))
     sb.requestTimeout(configuration.requestTimeout)
-    services.foreach{ route => sb.service(route._1, route._2)}
+    services.foreach{ route =>
+      sb.service(route._1, route._2.decorate((delegate, ctx, req) =>{
+        //embed the env and http config
+        ctx.setAttr(RequestAttrs.Config, configuration)
+        delegate.serve(ctx,req)
+      }))
+    }
     annotatedServices.foreach{s => sb.annotatedService(s)}
     sb.annotatedServiceExtensions(allRequestConverters, allResponseConverters, allExceptionHandlers)
     errorHandlerOpt.foreach{ handler => sb.errorHandler(handler.orElse(ServerErrorHandler.ofDefault()))}
