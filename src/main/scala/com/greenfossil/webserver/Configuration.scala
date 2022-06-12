@@ -7,18 +7,15 @@ object Configuration:
   def apply(): Configuration = from(getClass.getClassLoader)
 
   def usingPort(port: Int): Configuration =
-    val config = ConfigFactory.load(getClass.getClassLoader)
-    val environment = Environment.from(getClass.getClassLoader)
-    new Configuration(config, environment, HttpConfiguration.from(config, environment).copy(httpPort = port))
+    val configuration = from(getClass.getClassLoader)
+    configuration.copy(httpConfiguration = configuration.httpConfiguration.copy(httpPort = port))
 
   def from(classLoader: ClassLoader): Configuration =
-    from(ConfigFactory.load(classLoader),Environment.from(classLoader))
+    from(ConfigFactory.load(classLoader))
 
-  def from(config: Config, environment: Environment): Configuration =
-    new Configuration(config, environment, HttpConfiguration.from(config, environment))
-
-
-
+  def from(config: Config): Configuration =
+    val env = Environment.from(config)
+    new Configuration(config, env, HttpConfiguration.from(config, env))
 
 end Configuration
 

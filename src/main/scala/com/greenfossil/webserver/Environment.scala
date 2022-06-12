@@ -1,11 +1,32 @@
 package com.greenfossil.webserver
 
+import com.typesafe.config.{Config, ConfigFactory}
+
 import java.io.{File, InputStream}
 
-enum Mode:
+enum Mode extends Enum[Mode]:
   case Dev, Test, Prod, Demo
 
-case class Environment(rootPath: File, classLoader: ClassLoader, mode: Mode) {
+
+object Environment {
+
+  def from(classLoader: ClassLoader): Environment =
+    from(ConfigFactory.load(classLoader))
+
+  /**
+   * A simple environment.
+   *
+   * Uses the same classloader that the environment classloader is defined in, and the current working directory as the
+   * path.
+   */
+  def from(config: Config): Environment =
+    val mode = config.getEnum(classOf[Mode], "app.env")
+    Environment(config.getClass.getClassLoader, new File("."), mode)
+
+}
+
+
+case class Environment(classLoader: ClassLoader, rootPath: File,  mode: Mode) {
 
   /**
    * Retrieves a file relative to the application root path.
@@ -88,20 +109,5 @@ case class Environment(rootPath: File, classLoader: ClassLoader, mode: Mode) {
 
   def modeName: String = mode.toString.toLowerCase
 
-}
-
-object Environment {
-
-  /**
-   * A simple environment.
-   *
-   * Uses the same classloader that the environment classloader is defined in, and the current working directory as the
-   * path.
-   */
-  def simple(path: File = new File("."), mode: Mode = Mode.Test): Environment =
-    Environment(path, Environment.getClass.getClassLoader, mode)
-
-  def from(classLoader: ClassLoader): Environment =
-    Environment(new File("."), Environment.getClass.getClassLoader,  Mode.Test)
 }
 

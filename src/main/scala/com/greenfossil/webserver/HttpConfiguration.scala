@@ -14,9 +14,6 @@ import scala.util.*
 type SameSiteCookie = "Strict" | "Lax"
 
 object HttpConfiguration{
-  
-  def usingPort(port: Int): HttpConfiguration =
-    HttpConfiguration().copy(httpPort = port)
 
   def from(config: Config, environment: Environment): HttpConfiguration = {
     HttpConfiguration(
@@ -84,7 +81,7 @@ case class HttpConfiguration(
    sessionConfig: SessionConfiguration = SessionConfiguration(),
    flashConfig: FlashConfiguration = FlashConfiguration(),
    secretConfig: SecretConfiguration = SecretConfiguration(),
-   environment: Environment = Environment.simple()
+   environment: Environment
 )
 
 /**

@@ -12,7 +12,7 @@ import scala.util.Try
 
 object WebServer:
   /**
-   * A random port will be created
+   * Port is read from app.http.port in application.conf
    * @return
    */
   def apply(): WebServer = WebServer(null, Nil, Nil, None, Configuration())
