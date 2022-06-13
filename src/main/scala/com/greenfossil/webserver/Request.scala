@@ -4,6 +4,7 @@ import com.greenfossil.commons.CryptoSupport
 import com.greenfossil.commons.json.{JsValue, Json}
 import com.linecorp.armeria.common.*
 import com.linecorp.armeria.server.ServiceRequestContext
+import org.slf4j.LoggerFactory
 
 import java.net.{InetAddress, InetSocketAddress, SocketAddress}
 import java.time.ZoneId
@@ -11,7 +12,7 @@ import java.util.Locale
 import java.util.Locale.LanguageRange
 import java.util.concurrent.CompletableFuture
 import java.util.stream.Collectors
-import scala.util.Try
+import scala.util.{Failure, Try}
 
 object RequestAttrs {
   import io.netty.util.AttributeKey
@@ -24,6 +25,8 @@ object RequestAttrs {
 trait Request(val requestContext: ServiceRequestContext, val aggregatedHttpRequest: AggregatedHttpRequest) {
 
   import scala.jdk.CollectionConverters.*
+
+  val logger = LoggerFactory.getLogger("http.request")
 
   def config: Configuration = requestContext.attr(RequestAttrs.Config)
 
@@ -100,15 +103,20 @@ trait Request(val requestContext: ServiceRequestContext, val aggregatedHttpReque
     requestContext.setAttr(RequestAttrs.TZ, tz)
   }
 
-  //FIXME - Session will be encrypted, need to do decrytion
+  private def decryptCookieValue(cookie: Cookie): Option[Map[String, String]] = Try{
+    val cookieValue = CryptoSupport.base64DecryptAES(httpConfiguration.secretConfig.secret, cookie.value())
+    Json.parse(cookieValue).asOpt[Map[String, String]]
+  }.recoverWith{case e =>
+    logger.trace(s"Failed to decrypt the retrieved cookie: [${cookie.name()}] -> [${cookie.value()}]", e)
+    Failure(e)
+  }.toOption.flatten
+
   lazy val session: Session = cookies.find(c => c.name() == httpConfiguration.sessionConfig.cookieName).flatMap{c =>
-    Json.parse(CryptoSupport.base64DecryptAES(httpConfiguration.secretConfig.secret, c.value()))
-      .asOpt[Map[String, String]].map(Session(_))
+    decryptCookieValue(c).map(Session(_))
   }.getOrElse(Session())
 
   lazy val flash: Flash = cookies.find(c => c.name() == httpConfiguration.flashConfig.cookieName).flatMap{c =>
-    Json.parse(CryptoSupport.base64DecryptAES(httpConfiguration.secretConfig.secret, c.value()))
-      .asOpt[Map[String, String]].map(Flash(_))
+    decryptCookieValue(c).map(Flash(_))
   }.getOrElse(Flash())
 
   @deprecated("use remoteAddress instead")
