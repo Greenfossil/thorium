@@ -10,15 +10,15 @@ lazy val webServer = project
   .settings(
     name := "web-server",
     organization := "com.greenfossil",
-    version := "0.1.0-RC3-SNAPSHOT",
+    version := "0.1.0-RC3",
 
     scalaVersion := scala3Version,
 
     Compile / javacOptions ++= Seq("-source", "17", "-target", "17"),
 
     libraryDependencies ++= Seq(
-      "com.greenfossil" %% "typesafe-config-ext" % "0.1.0-SNAPSHOT",
-      "com.greenfossil" %% "data-mapping" % "0.1.0-RC6-SNAPSHOT",
+      "com.greenfossil" %% "typesafe-config-ext" % "0.1.0-RC1",
+      "com.greenfossil" %% "data-mapping" % "0.1.0-RC6",
       "com.greenfossil" %% "commons-crypto" % commonsCryptoVersion,
       "com.linecorp.armeria" %% "armeria-scala" % armeriaVersion,
       "ch.qos.logback" % "logback-classic" % logbackVersion % Runtime,
