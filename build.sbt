@@ -28,6 +28,9 @@ lazy val webServer = project
 
 lazy val nexus = "https://dev2.greenfossil.com:8001/repository/"
 
+import scala.concurrent.duration.DurationInt
+csrConfiguration := csrConfiguration.value.withTtl(0 seconds)
+
 parallelExecution := false
 
 ThisBuild / resolvers ++= Seq(
