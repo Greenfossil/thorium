@@ -261,7 +261,7 @@ private def configError(
     def position          = null
     def input             = originUrlOpt.map(readUrlAsString).orNull
     def sourceName        = originSourceName
-    override def toString = "Configuration error: " + getMessage
+    override def toString = "Configuration error: " + message
   }
 }
 
@@ -300,51 +300,46 @@ private def getSecretConfiguration(config: Config, environment: Environment): Se
 
   val secret =
     Option(config.getString("app.http.secret.key")) match {
-      case Some("changeme") | Some(Blank()) | None if  environment.mode == Mode.Prod =>
+      case Some("changeme") | Some(Blank()) | None if environment.isProd =>
         val message =
           """
             |The application secret has not been set, and we are in prod mode. Your application is not secure.
-            |To set the application secret, please read http://playframework.com/documentation/latest/ApplicationSecret
           """.stripMargin
         throw reportError("app.http.secret", message)
 
-      case Some(s) if s.length < SecretConfiguration.SHORTEST_SECRET_LENGTH && environment.mode == Mode.Prod =>
+      case Some(s) if s.length < SecretConfiguration.SHORTEST_SECRET_LENGTH && environment.isProd =>
         val message =
           """
             |The application secret is too short and does not have the recommended amount of entropy.  Your application is not secure.
-            |To set the application secret, please read http://playframework.com/documentation/latest/ApplicationSecret
           """.stripMargin
         throw reportError("app.http.secret", message)
 
-      case Some(s) if s.length < SecretConfiguration.SHORT_SECRET_LENGTH && environment.mode == Mode.Prod =>
+      case Some(s) if s.length < SecretConfiguration.SHORT_SECRET_LENGTH && environment.isProd =>
         val message =
           """
             |Your secret key is very short, and may be vulnerable to dictionary attacks.  Your application may not be secure.
             |The application secret should ideally be 32 bytes of completely random input, encoded in base64.
-            |To set the application secret, please read http://playframework.com/documentation/latest/ApplicationSecret
           """.stripMargin
         logger.warn(message)
         s
 
       case Some(s)
-        if s.length < SecretConfiguration.SHORTEST_SECRET_LENGTH && !s.equals("changeme") && s.trim.nonEmpty && environment.mode == Mode.Dev =>
+        if s.length < SecretConfiguration.SHORTEST_SECRET_LENGTH && !s.equals("changeme") && s.trim.nonEmpty && environment.isDev =>
         val message =
           """
             |The application secret is too short and does not have the recommended amount of entropy.  Your application is not secure
             |and it will fail to start in production mode.
-            |To set the application secret, please read http://playframework.com/documentation/latest/ApplicationSecret
           """.stripMargin
         logger.warn(message)
         s
 
       case Some(s)
-        if s.length < SecretConfiguration.SHORT_SECRET_LENGTH && !s.equals("changeme") && s.trim.nonEmpty && environment.mode == Mode.Dev =>
+        if s.length < SecretConfiguration.SHORT_SECRET_LENGTH && !s.equals("changeme") && s.trim.nonEmpty && environment.isDev =>
         val message =
           """
             |Your secret key is very short, and may be vulnerable to dictionary attacks.  Your application may not be secure.
             |The application secret should ideally be 32 bytes of completely random input, encoded in base64. While the application
             |will be able to start in production mode, you will also see a warning when it is starting.
-            |To set the application secret, please read http://playframework.com/documentation/latest/ApplicationSecret
           """.stripMargin
         logger.warn(message)
         s
