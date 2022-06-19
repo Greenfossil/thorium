@@ -10,15 +10,15 @@ lazy val webServer = project
   .settings(
     name := "web-server",
     organization := "com.greenfossil",
-    version := "0.1.0-RC3",
+    version := "0.1.0-RC4-SNAPSHOT",
 
     scalaVersion := scala3Version,
 
     Compile / javacOptions ++= Seq("-source", "17", "-target", "17"),
 
     libraryDependencies ++= Seq(
-      "com.greenfossil" %% "typesafe-config-ext" % "0.1.0-RC1",
-      "com.greenfossil" %% "data-mapping" % "0.1.0-RC6",
+      "com.greenfossil" %% "typesafe-config-ext" % "0.1.0-RC2",
+      "com.greenfossil" %% "data-mapping" % "0.1.0-RC7",
       "com.greenfossil" %% "commons-crypto" % commonsCryptoVersion,
       "com.linecorp.armeria" %% "armeria-scala" % armeriaVersion,
       "ch.qos.logback" % "logback-classic" % logbackVersion % Runtime,
@@ -27,9 +27,6 @@ lazy val webServer = project
   )
 
 lazy val nexus = "https://dev2.greenfossil.com:8001/repository/"
-
-import scala.concurrent.duration.DurationInt
-csrConfiguration := csrConfiguration.value.withTtl(0 seconds)
 
 parallelExecution := false
 

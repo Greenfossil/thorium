@@ -8,6 +8,8 @@ case class Endpoint(url: String, method: String = "POST") {
   
   def absoluteUrl(request: Request): String = 
     absoluteUrl(request.uriAuthority, request.secure)
+
+  def urlWithQueryParams(params: (String, Any)*): String = ""
   
 }
 

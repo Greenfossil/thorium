@@ -11,9 +11,9 @@ trait MacroSupport(globalDebug: Boolean):
       case sym if !sym.isTerm              => findEnclosingTerm(sym.owner)
       case _                               => sym
 
-  def showStructure(using quotes:Quotes)(msg: String, x: quotes.reflect.Tree | List[quotes.reflect.Tree]): Unit =
+  def showStructure(using quotes:Quotes)(msg: String, x: quotes.reflect.Tree | List[quotes.reflect.Tree], debug: Boolean = globalDebug): Unit =
     import quotes.reflect.*
-    if globalDebug
+    if debug
     then
       x match
         case xs: List[Tree]  =>
@@ -24,9 +24,9 @@ trait MacroSupport(globalDebug: Boolean):
 
     else ()
 
-  def showCode(using quotes:Quotes)(msg: String, x: quotes.reflect.Tree | List[quotes.reflect.Tree] ): Unit =
+  def showCode(using quotes:Quotes)(msg: String, x: quotes.reflect.Tree | List[quotes.reflect.Tree], debug: Boolean = globalDebug): Unit =
     import quotes.reflect.*
-    if globalDebug
+    if debug
     then
       x match
         case xs: List[Tree]  =>
