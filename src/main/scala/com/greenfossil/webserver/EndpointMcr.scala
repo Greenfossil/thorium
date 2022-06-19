@@ -10,13 +10,12 @@ def EndpointMcrImpl[A <: EssentialAction : Type](actionExpr: Expr[A])(using Quot
   computeActionAnnotatedPath(
     actionExpr,
     (exprMethod, exprPathPartList, exprQueryParamKeys, exprQueryParamValues) =>
-//      '{ Endpoint(${exprPathPartList}.mkString("/") + ${exprQueryParamKeys}.mkString("?", "&", "") , ${exprMethod}) }
-//      '{ Endpoint(${exprPathPartList}.mkString("/") +  ${exprQueryParamValues}.mkString("?", "&", "") , ${exprMethod}) }
       '{ Endpoint(${exprPathPartList}.mkString("/") +
+        ${exprQueryParamKeys}.headOption.map(_ => "?").getOrElse("") +
         ${exprQueryParamKeys}
           .zip(${exprQueryParamValues})
           .map(kv => s"${kv._1}=${kv._2}")
-          .mkString("?", "&", "") ,
+          .mkString("&") ,
         ${exprMethod})
       }
   )
