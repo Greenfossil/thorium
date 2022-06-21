@@ -34,7 +34,6 @@ trait Request(val requestContext: ServiceRequestContext, val aggregatedHttpReque
   
   def httpConfiguration: HttpConfiguration = config.httpConfiguration
 
-
   def contentType: MediaType = requestContext.request().contentType()
 
   def queryParam(param: String): Option[String] = Option(requestContext.queryParam(param))
@@ -62,6 +61,12 @@ trait Request(val requestContext: ServiceRequestContext, val aggregatedHttpReque
   def secure: Boolean = "https".equalsIgnoreCase(uriScheme)
 
   def uri: java.net.URI = aggregatedHttpRequest.uri()
+
+  //TOOD - need to test
+  def host: String =
+    getHeader(HttpHeaderNames.HOST).getOrElse(uri.getHost)
+
+  def port: Int = uri.getPort
 
   /**
     * The host name and port number (if there is any)

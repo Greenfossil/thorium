@@ -118,13 +118,8 @@ object AnnotatedPathMacroSupport extends MacroSupport(globalDebug = false) {
         accPath ++ newParts
       }
 
-    println(s"path parts ${computedPath.size}")
-    computedPath foreach { part => showCode("part", part.asTerm, true) }
-
     //compute QueryString
     val queryParamKeys: List[String] = paramNameValueLookup.keys.toList diff usedPathParamNames
-    println(s"queryParamKeys ${queryParamKeys.size}")
-    queryParamKeys foreach println
     val queryParamValues: List[Expr[Any]] = queryParamKeys.map(k => paramNameValueLookup(k).asExprOf[Any])
 
     (computedPath, queryParamKeys, queryParamValues)
