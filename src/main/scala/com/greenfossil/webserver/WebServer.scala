@@ -99,13 +99,13 @@ case class WebServer(server: Server,
   lazy val allExceptionHandlers: util.List[ExceptionHandlerFunction] =
     exceptionHandlers.asJava
 
-  private def buildServer: Server =
-    buildServer(false)
+  private def buildServer(builderExtFn: ServerBuilder => Unit): Server =
+    buildServer(false, builderExtFn)
 
-  private def buildSecureServer: Server =
-    buildServer(true)
+  private def buildSecureServer(builderExtFn: ServerBuilder => Unit): Server =
+    buildServer(true, builderExtFn)
 
-  private def buildServer(secure:Boolean): Server =
+  private def buildServer(secure:Boolean, builderExtFn: ServerBuilder => Unit): Server =
     val sb = Server.builder()
     if configuration.httpPort > 0 then {
       if secure then
@@ -126,10 +126,13 @@ case class WebServer(server: Server,
     annotatedServices.foreach{s => sb.annotatedService(s)}
     sb.annotatedServiceExtensions(allRequestConverters, allResponseConverters, allExceptionHandlers)
     errorHandlerOpt.foreach{ handler => sb.errorHandler(handler.orElse(ServerErrorHandler.ofDefault()))}
+    builderExtFn(sb)
     sb.build
 
-  def start(): WebServer =
-    val newServer = buildServer
+  def start(): WebServer = start(_ => ())
+
+  def start(builderExtFn: ServerBuilder => Unit): WebServer =
+    val newServer = buildServer(builderExtFn)
     Runtime.getRuntime.addShutdownHook(Thread(
       () => {
         newServer.stop().join
@@ -140,8 +143,10 @@ case class WebServer(server: Server,
     newServer.start().join()
     copy(server = newServer)
 
-  def startSecure(): WebServer =
-    val newSecureServer = buildSecureServer
+  def startSecure(): WebServer = startSecure(_ => ())
+
+  def startSecure(builderExtFn: ServerBuilder => Unit): WebServer =
+    val newSecureServer = buildSecureServer(builderExtFn)
     Runtime.getRuntime.addShutdownHook(Thread(
       () => {
         newSecureServer.stop().join
