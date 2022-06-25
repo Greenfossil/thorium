@@ -3,6 +3,7 @@ package com.greenfossil.webserver
 import com.linecorp.armeria.common.{AggregatedHttpRequest, HttpHeaders, HttpResponse, ResponseHeaders}
 import com.linecorp.armeria.server.*
 import com.linecorp.armeria.server.annotation.{ExceptionHandlerFunction, RequestConverterFunction, ResponseConverterFunction}
+import com.linecorp.armeria.server.docs.DocService
 import com.typesafe.config.Config
 import org.slf4j.LoggerFactory
 
@@ -30,7 +31,9 @@ case class WebServer(server: Server,
                      configuration: Configuration,
                      requestConverters: Seq[RequestConverterFunction] = Nil,
                      responseConverters: Seq[ResponseConverterFunction] = Nil,
-                     exceptionHandlers: Seq[ExceptionHandlerFunction] = Nil) {
+                     exceptionHandlers: Seq[ExceptionHandlerFunction] = Nil,
+                     beforeStartInitOpt: Option[ServerBuilder => Unit] = None,
+                     docServiceNameOpt: Option[String] = None) {
 
   private val logger = LoggerFactory.getLogger("webserver")
 
@@ -99,13 +102,13 @@ case class WebServer(server: Server,
   lazy val allExceptionHandlers: util.List[ExceptionHandlerFunction] =
     exceptionHandlers.asJava
 
-  private def buildServer(builderExtFn: ServerBuilder => Unit): Server =
-    buildServer(false, builderExtFn)
+  private def buildServer(): Server =
+    buildServer(false)
 
-  private def buildSecureServer(builderExtFn: ServerBuilder => Unit): Server =
-    buildServer(true, builderExtFn)
+  private def buildSecureServer(): Server =
+    buildServer(true)
 
-  private def buildServer(secure:Boolean, builderExtFn: ServerBuilder => Unit): Server =
+  private def buildServer(secure:Boolean): Server =
     val sb = Server.builder()
     if configuration.httpPort > 0 then {
       if secure then
@@ -126,13 +129,19 @@ case class WebServer(server: Server,
     annotatedServices.foreach{s => sb.annotatedService(s)}
     sb.annotatedServiceExtensions(allRequestConverters, allResponseConverters, allExceptionHandlers)
     errorHandlerOpt.foreach{ handler => sb.errorHandler(handler.orElse(ServerErrorHandler.ofDefault()))}
-    builderExtFn(sb)
+    beforeStartInitOpt.foreach(_.apply(sb))
+    docServiceNameOpt.foreach(name => sb.serviceUnder(name, new DocService()))
     sb.build
 
-  def start(): WebServer = start(_ => ())
+  def addBeforeStartInit(initFn: ServerBuilder => Unit): WebServer =
+    copy(beforeStartInitOpt = Option(initFn))
 
-  def start(builderExtFn: ServerBuilder => Unit): WebServer =
-    val newServer = buildServer(builderExtFn)
+  def addDocService(): WebServer = addDocService("/docs")
+
+  def addDocService(prefix: String): WebServer = copy(docServiceNameOpt = Option(prefix))
+
+  def start(): WebServer =
+    val newServer = buildServer()
     Runtime.getRuntime.addShutdownHook(Thread(
       () => {
         newServer.stop().join
@@ -143,10 +152,8 @@ case class WebServer(server: Server,
     newServer.start().join()
     copy(server = newServer)
 
-  def startSecure(): WebServer = startSecure(_ => ())
-
-  def startSecure(builderExtFn: ServerBuilder => Unit): WebServer =
-    val newSecureServer = buildSecureServer(builderExtFn)
+  def startSecure(): WebServer =
+    val newSecureServer = buildSecureServer()
     Runtime.getRuntime.addShutdownHook(Thread(
       () => {
         newSecureServer.stop().join

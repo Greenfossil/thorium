@@ -9,5 +9,9 @@ import com.greenfossil.webserver.*
       Ok(s"Howdy! env:${request.env.mode}")
     })
     .addServices(BasicServices,FormServices,SimpleServices)
+    .addDocService()
+    .addBeforeStartInit(sb => {
+      sb.serviceUnder("/docs", new com.linecorp.armeria.server.docs.DocService())
+    })
     .start()
   println(s"Server started... ${Thread.currentThread()}")
