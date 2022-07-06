@@ -75,10 +75,9 @@ object FormServices extends Controller {
     Ok(s"arg:${arg}, form:${encodedForm}")
   }
 
-  @Post("/form-patharg-query/:arg") //curl -d "name=homer&id=8" -X POST  http://localhost:8080/form-patharg-query/:abc\?postalCode\=12345
-  def formPathArgQuery(@Param arg: String, @Param postalCode: Int) = Action { implicit request =>
-    val encodedForm = request.asFormUrlEncoded
-    Ok(s"arg:${arg} form:${encodedForm} postalCode:${postalCode}")
+  @Post("/form-patharg-query") //curl -d "name=homer" -X POST  http://localhost:8080/form-patharg-query\?postalCode\=12345
+  def formPathArgQuery(@Param postalCode: Int) = Action { implicit request =>
+    Ok(s"postalCode:${postalCode}")
   }
 
 }

@@ -60,7 +60,7 @@ trait Request(val requestContext: ServiceRequestContext, val aggregatedHttpReque
 
   def secure: Boolean = "https".equalsIgnoreCase(uriScheme)
 
-  def uri: java.net.URI = aggregatedHttpRequest.uri()
+  def uri: java.net.URI = requestContext.request().uri()
 
   //TOOD - need to test
   def host: String =
@@ -79,20 +79,20 @@ trait Request(val requestContext: ServiceRequestContext, val aggregatedHttpReque
     */
   def uriScheme: String = uri.getScheme
 
-  def path: String = aggregatedHttpRequest.path()
+  def path: String = requestContext.path()
 
   def endpoint: Endpoint = Endpoint(path)
   
-  def headers: RequestHeaders = aggregatedHttpRequest.headers()
+  def headers: RequestHeaders = requestContext.request().headers()
 
   def getHeader(name: CharSequence): Option[String] = Option(headers.get(name))
 
   //https://www.javatips.net/api/java.util.locale.languagerange
   def acceptLanguages: Seq[LanguageRange] = 
-    aggregatedHttpRequest.acceptLanguages().asScala.toSeq
+    requestContext.request().acceptLanguages().asScala.toSeq
 
   lazy val cookies: Set[Cookie] =
-    aggregatedHttpRequest.headers().cookies().asInstanceOf[java.util.Set[Cookie]].asScala.toSet
+    requestContext.request().headers().cookies().asInstanceOf[java.util.Set[Cookie]].asScala.toSet
 
   def findCookie(name: String): Option[Cookie] =
     cookies.find(c => c.name() == name)
@@ -131,7 +131,7 @@ trait Request(val requestContext: ServiceRequestContext, val aggregatedHttpReque
     getHeader("X-Alt-Referer")
       .orElse(getHeader("referer"))
 
-  def method: HttpMethod = aggregatedHttpRequest.method()
+  def method: HttpMethod = requestContext.method()
 
   def userAgent: Option[String] = Option(headers.get(HttpHeaderNames.USER_AGENT))
 
@@ -142,7 +142,10 @@ trait Request(val requestContext: ServiceRequestContext, val aggregatedHttpReque
   def localeVariantOpt: Option[String] = None
 
   def locale: Locale = LocaleUtil.getBestMatchLocale(acceptLanguages, availableLanguages, localeVariantOpt)
-  
+
+  /*
+   *  ---- to be removed below
+   */
   def asText: String = aggregatedHttpRequest.contentUtf8()
 
   //application/json

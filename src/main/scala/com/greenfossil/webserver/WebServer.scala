@@ -166,5 +166,3 @@ case class WebServer(server: Server,
 
 }
 
-//TODO - https://armeria.dev/docs/advanced-production-checklist
-class ServerConfig(val maxNumConnections: Int, maxRequestLength: Int, requestTimeoutInSecs: Int)

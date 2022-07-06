@@ -1,6 +1,6 @@
 package com.greenfossil.webserver
 
-import com.linecorp.armeria.common.{AggregatedHttpRequest, HttpData, HttpRequest, HttpResponse}
+import com.linecorp.armeria.common.{AggregatedHttpRequest, HttpData, HttpRequest, HttpResponse, HttpStatus}
 import com.linecorp.armeria.server.{HttpService, ServiceRequestContext}
 
 import java.time.Duration
@@ -19,26 +19,31 @@ trait EssentialAction extends HttpService:
    * @return
    */
   override def serve(svcRequestContext: ServiceRequestContext, httpRequest: HttpRequest): HttpResponse =
-    val future = svcRequestContext.request().aggregate()
-    println(s"future.isDone = ${future.isDone}")
     val f: CompletableFuture[HttpResponse] =
-      if !future.isDone then {
-        println(s"Processing not done future")
-        future.thenApply(aggregateRequest => invokeAction(svcRequestContext, aggregateRequest))
-      } else {
-        println("Processing is done future")
-        val resp = invokeAction(svcRequestContext, future.get())
-        CompletableFuture.completedFuture(resp)
-      }
+      svcRequestContext
+        .request()
+        .aggregate()
+        .thenCompose(aggregateRequest => invokeAction(svcRequestContext, aggregateRequest))
     HttpResponse.from(f)
 
-  private def invokeAction(svcRequestContext:ServiceRequestContext, aggregateRequest: AggregatedHttpRequest): HttpResponse = {
-    val req = new Request(svcRequestContext, aggregateRequest) {}
-    apply(req) match
-      case s: String => HttpResponse.of(s)
-      case hr: HttpResponse => hr
-      case result: Result => result.toHttpResponse(req)
-      case bytes: Array[Byte] => HttpResponse.of(HttpData.wrap(bytes))
+  private def invokeAction(svcRequestContext:ServiceRequestContext, aggregateRequest: AggregatedHttpRequest): CompletableFuture[HttpResponse] = {
+    val f = new CompletableFuture[HttpResponse]()
+    svcRequestContext.blockingTaskExecutor().execute(() => {
+      try{
+        val req = new Request(svcRequestContext, aggregateRequest) {}
+        val resp = apply(req) match
+          case s: String => HttpResponse.of(s)
+          case hr: HttpResponse => hr
+          case result: Result => result.toHttpResponse(req)
+          case bytes: Array[Byte] => HttpResponse.of(HttpData.wrap(bytes))
+        f.complete(resp)
+      } catch
+        case t: Throwable => {
+          t.printStackTrace()
+          f.complete(HttpResponse.of(HttpStatus.INTERNAL_SERVER_ERROR))
+        }
+    })
+    f
   }
 
   /**
