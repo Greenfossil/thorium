@@ -39,17 +39,17 @@ object TestService {
     }))
 
   @Post("/post3")
-  def post3(@Param queryArg: String)(req: ActionRequest) =
+  def post3(@Param queryArg: String) =
     Action{implicit req: ActionRequest =>
       s"queryArg:$queryArg content:${req.content}"
     }
 
-    @Post("/post4")
-    def post4(@Param queryArg: String, ctx: ServiceRequestContext, request: AggregatedHttpRequest) =
-      ctx.updateRequest(request.toHttpRequest())
-      Action{implicit req: ActionRequest =>
-        s"queryArg:$queryArg content:${req.content}"
-      }
+  @Post("/post4")
+  def post4(@Param queryArg: String, ctx: ServiceRequestContext, request: AggregatedHttpRequest) =
+    ctx.updateRequest(request.toHttpRequest())
+    Action{implicit req: ActionRequest =>
+      s"queryArg:$queryArg content:${req.content}"
+    }
 
 }
 
