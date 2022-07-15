@@ -107,15 +107,28 @@ object AnnotatedPathMacroSupport extends MacroSupport(globalDebug = false) {
           report.errorAndAbort(s"Path param [$name] of path [$declaredPath] cannot be found in method's param names [${paramNameValueLookup.keySet.mkString(",")}]  ", actionExpr)
     }
 
-    //compute Path
-    val computedPath: List[Expr[Any]] =
-      val parts = declaredPath.split("/:")
+    def paramPathExtractor(path: String): List[Expr[Any]] = {
+      val parts = path.split("/:")
       parts.tail.foldLeft(List[Expr[Any]](Expr(parts.head))) { (accPath, part) =>
         val newParts = part.split("/").toList match
           case Nil =>  Nil
           case pathParamName +: rightParts => getPathParamExpr(pathParamName) +: rightParts.map(p => Expr(p))
 
         accPath ++ newParts
+      }
+    }
+
+    //compute Path
+    val computedPath: List[Expr[Any]] =
+      declaredPath match {
+        case path if path.startsWith("prefix:/") =>
+          List(Expr(path.replaceFirst("prefix:","")))
+        case path if path.matches("regex:\\^?.+") =>
+          val regexPath = path.replaceFirst("regex:\\^?([^$]+)\\$?", "$1") //remove 'regex:' + optional '^' + optional '?'
+          val paramPath = regexPath.replaceAll("/\\(\\?<(\\w+)>.+?\\)", "/:$1") //replace regex-param with :param
+          paramPathExtractor(paramPath)
+
+        case path => paramPathExtractor(path)
       }
 
     //compute QueryString
