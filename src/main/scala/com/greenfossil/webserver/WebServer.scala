@@ -26,7 +26,7 @@ object WebServer:
 
 case class WebServer(server: Server,
                      services: Seq[(String, HttpService)],
-                     annotatedServices: Seq[Any] = Nil,
+                     annotatedServices: Seq[Controller] = Nil,
                      errorHandlerOpt: Option[ServerErrorHandler],
                      configuration: Configuration,
                      requestConverters: Seq[RequestConverterFunction] = Nil,
@@ -61,7 +61,9 @@ case class WebServer(server: Server,
       //embed the env and http config
       svcRequestContext.setAttr(RequestAttrs.Config, configuration)
       result match
-        case action: EssentialAction => action.serve(svcRequestContext, null)
+        case action: EssentialAction => action.serve(svcRequestContext, svcRequestContext.request())
+        case resp: ActionResponse => HttpResponse.of(actionResponse2HttpResponse(resp))
+        case result: Result => HttpResponse.of(actionResponse2HttpResponse(result))
         case _ => ResponseConverterFunction.fallthrough()
 
   def port: Int = server.activeLocalPort()

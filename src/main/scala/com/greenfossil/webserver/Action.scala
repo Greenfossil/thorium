@@ -2,6 +2,7 @@ package com.greenfossil.webserver
 
 import com.linecorp.armeria.common.{AggregatedHttpRequest, HttpData, HttpRequest, HttpResponse, HttpStatus}
 import com.linecorp.armeria.server.{HttpService, ServiceRequestContext}
+import org.slf4j.LoggerFactory
 
 import java.time.Duration
 import java.util.concurrent.CompletableFuture
@@ -10,6 +11,18 @@ import scala.concurrent.{ExecutionContext, Future}
 trait Controller
 
 type ActionResponse =  HttpResponse | Result | String | Array[Byte]
+
+private[webserver] val _actionLogger = LoggerFactory.getLogger("webserver-action")
+
+private[webserver] def actionResponse2HttpResponse(x: ActionResponse): HttpResponse =
+  x match
+    case s: String => HttpResponse.of(s)
+    case hr: HttpResponse => hr
+    case result: Result =>
+      val ctx  = ServiceRequestContext.current()
+      val req = new Request(ctx, null) {}
+      result.toHttpResponse(req)
+    case bytes: Array[Byte] => HttpResponse.of(HttpData.wrap(bytes))
 
 trait EssentialAction extends HttpService:
   /**
@@ -39,7 +52,7 @@ trait EssentialAction extends HttpService:
         f.complete(resp)
       } catch
         case t: Throwable => {
-          t.printStackTrace()
+          _actionLogger.warn("Invoke Action error", t)
           f.complete(HttpResponse.of(HttpStatus.INTERNAL_SERVER_ERROR))
         }
     })

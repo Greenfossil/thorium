@@ -1,10 +1,10 @@
 package com.greenfossil.webserver
 
-object AnnotatedPathMacroSupport extends MacroSupport(globalDebug = false) {
+object AnnotatedPathMacroSupport2 extends MacroSupport(globalDebug = false) {
 
   import scala.quoted.*
 
-  def computeActionAnnotatedPath[A <: EssentialAction : Type, R : Type](actionExpr: Expr[A],
+  def computeActionAnnotatedPath[A : Type, R : Type](actionExpr: Expr[A],
                                                                         onSuccessCallback: (Expr[String], Expr[List[Any]], Expr[List[String]], Expr[List[Any]]) =>  Expr[R])
                                                                        (using Quotes): Expr[R] =
     import quotes.reflect.*
@@ -42,7 +42,7 @@ object AnnotatedPathMacroSupport extends MacroSupport(globalDebug = false) {
    * @tparam P - Computed annotated path
    * @return
    */
-  private def getAnnotatedPath[A <: EssentialAction : Type, P : Type](using Quotes)(
+  private def getAnnotatedPath[A : Type, P : Type](using Quotes)(
     actionExpr: Expr[A],
     annList: List[quotes.reflect.Term],
     paramNameValueLookup: Map[String, quotes.reflect.Term],
@@ -88,7 +88,7 @@ object AnnotatedPathMacroSupport extends MacroSupport(globalDebug = false) {
     }.flatten
   }
 
-  private def getComputedPathExpr[A <: EssentialAction : Type](using Quotes)(
+  private def getComputedPathExpr[A : Type](using Quotes)(
     actionExpr: Expr[A],
     paramNameValueLookup: Map[String, quotes.reflect.Term],
     declaredPath: String): (List[Expr[Any]], List[String], List[Expr[Any]])  = {
@@ -128,6 +128,7 @@ object AnnotatedPathMacroSupport extends MacroSupport(globalDebug = false) {
           val paramPath = regexPath.replaceAll("/\\(\\?<(\\w+)>.+?\\)", "/:$1") //replace regex-param with :param
           paramPathExtractor(paramPath)
 
+        case path if path.startsWith("glob:/") => ???
         case path => paramPathExtractor(path)
       }
 

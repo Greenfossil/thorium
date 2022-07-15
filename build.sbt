@@ -18,7 +18,7 @@ lazy val webServer = project
       "com.greenfossil" %% "commons-crypto" % commonsCryptoVersion,
       "com.greenfossil" %% "typesafe-config-ext" % typesafeConfigExtVersion,
       "com.greenfossil" %% "data-mapping" % "0.1.0-RC11",
-      "com.linecorp.armeria" %% "armeria-scala" % "1.16.0",
+      "com.linecorp.armeria" %% "armeria-scala" % "1.17.0",
       "ch.qos.logback" % "logback-classic" % "1.2.11" % Runtime,
       "org.scalameta" %% "munit" % "0.7.29" % Test
     )

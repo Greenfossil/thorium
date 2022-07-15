@@ -75,9 +75,13 @@ object FormServices extends Controller {
     Ok(s"arg:${arg}, form:${encodedForm}")
   }
 
-  @Post("/form-patharg-query") //curl -d "name=homer" -X POST  http://localhost:8080/form-patharg-query\?postalCode\=12345
-  def formPathArgQuery(@Param postalCode: Int) = Action { implicit request =>
-    Ok(s"postalCode:${postalCode}")
-  }
+  @Post("/form-request1") //curl -d "name=homer" -X POST  http://localhost:8080/form-request1\?queryArg\=12345
+  def formRequest1(@Param queryArg: Int) =
+    Action { implicit request =>
+      s"queryArg:${queryArg} , req ${request.asFormUrlEncoded}"
+    }
 
+  @Post("/form-request2") //curl -d "name=homer" -X POST  http://localhost:8080/form-request2\?queryArg\=12345
+  def formRequest2(@Param queryArg: Int)(using request: Request) =
+    s"queryArg:${queryArg} , req ${request.asFormUrlEncoded}"
 }
