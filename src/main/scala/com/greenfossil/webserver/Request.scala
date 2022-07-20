@@ -143,9 +143,6 @@ trait Request(val requestContext: ServiceRequestContext, val aggregatedHttpReque
 
   def locale: Locale = LocaleUtil.getBestMatchLocale(acceptLanguages, availableLanguages, localeVariantOpt)
 
-  /*
-   *  ---- to be removed below
-   */
   def asText: String = aggregatedHttpRequest.contentUtf8()
 
   //application/json
@@ -188,7 +185,6 @@ extension[A](field: Mapping[A])
 //        field.bind(req.asMultipartFormData.get().asFormUrlEncoded ++ queryData.groupMap(_._1)(_._2))
 
       case req if Try(req.asJson).isSuccess =>
-        //        bind(req.asJson, querydata)
         field.bind(request.asJson)
 
       case req =>

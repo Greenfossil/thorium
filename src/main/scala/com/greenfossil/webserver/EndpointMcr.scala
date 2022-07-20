@@ -1,14 +1,14 @@
 package com.greenfossil.webserver
 
-inline def EndpointMcr[A <: EssentialAction](inline action: A): Endpoint =
-  ${ EndpointMcrImpl( '{action} ) }
+inline def EndpointMcr[A](inline ep: A): Endpoint =
+  ${ EndpointMcrImpl( '{ep} ) }
 
 import scala.quoted.*
-def EndpointMcrImpl[A <: EssentialAction : Type](actionExpr: Expr[A])(using Quotes): Expr[Endpoint] =
+def EndpointMcrImpl[A : Type](epExpr: Expr[A])(using Quotes): Expr[Endpoint] =
   import AnnotatedPathMacroSupport.*
 
   computeActionAnnotatedPath(
-    actionExpr,
+    epExpr,
     (exprMethod, exprPathPartList, exprQueryParamKeys, exprQueryParamValues) =>
       '{
         Endpoint(

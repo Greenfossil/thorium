@@ -1,7 +1,9 @@
 package com.greenfossil.webserver
 
 import com.linecorp.armeria.server.annotation.*
-
+/*
+ *  Class annotated path is currently not supported - Need to lift this restriction
+ */
 object SingletonService extends Controller {
 
 //    @Get("/classRefAction")

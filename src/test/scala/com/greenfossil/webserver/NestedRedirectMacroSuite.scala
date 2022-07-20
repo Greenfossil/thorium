@@ -14,7 +14,6 @@ object NestedRedirectServices extends Controller {
   def nestedRedirectFn(ep: Endpoint): Result =
     Redirect(ep)
 
-
   @Get("/actionEnd")
   def actionEnd = Action{ request =>
     Ok("End")
@@ -28,6 +27,5 @@ class NestedRedirectMacroSuite extends munit.FunSuite {
     val ep = Endpoint(NestedRedirectServices.actionEnd)
     assertNoDiff(ep.url, "/actionEnd")
   }
-
 
 }

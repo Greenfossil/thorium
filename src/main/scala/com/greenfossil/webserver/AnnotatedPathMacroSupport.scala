@@ -1,10 +1,12 @@
 package com.greenfossil.webserver
 
+import java.nio.charset.{Charset, StandardCharsets}
+
 object AnnotatedPathMacroSupport extends MacroSupport(globalDebug = false) {
 
   import scala.quoted.*
 
-  def computeActionAnnotatedPath[A <: EssentialAction : Type, R : Type](actionExpr: Expr[A],
+  def computeActionAnnotatedPath[A : Type, R : Type](actionExpr: Expr[A],
                                                                         onSuccessCallback: (Expr[String], Expr[List[Any]], Expr[List[String]], Expr[List[Any]]) =>  Expr[R])
                                                                        (using Quotes): Expr[R] =
     import quotes.reflect.*
@@ -42,7 +44,7 @@ object AnnotatedPathMacroSupport extends MacroSupport(globalDebug = false) {
    * @tparam P - Computed annotated path
    * @return
    */
-  private def getAnnotatedPath[A <: EssentialAction : Type, P : Type](using Quotes)(
+  private def getAnnotatedPath[A : Type, P : Type](using Quotes)(
     actionExpr: Expr[A],
     annList: List[quotes.reflect.Term],
     paramNameValueLookup: Map[String, quotes.reflect.Term],
@@ -88,7 +90,7 @@ object AnnotatedPathMacroSupport extends MacroSupport(globalDebug = false) {
     }.flatten
   }
 
-  private def getComputedPathExpr[A <: EssentialAction : Type](using Quotes)(
+  private def getComputedPathExpr[A : Type](using Quotes)(
     actionExpr: Expr[A],
     paramNameValueLookup: Map[String, quotes.reflect.Term],
     declaredPath: String): (List[Expr[Any]], List[String], List[Expr[Any]])  = {
@@ -98,16 +100,20 @@ object AnnotatedPathMacroSupport extends MacroSupport(globalDebug = false) {
     //Parameterized Path
     var usedPathParamNames: List[String] = Nil
 
-    def getPathParamExpr(name: String): Expr[Any] = {
+    def getPathParamExpr(name: String): Expr[Any] =
       paramNameValueLookup.get(name) match
         case Some(value) =>
           usedPathParamNames = usedPathParamNames :+ name
-          value.asExpr
+          value match {
+            case Literal(c: StringConstant)  =>
+              //UrlEncode for all String value
+              Expr(java.net.URLEncoder.encode(c.value.asInstanceOf[String], StandardCharsets.UTF_8))
+            case x => x.asExpr
+          }
         case None =>
           report.errorAndAbort(s"Path param [$name] of path [$declaredPath] cannot be found in method's param names [${paramNameValueLookup.keySet.mkString(",")}]  ", actionExpr)
-    }
 
-    def paramPathExtractor(path: String): List[Expr[Any]] = {
+    def paramPathExtractor(path: String): List[Expr[Any]] =
       val parts = path.split("/:")
       parts.tail.foldLeft(List[Expr[Any]](Expr(parts.head))) { (accPath, part) =>
         val newParts = part.split("/").toList match
@@ -116,7 +122,6 @@ object AnnotatedPathMacroSupport extends MacroSupport(globalDebug = false) {
 
         accPath ++ newParts
       }
-    }
 
     //compute Path
     val computedPath: List[Expr[Any]] =
@@ -127,13 +132,24 @@ object AnnotatedPathMacroSupport extends MacroSupport(globalDebug = false) {
           val regexPath = path.replaceFirst("regex:\\^?([^$]+)\\$?", "$1") //remove 'regex:' + optional '^' + optional '?'
           val paramPath = regexPath.replaceAll("/\\(\\?<(\\w+)>.+?\\)", "/:$1") //replace regex-param with :param
           paramPathExtractor(paramPath)
-
-        case path => paramPathExtractor(path)
+//        case path if path.startsWith("glob:/") =>
+//          scala.compiletime.error("glob: is not supported")
+        case path =>
+          //convert all braced params to colon params
+          val _path=path.replaceAll("/\\{(\\w+)}", "/:$1")
+          paramPathExtractor(_path)
       }
 
     //compute QueryString
     val queryParamKeys: List[String] = paramNameValueLookup.keys.toList diff usedPathParamNames
-    val queryParamValues: List[Expr[Any]] = queryParamKeys.map(k => paramNameValueLookup(k).asExprOf[Any])
+    val queryParamValues: List[Expr[Any]] = queryParamKeys.map{k =>
+      paramNameValueLookup(k) match {
+        case Literal(c: StringConstant) =>
+          //UrlEncode for all String value
+          Expr(java.net.URLEncoder.encode(c.value.asInstanceOf[String], StandardCharsets.UTF_8))
+        case x => x.asExpr
+      }
+    }
 
     (computedPath, queryParamKeys, queryParamValues)
   }

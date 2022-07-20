@@ -7,7 +7,6 @@ import java.io.{File, InputStream}
 enum Mode extends Enum[Mode]:
   case Dev, Test, Prod, Demo
 
-
 object Environment {
 
   def from(classLoader: ClassLoader): Environment =
@@ -75,10 +74,9 @@ case class Environment(classLoader: ClassLoader, rootPath: File,  mode: Mode) {
    * @param name the absolute name of the resource (from the classpath root)
    * @return the resource URL, if found
    */
-  def resource(name: String): Option[java.net.URL] = {
+  def resource(name: String): Option[java.net.URL] =
     val n = name.stripPrefix("/")
     Option(classLoader.getResource(n))
-  }
 
   /**
    * Scans the application classloader to retrieve a resource’s contents as a stream.
@@ -94,10 +92,9 @@ case class Environment(classLoader: ClassLoader, rootPath: File,  mode: Mode) {
    * @param name the absolute name of the resource (from the classpath root)
    * @return a stream, if found
    */
-  def resourceAsStream(name: String): Option[InputStream] = {
+  def resourceAsStream(name: String): Option[InputStream] =
     val n = name.stripPrefix("/")
     Option(classLoader.getResourceAsStream(n))
-  }
 
   def isProd: Boolean = mode == Mode.Prod
 

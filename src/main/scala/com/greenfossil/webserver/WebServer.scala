@@ -1,6 +1,6 @@
 package com.greenfossil.webserver
 
-import com.linecorp.armeria.common.{AggregatedHttpRequest, HttpHeaders, HttpResponse, ResponseHeaders}
+import com.linecorp.armeria.common.{AggregatedHttpRequest, HttpData, HttpHeaders, HttpResponse, ResponseHeaders}
 import com.linecorp.armeria.server.*
 import com.linecorp.armeria.server.annotation.{ExceptionHandlerFunction, RequestConverterFunction, ResponseConverterFunction}
 import com.linecorp.armeria.server.docs.DocService
@@ -9,6 +9,7 @@ import org.slf4j.LoggerFactory
 
 import java.lang.reflect.ParameterizedType
 import java.util
+import java.util.concurrent.CompletableFuture
 import scala.util.Try
 
 object WebServer:
@@ -37,11 +38,11 @@ case class WebServer(server: Server,
 
   private val logger = LoggerFactory.getLogger("webserver")
 
-  def mode = configuration.environment.mode
+  def mode: Mode = configuration.environment.mode
 
-  def isDev  = mode == Mode.Dev
-  def isTest = mode == Mode.Test
-  def isProd = mode == Mode.Prod
+  def isDev: Boolean = mode == Mode.Dev
+  def isTest: Boolean = mode == Mode.Test
+  def isProd: Boolean = mode == Mode.Prod
 
   export server.{start as _, toString as _ , serviceConfigs => _,  *}
 
@@ -61,10 +62,23 @@ case class WebServer(server: Server,
       //embed the env and http config
       svcRequestContext.setAttr(RequestAttrs.Config, configuration)
       result match
-        case action: EssentialAction => action.serve(svcRequestContext, svcRequestContext.request())
-        case resp: ActionResponse => HttpResponse.of(actionResponse2HttpResponse(resp))
-        case result: Result => HttpResponse.of(actionResponse2HttpResponse(result))
-        case _ => ResponseConverterFunction.fallthrough()
+        case action: EssentialAction =>
+          action.serve(svcRequestContext, svcRequestContext.request())
+        case s: String =>
+          HttpResponse.from(CompletableFuture.completedFuture(HttpResponse.of(s)))
+        case hr: HttpResponse =>
+          hr
+        case bytes: Array[Byte] =>
+          HttpResponse.of(HttpData.wrap(bytes))
+        case result: Result =>
+          throw new RuntimeException("Response should not have Result at this stage")
+//          val resp = svcRequestContext.request().aggregate().thenApply( aggReq => {
+//            val req = new Request(svcRequestContext, aggReq){}
+//            result.toHttpResponse(req)
+//          })
+//          HttpResponse.from(resp)
+        case _ =>
+          ResponseConverterFunction.fallthrough()
 
   def port: Int = server.activeLocalPort()
 

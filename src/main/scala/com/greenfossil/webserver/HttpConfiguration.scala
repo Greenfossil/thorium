@@ -15,7 +15,7 @@ type SameSiteCookie = "Strict" | "Lax"
 
 object HttpConfiguration{
 
-  def from(config: Config, environment: Environment): HttpConfiguration = {
+  def from(config: Config, environment: Environment): HttpConfiguration =
     HttpConfiguration(
       context = config.getString("app.http.context"),
       httpPort = config.getInt("app.http.port"),
@@ -54,8 +54,6 @@ object HttpConfiguration{
       secretConfig = getSecretConfiguration(config, environment),
       environment = environment
     )
-
-  }
 
 }
 

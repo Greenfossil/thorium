@@ -25,8 +25,6 @@ trait UsefulException extends RuntimeException {
   
 }
 
-trait AppException extends UsefulException {
-
-}
+trait AppException extends UsefulException
 
 trait ExceptionSource extends AppException

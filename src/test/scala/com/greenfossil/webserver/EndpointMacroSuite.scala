@@ -12,13 +12,10 @@ class EndpointMacroSuite extends munit.FunSuite {
   @Get("/endpoint2/:name")
   def endpoint2(@Param name : String) = Action { req => "endpoint2"}
 
-//  @Get("/endpoint3/{name}") //alternate variable notation
-//  def endpoint3(@Param name : String) = Action { req => "endpoint3"}
-
   @Get("/endpoint3") //query string
   def endpoint3(@Param name: String) = Action { req => "endpoint3"}
 
-  @Post("/endpoint5/:name")
+  @Post("/endpoint4/:name")
   def endpoint4(@Param members: Seq[String], @Param name: String, @Param time: LocalDateTime) = Action { req => "endpoint5"}
 
   test("annotated endpoint"){
@@ -38,7 +35,7 @@ class EndpointMacroSuite extends munit.FunSuite {
     val now = LocalDateTime.now
     val members = Seq("Marge Simpson", "Bart Simpson", "Maggie Simpson")
     val ep4 = Endpoint(endpoint4(members, "homer", now))
-    assertNoDiff(ep4.url, "/endpoint5/homer?" +
+    assertNoDiff(ep4.url, "/endpoint4/homer?" +
         Endpoint.paramKeyValue("members", members) + "&" +
         Endpoint.paramKeyValue("time", now.toString))
     assertNoDiff(ep4.method, "Post")

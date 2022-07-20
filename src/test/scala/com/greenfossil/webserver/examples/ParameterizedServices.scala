@@ -14,6 +14,10 @@ object ParameterizedServices extends Controller {
   @Get("prefix:/howdy")
   def prefixEndpoint = "prefix - howdy"
 
+  @Get("/{name}/{age}/:contact")
+  def bracedParams(@Param name: String, @Param age:Int, @Param contact: String) =
+    s"braced-param name:${name} age:${age} contact:${contact}"
+
   /*
    * curl http://localhost:8080/regex/string/homer - this works
    * curl http://localhost:8080/regex/string/123 - this wont work
@@ -39,8 +43,8 @@ object ParameterizedServices extends Controller {
   @Get("regex:/mixbad/:min/(?<max>\\d+)") //this will not work curl http://localhost:8080/mixbad/first/20
   def regexMixBadEndpoint(@Param min : String, @Param max: Int) = s"regex3Mix-String,Int - min:$min - max:$max"
 
-  @Get("glob:/*/hello/**")
-  def globEndpoint(@Param("0") prefix: String, @Param("1") name: String) = s"glob [$name] and [$name]"
+//  @Get("glob:/*/hello/**")
+//  def globEndpoint(@Param("0") prefix: String, @Param("1") name: String) = s"glob [$name] and [$name]"
 
 
 }

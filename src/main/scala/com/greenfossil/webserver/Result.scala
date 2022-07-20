@@ -15,11 +15,10 @@ import scala.util.Try
  * at the content of the strings.
  */
 private object CaseInsensitiveOrdered extends Ordering[String] {
-  def compare(x: String, y: String): Int = {
+  def compare(x: String, y: String): Int =
     val xl = x.length
     val yl = y.length
     if xl < yl then -1 else if (xl > yl) 1 else x.compareToIgnoreCase(y)
-  }
 }
 
 object ResponseHeader {
@@ -123,13 +122,12 @@ case class Result(header: ResponseHeader,
    * @param cookiesName the cookies to discard along to this result
    * @return the new result
    */
-  def discardingCookies[A <: String | Cookie](cookies: A*)(using request: Request): Result = {
+  def discardingCookies[A <: String | Cookie](cookies: A*)(using request: Request): Result =
     val _cookies: Seq[Cookie] = cookies.map{
         case name: String => CookieUtil.bakeCookie(name, "", Option(0L))
         case c: Cookie => c
     }
     withCookies(_cookies*)
-  }
 
   /**
    * Sets a new session for this result.
@@ -184,10 +182,9 @@ case class Result(header: ResponseHeader,
    * @return the new result
    */
   //TODO - check if need to warnFlashingIfNotRedirect
-  def flashing(flash: Flash): Result = {
+  def flashing(flash: Flash): Result =
 //    Result.warnFlashingIfNotRedirect(flash, header)
     copy(newFlashOpt = Some(flash))
-  }
 
   /**
    * Adds values to the flash scope for this result.
