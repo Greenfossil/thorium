@@ -1,14 +1,15 @@
 val scala3Version = "3.1.3"
 
 lazy val commonsCryptoVersion = "0.1.0-RC3"
-lazy val typesafeConfigExtVersion = "0.1.0-RC3"
+lazy val typesafeConfigExtVersion = "0.1.0-RC4"
+lazy val datamappingVersion="0.1.0-RC12"
 
 lazy val webServer = project
   .in(file("."))
   .settings(
     name := "web-server",
     organization := "com.greenfossil",
-    version := "0.1.0-RC7",
+    version := "0.1.0-RC10-SNAPSHOT",
 
     scalaVersion := scala3Version,
 
@@ -17,8 +18,8 @@ lazy val webServer = project
     libraryDependencies ++= Seq(
       "com.greenfossil" %% "commons-crypto" % commonsCryptoVersion,
       "com.greenfossil" %% "typesafe-config-ext" % typesafeConfigExtVersion,
-      "com.greenfossil" %% "data-mapping" % "0.1.0-RC11",
-      "com.linecorp.armeria" %% "armeria-scala" % "1.17.0",
+      "com.greenfossil" %% "data-mapping" % datamappingVersion,
+      "com.linecorp.armeria" %% "armeria-scala" % "1.17.1",
       "ch.qos.logback" % "logback-classic" % "1.2.11" % Runtime,
       "org.scalameta" %% "munit" % "0.7.29" % Test
     )

@@ -3,6 +3,12 @@ package com.greenfossil.webserver.examples
 import com.greenfossil.webserver.*
 import com.linecorp.armeria.server.annotation.{Get, Param}
 
+@main def redirectMain =
+  val server = WebServer(8080)
+    .addServices(Redirect1Services)
+    .addServices(Redirect2Services)
+    .start()
+
 object Redirect1Services extends Controller {
 
   //curl http://localhost:8080/action1 -L
@@ -20,6 +26,10 @@ object Redirect1Services extends Controller {
 }
 
 object Redirect2Services extends Controller {
+
+  /*
+   * curl http://localhost:8080/action3 -L
+   */
   @Get("/action3")
   def action3 = Action { request =>
     Redirect(action4)
@@ -33,9 +43,3 @@ object Redirect2Services extends Controller {
   }
 
 }
-
-@main def redirectMain =
-    val server = WebServer(8080)
-      .addServices(Redirect1Services)
-      .addServices(Redirect2Services)
-      .start()

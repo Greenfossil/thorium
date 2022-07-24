@@ -8,8 +8,6 @@ import com.typesafe.config.Config
 import org.slf4j.LoggerFactory
 
 import java.lang.reflect.ParameterizedType
-import java.util
-import java.util.concurrent.CompletableFuture
 import scala.util.Try
 
 object WebServer:
@@ -54,7 +52,12 @@ case class WebServer(server: Server,
           //embed the env and http config
           svcRequestContext.setAttr(RequestAttrs.Config, configuration)
           if expectedResultType == classOf[com.greenfossil.webserver.Request]
-          then new com.greenfossil.webserver.Request(svcRequestContext, aggHttpRequest) {}
+          then {
+            val request = new com.greenfossil.webserver.Request(svcRequestContext, aggHttpRequest) {}
+            //Create a request for use in ResponseConverter
+            svcRequestContext.setAttr(RequestAttrs.Request, request)
+            request
+          }
           else RequestConverterFunction.fallthrough()
 
   lazy val defaultResponseConverter: ResponseConverterFunction =
@@ -65,18 +68,15 @@ case class WebServer(server: Server,
         case action: EssentialAction =>
           action.serve(svcRequestContext, svcRequestContext.request())
         case s: String =>
-          HttpResponse.from(CompletableFuture.completedFuture(HttpResponse.of(s)))
+          HttpResponse.of(s)
         case hr: HttpResponse =>
           hr
         case bytes: Array[Byte] =>
           HttpResponse.of(HttpData.wrap(bytes))
         case result: Result =>
-          throw new RuntimeException("Response should not have Result at this stage")
-//          val resp = svcRequestContext.request().aggregate().thenApply( aggReq => {
-//            val req = new Request(svcRequestContext, aggReq){}
-//            result.toHttpResponse(req)
-//          })
-//          HttpResponse.from(resp)
+          val req = svcRequestContext.attr(RequestAttrs.Request)
+          require(req != null, "Request is not initialized in ServiceRequestContext")
+          result.toHttpResponse(req)
         case _ =>
           ResponseConverterFunction.fallthrough()
 
@@ -109,13 +109,13 @@ case class WebServer(server: Server,
 
   import scala.jdk.CollectionConverters.*
 
-  lazy val allRequestConverters: util.List[RequestConverterFunction] =
+  lazy val allRequestConverters: java.util.List[RequestConverterFunction] =
     (defaultRequestConverter +: requestConverters).asJava
 
-  lazy val allResponseConverters: util.List[ResponseConverterFunction] =
+  lazy val allResponseConverters: java.util.List[ResponseConverterFunction] =
     (defaultResponseConverter +: responseConverters).asJava
 
-  lazy val allExceptionHandlers: util.List[ExceptionHandlerFunction] =
+  lazy val allExceptionHandlers: java.util.List[ExceptionHandlerFunction] =
     exceptionHandlers.asJava
 
   private def buildServer(): Server =

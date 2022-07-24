@@ -61,7 +61,7 @@ object HttpConfiguration{
  *
  * @param context
  * @param httpPort The HTTP port number
- * @param maxConnection The maximum number of accepted HTTP connections
+ * @param maxConnectionOpt The maximum number of accepted HTTP connections
  * @param maxRequestLength The maximum allowed length of HTTP content in bytes
  * @param requestTimeout Number of seconds before HTTP request times out
  * @param sessionConfig The session configuration

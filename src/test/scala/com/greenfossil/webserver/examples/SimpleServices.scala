@@ -7,6 +7,9 @@ import com.linecorp.armeria.server.annotation.{Get, Param, RequestConverter, Req
 
 import java.lang.reflect.ParameterizedType
 
+/*
+ * Please ensure com.greenfossil.webserver.examples.main is started
+ */
 object SimpleServices extends Controller {
 
   //curl http://localhost:8080/simple-text/homer%20simpson/2022-12-31

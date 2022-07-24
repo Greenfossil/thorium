@@ -19,7 +19,7 @@ class EndpointMacroParameterizedServicesSuite extends munit.FunSuite {
   test("braced param"){
     val bracedEndpoint = EndpointMcr(ParameterizedServices.bracedParams("homer simpson",42, "spring/field"))
     println(s" = ${bracedEndpoint}")
-    assertNoDiff(bracedEndpoint.url, "/homer+simpson/42/spring%2Ffield")
+    assertNoDiff(bracedEndpoint.url, "/braced-params/homer+simpson/42/spring%2Ffield")
   }
 
   test("regex string endpoint") {
@@ -29,31 +29,40 @@ class EndpointMacroParameterizedServicesSuite extends munit.FunSuite {
   }
 
   test("regex number endpoint") {
-    val regexNumEp = EndpointMcr(ParameterizedServices.regexNumberEndpoint(5))
+    def num = 5
+    val regexNumEp = EndpointMcr(ParameterizedServices.regexNumberEndpoint(num))
     assertNoDiff(regexNumEp.url, "/number/5")
     assertNoDiff(regexNumEp.method, "Get")
   }
 
   test("regex string2 endpoint") {
-    val regexString2Ep = EndpointMcr(ParameterizedServices.regexString2Endpoint("min", "max"))
+    def minValue = "min"
+    def maxValue = "max"
+    val regexString2Ep = EndpointMcr(ParameterizedServices.regexString2Endpoint(minValue, maxValue))
     assertNoDiff(regexString2Ep.url, "/string2/min/max")
     assertNoDiff(regexString2Ep.method, "Get")
   }
 
   test("regex number2 endpoint") {
-    val regexNumber2Ep = EndpointMcr(ParameterizedServices.regexNumber2Endpoint(10, 20))
+    def arg1 = 10
+    def arg2 = 20
+    val regexNumber2Ep = EndpointMcr(ParameterizedServices.regexNumber2Endpoint(arg1, arg2))
     assertNoDiff(regexNumber2Ep.url, "/number2/10/20")
     assertNoDiff(regexNumber2Ep.method, "Get")
   }
 
   test("regex mix endpoint") {
-    val regexMix1Ep = EndpointMcr(ParameterizedServices.regexMix1Endpoint(10, "last"))
+    def arg1 = 10
+    def arg2 = "last"
+    val regexMix1Ep = EndpointMcr(ParameterizedServices.regexMix1Endpoint(arg1, arg2))
     assertNoDiff(regexMix1Ep.url, "/mix/10/last")
     assertNoDiff(regexMix1Ep.method, "Get")
   }
 
   test("regex mix2 endpoint") {
-    val regexMix2Ep = EndpointMcr(ParameterizedServices.regexMix2Endpoint("first", 20))
+    def arg1 = "first"
+    def arg2 = 20
+    val regexMix2Ep = EndpointMcr(ParameterizedServices.regexMix2Endpoint(arg1, arg2))
     assertNoDiff(regexMix2Ep.url, "/mix/first/20")
     assertNoDiff(regexMix2Ep.method, "Get")
   }

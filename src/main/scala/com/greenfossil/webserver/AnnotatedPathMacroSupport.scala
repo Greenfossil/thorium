@@ -132,7 +132,7 @@ object AnnotatedPathMacroSupport extends MacroSupport(globalDebug = false) {
           val regexPath = path.replaceFirst("regex:\\^?([^$]+)\\$?", "$1") //remove 'regex:' + optional '^' + optional '?'
           val paramPath = regexPath.replaceAll("/\\(\\?<(\\w+)>.+?\\)", "/:$1") //replace regex-param with :param
           paramPathExtractor(paramPath)
-//        case path if path.startsWith("glob:/") =>
+// FIXME        case path if path.startsWith("glob:/") =>
 //          scala.compiletime.error("glob: is not supported")
         case path =>
           //convert all braced params to colon params

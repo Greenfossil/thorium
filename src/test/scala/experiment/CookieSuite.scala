@@ -1,4 +1,4 @@
-package com.greenfossil.webserver.examples
+package experiment
 
 import com.linecorp.armeria.common.{Cookie, HttpResponse, ResponseHeaders}
 

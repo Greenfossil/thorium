@@ -4,6 +4,9 @@ import com.greenfossil.data.mapping.*
 import com.greenfossil.webserver.{*, given}
 import com.linecorp.armeria.server.annotation.{Get, Param, Post}
 
+/*
+ * Please ensure com.greenfossil.webserver.examples.main is started
+ */
 object FormServices extends Controller {
   import com.greenfossil.data.mapping.Mapping.*
 
@@ -75,6 +78,10 @@ object FormServices extends Controller {
     Ok(s"arg:${arg}, form:${encodedForm}")
   }
 
+  /*
+   * NB: Currently, for Method Post, both data and query arg will not work,
+   * the only workround is to use Request as an function argument as in /form-request2
+   */
   @Post("/form-request1") //curl -d "name=homer" -X POST  http://localhost:8080/form-request1\?queryArg\=12345
   def formRequest1(@Param queryArg: Int) =
     Action { implicit request =>

@@ -20,6 +20,7 @@ object RequestAttrs {
   val Session = AttributeKey.valueOf[Session]("session")
   val Flash = AttributeKey.valueOf[Flash]("flash")
   val Config = AttributeKey.valueOf[Configuration]("config")
+  val Request = AttributeKey.valueOf[com.greenfossil.webserver.Request]("request")
 }
 
 trait Request(val requestContext: ServiceRequestContext, val aggregatedHttpRequest: AggregatedHttpRequest) {
