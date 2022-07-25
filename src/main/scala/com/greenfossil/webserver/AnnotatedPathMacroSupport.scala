@@ -11,11 +11,33 @@ object AnnotatedPathMacroSupport extends MacroSupport(globalDebug = false) {
                                                                        (using Quotes): Expr[R] =
     import quotes.reflect.*
     searchForAnnotations(actionExpr.asTerm, 1) match
-      case applyTerm @ Apply(_, paramValues) =>
+      case applyTerm: Apply =>
+        def getParamValues(applyTerm: Apply): List[Term] =
+          applyTerm match {
+            case Apply(aTerm: Apply, paramValues) => getParamValues(aTerm) ++ paramValues
+            case Apply(_, paramValues) => paramValues
+          }
+
+        val paramValues = getParamValues(applyTerm)
         //Handle - Apply method
-        show("ApplyTerm", applyTerm)
-        val paramNames: List[String] = applyTerm.symbol.paramSymss.head.map(_.name)
-        val paramNameValueLookup: Map[String, Term] = paramNames.zip(paramValues).toMap
+        val paramSymss = applyTerm.symbol.paramSymss
+
+        //Get all param names annotated with @Param from all paramList
+        import com.linecorp.armeria.server.annotation.Param
+        val annotatedParamNames: List[String] = paramSymss.flatten.collect{
+          case sym if sym.annotations.exists(_.symbol.fullName.startsWith(classOf[Param].getName)) =>
+            sym.name
+        }
+
+        //Get all param names from all paramList
+        val paramNames: List[String] = paramSymss.flatten.map(_.name)
+
+        //Removed the params that are not annotated with @Param
+        val paramNameValueLookup: Map[String, Term] =
+          paramNames.zip(paramValues)
+            .toMap
+            .filter((key, value) => annotatedParamNames.contains(key))
+
         val annList = applyTerm.symbol.annotations
         getAnnotatedPath(actionExpr, annList, paramNameValueLookup, onSuccessCallback)
 
@@ -143,12 +165,11 @@ object AnnotatedPathMacroSupport extends MacroSupport(globalDebug = false) {
     //compute QueryString
     val queryParamKeys: List[String] = paramNameValueLookup.keys.toList diff usedPathParamNames
     val queryParamValues: List[Expr[Any]] = queryParamKeys.map{k =>
-      paramNameValueLookup(k) match {
+      paramNameValueLookup(k) match
         case Literal(c: StringConstant) =>
           //UrlEncode for all String value
           Expr(java.net.URLEncoder.encode(c.value.asInstanceOf[String], StandardCharsets.UTF_8))
         case x => x.asExpr
-      }
     }
 
     (computedPath, queryParamKeys, queryParamValues)

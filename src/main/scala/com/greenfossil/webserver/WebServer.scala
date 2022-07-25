@@ -75,8 +75,16 @@ case class WebServer(server: Server,
           HttpResponse.of(HttpData.wrap(bytes))
         case result: Result =>
           val req = svcRequestContext.attr(RequestAttrs.Request)
-          require(req != null, "Request is not initialized in ServiceRequestContext")
-          result.toHttpResponse(req)
+          if req != null then result.toHttpResponse(req)
+          else {
+            //Handle a when no RequestConverterFunction has been invoked
+            val f = svcRequestContext.request().aggregate().thenApply { aggReq =>
+              val request = new Request(svcRequestContext, aggReq){}
+              result.toHttpResponse(request)
+            }
+            HttpResponse.from(f)
+          }
+
         case _ =>
           ResponseConverterFunction.fallthrough()
 
