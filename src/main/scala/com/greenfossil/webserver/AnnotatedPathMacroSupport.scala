@@ -6,20 +6,13 @@ object AnnotatedPathMacroSupport extends MacroSupport(globalDebug = false) {
 
   import scala.quoted.*
 
-  def computeActionAnnotatedPath[A : Type, R : Type](actionExpr: Expr[A],
-                                                                        onSuccessCallback: (Expr[String], Expr[List[Any]], Expr[List[String]], Expr[List[Any]]) =>  Expr[R])
-                                                                       (using Quotes): Expr[R] =
+  def computeActionAnnotatedPath[A : Type, R : Type](epExpr: Expr[A],
+                                                     onSuccessCallback: (Expr[String], Expr[List[Any]], Expr[List[String]], Expr[List[Any]]) =>  Expr[R]
+                                                    )(using Quotes): Expr[R] =
     import quotes.reflect.*
-    searchForAnnotations(actionExpr.asTerm, 1) match
+    searchForAnnotations(epExpr.asTerm, 1) match
       case applyTerm: Apply =>
-        def getParamValues(applyTerm: Apply): List[Term] =
-          applyTerm match {
-            case Apply(aTerm: Apply, paramValues) => getParamValues(aTerm) ++ paramValues
-            case Apply(_, paramValues) => paramValues
-          }
-
-        val paramValues = getParamValues(applyTerm)
-        //Handle - Apply method
+        show("Apply Term", applyTerm)
         val paramSymss: List[List[Symbol]] = applyTerm.symbol.paramSymss
 
         //Get all param names annotated with @Param from all paramList
@@ -33,31 +26,47 @@ object AnnotatedPathMacroSupport extends MacroSupport(globalDebug = false) {
         val paramNames: List[String] = paramSymss.flatten.map(_.name)
 
         //Removed the params that are not annotated with @Param
+        val paramValues = getFlattenedParamValues(applyTerm)
         val paramNameValueLookup: Map[String, Term] =
           paramNames.zip(paramValues)
             .toMap
             .filter((key, value) => annotatedParamNames.contains(key))
 
         val annList = applyTerm.symbol.annotations
-        getAnnotatedPath(actionExpr, annList, paramNameValueLookup, onSuccessCallback)
+        getAnnotatedPath(epExpr, annList, paramNameValueLookup, onSuccessCallback)
+
+      case typedTerm: Typed =>
+        report.errorAndAbort(s"Check function body for '???' code", epExpr)
 
       case methodTerm if methodTerm.symbol.flags.is(Flags.Method) =>
         //Handle - Method
+        show("Method Term", methodTerm)
         val annList = methodTerm.symbol.annotations
-        getAnnotatedPath(actionExpr, annList, Map.empty[String, Term], onSuccessCallback)
+        getAnnotatedPath(epExpr, annList, Map.empty[String, Term], onSuccessCallback)
 
       case otherTerm =>
         show("otherTerm", otherTerm)
         val ref = Ref(otherTerm.symbol)
         val term = searchForAnnotations(ref, 1)
         show("search term", term)
-        report.errorAndAbort("Unable to find any Essential Action path annotations")
+        report.errorAndAbort("Unable to find any annotated path")
 
+  /**
+   * Get a flatten list of param values from the a list of list of param values
+   * @param Quotes
+   * @param applyTerm
+   * @return
+   */
+  private def getFlattenedParamValues(using Quotes)(applyTerm: quotes.reflect.Apply): List[quotes.reflect.Term] =
+    import quotes.reflect.*
+    applyTerm match
+      case Apply(aTerm: Apply, paramValues) => getFlattenedParamValues(aTerm) ++ paramValues
+      case Apply(_, paramValues) => paramValues
 
   /**
    * Extract params from the annotated path
    * @param Quotes
-   * @param actionExpr
+   * @param epExpr
    * @param annList
    * @param paramNameValueLookup
    * @param successCallback - on when the params/values length matched.
@@ -67,7 +76,7 @@ object AnnotatedPathMacroSupport extends MacroSupport(globalDebug = false) {
    * @return
    */
   private def getAnnotatedPath[A : Type, P : Type](using Quotes)(
-    actionExpr: Expr[A],
+    epExpr: Expr[A],
     annList: List[quotes.reflect.Term],
     paramNameValueLookup: Map[String, quotes.reflect.Term],
     successCallback: (Expr[String], Expr[List[Any]], Expr[List[String]], Expr[List[Any]]) =>  Expr[P]
@@ -75,15 +84,22 @@ object AnnotatedPathMacroSupport extends MacroSupport(globalDebug = false) {
     import quotes.reflect.*
     getDeclaredPath(annList) match
       case None =>
-        report.errorAndAbort(s"No annotated path found ${actionExpr}", actionExpr)
+        report.errorAndAbort(s"No annotated path found ${epExpr}", epExpr)
 
       case Some((method, declaredPath)) =>
         /*
          * update the del
          */
-        val (computedPath, queryParamKeys, queryParamValues) = getComputedPathExpr(actionExpr, paramNameValueLookup, declaredPath)
+        val (computedPath, queryParamKeys, queryParamValues) = getComputedPathExpr(epExpr, paramNameValueLookup, declaredPath)
         successCallback(Expr(method), Expr.ofList(computedPath), Expr[List[String]](queryParamKeys), Expr.ofList(queryParamValues))
 
+  /**
+   * Search for the inner most Term, skip all the outer Inlined
+   * @param Quotes
+   * @param term
+   * @param level
+   * @return
+   */
   private def searchForAnnotations(using Quotes)(term: quotes.reflect.Term, level: Int): quotes.reflect.Term =
     import quotes.reflect.*
     //  show(s"SearchForAnnotations level: $level", term)
@@ -151,11 +167,17 @@ object AnnotatedPathMacroSupport extends MacroSupport(globalDebug = false) {
         case path if path.startsWith("prefix:/") =>
           List(Expr(path.replaceFirst("prefix:","")))
         case path if path.matches("regex:\\^?.+") =>
-          val regexPath = path.replaceFirst("regex:\\^?([^$]+)\\$?", "$1") //remove 'regex:' + optional '^' + optional '?'
-          val paramPath = regexPath.replaceAll("/\\(\\?<(\\w+)>.+?\\)", "/:$1") //replace regex-param with :param
+          val paramPath =
+            path
+              .replaceAll("(\\(\\?-?[idmsuxU]\\))", "") //remove all regex 'on' and 'off' modifiers
+              .replaceFirst("regex:\\^?([^$]+)\\$?", "$1") //remove 'regex:' + optional '^' + optional '?'
+              .replaceAll("/\\(\\?<(\\w+)>.+?\\)", "/:$1") //replace regex-param with :param
+
           paramPathExtractor(paramPath)
+
 // FIXME        case path if path.startsWith("glob:/") =>
 //          scala.compiletime.error("glob: is not supported")
+
         case path =>
           //convert all braced params to colon params
           val _path=path.replaceAll("/\\{(\\w+)}", "/:$1")

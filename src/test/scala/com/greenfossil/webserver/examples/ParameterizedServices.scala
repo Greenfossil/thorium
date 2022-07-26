@@ -47,7 +47,7 @@ object ParameterizedServices extends Controller {
   /*
    * curl http://localhost:8080/number2/10/20
    */
-  @Get("regex:/number2/(?<min>\\d+)/(?<max>\\d+)") //
+  @Get("regex:/number2/(?<min>\\d+)/(?<max>\\d+)")
   def regexNumber2Endpoint(@Param min : Int, @Param max: Int) = s"regexNumber2 - min:$min - max:$max"
 
   /*
@@ -66,7 +66,7 @@ object ParameterizedServices extends Controller {
    * this will not work
    * curl http://localhost:8080/mixbad/first/20
    */
-  @Get("regex:/mixbad/:min/(?<max>\\d+)") //
+  @Get("regex:/mixbad/:min/(?<max>\\d+)")
   def regexMixBadEndpoint(@Param min : String, @Param max: Int) = s"regex3Mix-String,Int - min:$min - max:$max"
 
   /*
@@ -87,7 +87,7 @@ object ParameterizedServices extends Controller {
    * @param name
    * @return
    */
-  @Get("regex:^/ci/(?<name>(?i)Homer|Marge)") //
+  @Get("regex:^/ci/(?<name>(?i)Homer|Marge)")
   def caseInsensitivity(@Param name: String) = name
 
   /**
@@ -102,7 +102,7 @@ object ParameterizedServices extends Controller {
    * @param name
    * @return
    */
-  @Get("regex:(?i)^/ci2/(?<name>Homer|Marge)") //
+  @Get("regex:(?i)^/ci2/(?<name>Homer|Marge)")
   def caseInsensitivity2(@Param name: String) = name
 
   /**
@@ -117,7 +117,7 @@ object ParameterizedServices extends Controller {
    * @param name
    * @return
    */
-  @Get("regex:^/(?i)ci3(?-i)/(?<name>Homer|Marge)") //
+  @Get("regex:^/(?i)ci3(?-i)/(?<name>Homer|Marge)")
   def caseInsensitivity3(@Param name: String) = name
 
   /**
@@ -132,7 +132,7 @@ object ParameterizedServices extends Controller {
    * @param name
    * @return
    */
-  @Get("regex:^/ci4/(?<name>(?i)Homer|Marge(?-i))") //
+  @Get("regex:^/ci4/(?<name>(?i)Homer|Marge(?-i))")
   def caseInsensitivity4(@Param name: String) = name
 }
 
