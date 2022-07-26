@@ -20,12 +20,12 @@ object AnnotatedPathMacroSupport extends MacroSupport(globalDebug = false) {
 
         val paramValues = getParamValues(applyTerm)
         //Handle - Apply method
-        val paramSymss = applyTerm.symbol.paramSymss
+        val paramSymss: List[List[Symbol]] = applyTerm.symbol.paramSymss
 
         //Get all param names annotated with @Param from all paramList
         import com.linecorp.armeria.server.annotation.Param
         val annotatedParamNames: List[String] = paramSymss.flatten.collect{
-          case sym if sym.annotations.exists(_.symbol.fullName.startsWith(classOf[Param].getName)) =>
+          case sym: Symbol if sym.annotations.exists(_.symbol.fullName.startsWith(classOf[Param].getName)) =>
             sym.name
         }
 
