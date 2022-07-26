@@ -75,6 +75,64 @@ object ParameterizedServices extends Controller {
 //  @Get("glob:/*/hello/**")
 //  def globEndpoint(@Param("0") prefix: String, @Param("1") name: String) = s"glob [$name] and [$name]"
 
+  /**
+   * The following routes work:
+   * curl http://localhost:8080/ci/Homer
+   * curl http://localhost:8080/ci/homer
+   * curl http://localhost:8080/ci/marge
+   *
+   * The following routes do not work:
+   * curl http://localhost:8080/ci/lisa
+   * curl http://localhost:8080/CI/homer
+   * @param name
+   * @return
+   */
+  @Get("regex:^/ci/(?<name>(?i)Homer|Marge)") //
+  def caseInsensitivity(@Param name: String) = name
 
+  /**
+   * The following routes work:
+   * curl http://localhost:8080/ci2/Homer
+   * curl http://localhost:8080/ci2/homer
+   * curl http://localhost:8080/ci2/marge
+   * curl http://localhost:8080/CI2/homer
+   *
+   * The following routes do not work:
+   * curl http://localhost:8080/ci2/lisa
+   * @param name
+   * @return
+   */
+  @Get("regex:(?i)^/ci2/(?<name>Homer|Marge)") //
+  def caseInsensitivity2(@Param name: String) = name
+
+  /**
+   * The following routes work:
+   * curl http://localhost:8080/ci3/Homer
+   * curl http://localhost:8080/ci3/Marge
+   * curl http://localhost:8080/CI3/Homer
+   *
+   * The following routes do not work:
+   * curl http://localhost:8080/ci3/homer
+   * curl http://localhost:8080/ci3/lisa
+   * @param name
+   * @return
+   */
+  @Get("regex:^/(?i)ci3(?-i)/(?<name>Homer|Marge)") //
+  def caseInsensitivity3(@Param name: String) = name
+
+  /**
+   * The following routes work:
+   * curl http://localhost:8080/ci4/Homer
+   * curl http://localhost:8080/ci4/Marge
+   * curl http://localhost:8080/ci4/homer
+   *
+   * The following routes do not work:
+   * curl http://localhost:8080/CI4/Homer
+   * curl http://localhost:8080/ci4/lisa
+   * @param name
+   * @return
+   */
+  @Get("regex:^/ci4/(?<name>(?i)Homer|Marge(?-i))") //
+  def caseInsensitivity4(@Param name: String) = name
 }
 
