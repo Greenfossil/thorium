@@ -29,14 +29,14 @@ object Redirect4Services extends Controller {
   /*
    * curl http://localhost:8080/action3 -L
    */
-  @Get("/fn3")
-  def fn3(using req: Request) =
-    Redirect(EndpointMcr(fn4))
+  @Get("/fn3/:id")
+  def fn3(@Param id: Long)(using req: Request) =
+    Redirect(EndpointMcr(fn4(id)))
 
-  @Get("/fn4")
-  def fn4(using req: Request) =
+  @Get("/fn4/:id")
+  def fn4(@Param id: Long)(using req: Request) =
     //Redirect with Ref - name, and inline
-    def name = "Space!"
+    def name = java.net.URLEncoder.encode(s"SpaceId#${id}!") //Note: '#' must be urlencoded
     Redirect(EndpointMcr(Redirect3Services.fn2(name, java.time.LocalDateTime.now.toString)))
 
 }
