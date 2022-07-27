@@ -9,7 +9,7 @@ lazy val webServer = project
   .settings(
     name := "web-server",
     organization := "com.greenfossil",
-    version := "0.1.0-RC10",
+    version := "0.1.0-RC11",
 
     scalaVersion := scala3Version,
 

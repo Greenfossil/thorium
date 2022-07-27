@@ -43,7 +43,7 @@ trait EssentialAction extends HttpService:
       } catch {
         case t: Throwable =>
           _actionLogger.error("Invoke Action error", t)
-          f.complete(HttpResponse.of(HttpStatus.INTERNAL_SERVER_ERROR))
+          f.complete(HttpResponse.ofFailure(t)) // allow exceptionHandlerFunctions and serverErrorHandler to kick in
       }
     })
     f
