@@ -27,7 +27,7 @@ object Redirect3Services extends Controller {
 object Redirect4Services extends Controller {
 
   /*
-   * curl http://localhost:8080/action3 -L
+   * curl http://localhost:8080/fn3/1 -L
    */
   @Get("/fn3/:id")
   def fn3(@Param id: Long)(using req: Request) =
@@ -36,7 +36,7 @@ object Redirect4Services extends Controller {
   @Get("/fn4/:id")
   def fn4(@Param id: Long)(using req: Request) =
     //Redirect with Ref - name, and inline
-    def name = java.net.URLEncoder.encode(s"SpaceId#${id}!") //Note: '#' must be urlencoded
+    def name = java.net.URLEncoder.encode(s"SpaceId#${id}!","utf-8") //Note: '#' must be urlencoded
     Redirect(EndpointMcr(Redirect3Services.fn2(name, java.time.LocalDateTime.now.toString)))
 
 }

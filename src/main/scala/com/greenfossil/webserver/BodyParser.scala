@@ -49,7 +49,7 @@ object FormUrlEncodedParser {
     if split.length == 1 && split(0).isEmpty 
     then Seq.empty
     else 
-      split.map { param =>
+      split.toIndexedSeq.map { param =>
         val parts = param.split("=", -1)
         val key   = URLDecoder.decode(parts(0), encoding)
         val value = URLDecoder.decode(parts.lift(1).getOrElse(""), encoding)

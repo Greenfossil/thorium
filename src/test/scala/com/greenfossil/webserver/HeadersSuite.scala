@@ -3,8 +3,10 @@ package com.greenfossil.webserver
 import com.linecorp.armeria.common.{Cookie, HttpStatus}
 import com.linecorp.armeria.server.annotation.Get
 
+import scala.annotation.nowarn
+
 object HeadersServices extends Controller {
-  @Get("/headers")
+  @Get("/headers") @nowarn
   def headers = Action { request =>
     println(s"S0 request.session = ${request.session}")
     Ok("Headers sent")

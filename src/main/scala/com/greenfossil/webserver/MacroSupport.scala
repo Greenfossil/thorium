@@ -16,10 +16,10 @@ trait MacroSupport(globalDebug: Boolean):
     if debug
     then
       x match
-        case xs: List[Tree]  =>
+        case xs: List[Tree @unchecked]  =>
           println(s"$msg: ${xs.map(_.show(using Printer.TreeStructure))}")
 
-        case term: Tree =>
+        case term: Tree @unchecked =>
           println(s"$msg: ${term.show(using Printer.TreeStructure)}")
 
     else ()
@@ -29,10 +29,10 @@ trait MacroSupport(globalDebug: Boolean):
     if debug
     then
       x match
-        case xs: List[Tree]  =>
+        case xs: List[Tree @unchecked]  =>
           println(s"$msg: ${xs.map(_.show(using quotes.reflect.Printer.TreeAnsiCode))}")
 
-        case term: Tree =>
+        case term: Tree @unchecked =>
           println(s"$msg: ${term.show(using quotes.reflect.Printer.TreeAnsiCode)}")
 
     else ()
@@ -42,7 +42,7 @@ trait MacroSupport(globalDebug: Boolean):
     if debug
     then
       x match
-        case xs: List[Tree]  =>
+        case xs: List[Tree @unchecked]  =>
           println(s"===> [List] ${msg}")
           println(s"Code - Size:${xs.size}")
           println("  " + xs.map(_.show(using quotes.reflect.Printer.TreeAnsiCode)))
@@ -50,7 +50,7 @@ trait MacroSupport(globalDebug: Boolean):
           println(s"Structure - Size:${xs.size}")
           println("  " + xs.map(_.show(using Printer.TreeStructure)))
 
-        case term: Tree =>
+        case term: Tree @unchecked =>
           println(s"===> [Tree] ${msg}")
           println(s"Symbol: ${term.symbol.flags.show}")
           println(s"Code: ${term.show(using quotes.reflect.Printer.TreeAnsiCode)}")

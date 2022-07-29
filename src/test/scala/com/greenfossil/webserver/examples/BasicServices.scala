@@ -3,6 +3,8 @@ package com.greenfossil.webserver.examples
 import com.greenfossil.webserver.{*, given}
 import com.linecorp.armeria.server.annotation.{Get, Post}
 
+import scala.language.implicitConversions
+
 /*
  * Please ensure com.greenfossil.webserver.examples.main is started
  */

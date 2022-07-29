@@ -4,6 +4,8 @@ import com.greenfossil.commons.json.Json
 
 import java.io.File
 
+import scala.language.implicitConversions
+
 class RequestSuite extends munit.FunSuite{
   import com.linecorp.armeria.client.*
   import com.linecorp.armeria.common.*

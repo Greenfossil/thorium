@@ -1,15 +1,17 @@
 val scala3Version = "3.1.3"
 
-lazy val commonsCryptoVersion = "0.1.0-RC3"
-lazy val typesafeConfigExtVersion = "0.1.0-RC4"
-lazy val datamappingVersion="0.1.0-RC12"
+scalacOptions ++= Seq("-feature", "-deprecation")
+
+lazy val commonsCryptoVersion = "0.1.0"
+lazy val typesafeConfigExtVersion = "0.1.0"
+lazy val datamappingVersion="0.1.0"
 
 lazy val webServer = project
   .in(file("."))
   .settings(
     name := "web-server",
     organization := "com.greenfossil",
-    version := "0.1.0-RC11",
+    version := "0.1.0-RC12",
 
     scalaVersion := scala3Version,
 
@@ -39,4 +41,4 @@ ThisBuild / publishTo := {
   else Some("releases"  at nexus + "releases/")
 }
 
-credentials += Credentials("Sonatype Nexus Repository Manager", "dev2.greenfossil.com", "dev", "ayerrajah")
+credentials += Credentials(Path.userHome / ".sbt" / ".credentials")
