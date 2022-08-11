@@ -23,7 +23,7 @@ object RequestAttrs {
   val Request = AttributeKey.valueOf[com.greenfossil.webserver.Request]("request")
 }
 
-trait Request(val requestContext: ServiceRequestContext, val aggregatedHttpRequest: AggregatedHttpRequest) {
+trait Request(val requestContext: ServiceRequestContext, val aggregatedHttpRequest: AggregatedHttpRequest) extends com.greenfossil.commons.LocaleProvider {
 
   import scala.jdk.CollectionConverters.*
 

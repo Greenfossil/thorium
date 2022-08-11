@@ -3,6 +3,7 @@ val scala3Version = "3.1.3"
 scalacOptions ++= Seq("-feature", "-deprecation")
 
 lazy val commonsCryptoVersion = "0.1.0"
+lazy val commonsI18nVersion = "0.1.1-SNAPSHOT"
 lazy val typesafeConfigExtVersion = "0.1.0"
 lazy val datamappingVersion="0.1.0"
 
@@ -11,7 +12,7 @@ lazy val webServer = project
   .settings(
     name := "web-server",
     organization := "com.greenfossil",
-    version := "0.1.0-RC12",
+    version := "0.1.0-RC13-SNAPSHOT",
 
     scalaVersion := scala3Version,
 
@@ -19,6 +20,7 @@ lazy val webServer = project
 
     libraryDependencies ++= Seq(
       "com.greenfossil" %% "commons-crypto" % commonsCryptoVersion,
+      "com.greenfossil" %% "commons-i18n" % commonsI18nVersion,
       "com.greenfossil" %% "typesafe-config-ext" % typesafeConfigExtVersion,
       "com.greenfossil" %% "data-mapping" % datamappingVersion,
       "com.linecorp.armeria" %% "armeria-scala" % "1.17.1",
