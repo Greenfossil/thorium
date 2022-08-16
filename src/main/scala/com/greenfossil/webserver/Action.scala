@@ -4,13 +4,14 @@ import com.linecorp.armeria.common.{AggregatedHttpRequest, HttpData, HttpRequest
 import com.linecorp.armeria.server.{HttpService, ServiceRequestContext}
 import org.slf4j.LoggerFactory
 
+import java.io.InputStream
 import java.time.Duration
 import java.util.concurrent.CompletableFuture
 import scala.concurrent.{ExecutionContext, Future}
 
 trait Controller
 
-type ActionResponse =  HttpResponse | Result | String | Array[Byte]
+type ActionResponse =  HttpResponse | Result | String | Array[Byte] | InputStream
 
 private[webserver] val _actionLogger = LoggerFactory.getLogger("webserver-action")
 

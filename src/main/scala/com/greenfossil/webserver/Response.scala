@@ -50,5 +50,5 @@ private def toResult[C](status: HttpStatus, body: C)(using w: Writeable[C]): Res
   if /*Redirect*/ status.code() >= 300 && status.code() <= 308
   then Result(HttpResponse.ofRedirect(status, body.asInstanceOf[String]))
   else
-    val (mediaType, bytes) = w.content(body)
-    Result(HttpResponse.of(status, mediaType, bytes))
+    val (mediaType, is) = w.content(body)
+    Result(HttpResponse.of(status, mediaType, is.readAllBytes()))

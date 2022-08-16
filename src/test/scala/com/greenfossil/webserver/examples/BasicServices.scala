@@ -1,8 +1,10 @@
 package com.greenfossil.webserver.examples
 
 import com.greenfossil.webserver.{*, given}
+import com.linecorp.armeria.common.MediaType
 import com.linecorp.armeria.server.annotation.{Get, Post}
 
+import java.io.ByteArrayInputStream
 import scala.language.implicitConversions
 
 /*
@@ -38,6 +40,22 @@ object BasicServices extends Controller {
   @Get("/redirectText2")
   def redirectText2 = Action { request =>
     "You are at Text2!"
+  }
+
+  //This method should not be called, it is here to ensure compilation works for InputStream as direct return
+  @Get("/image")
+  def image = Action {request =>
+    import com.linecorp.armeria.common.HttpHeaderNames.CACHE_CONTROL
+    val is: java.io.InputStream = new ByteArrayInputStream(null)
+    is.withHeaders(CACHE_CONTROL -> "no-store").as(MediaType.PNG)
+  }
+
+  //This method should not be called, it is here to ensure compilation works for InputStream as direct return
+  @Get("/bytes")
+  def bytes = Action { request =>
+    import com.linecorp.armeria.common.HttpHeaderNames.CACHE_CONTROL
+    val bytes: Array[Byte] = Array.emptyByteArray
+    bytes.withHeaders(CACHE_CONTROL -> "no-store").as(MediaType.PNG)
   }
 
 }

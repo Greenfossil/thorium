@@ -2,7 +2,9 @@ package com.greenfossil.webserver
 
 import com.greenfossil.commons.json.Json
 import com.linecorp.armeria.common.{Cookie, HttpResponse, HttpStatus, MediaType}
+import io.netty.util.AsciiString
 
+import java.io.InputStream
 import java.time.format.DateTimeFormatter
 import java.time.{ZoneOffset, ZonedDateTime}
 import scala.collection.immutable.TreeMap
@@ -40,13 +42,13 @@ case class ResponseHeader(headers: TreeMap[String, String], reasonPhrase:Option[
 
 object Result {
 
-  def apply(body: HttpResponse | String | Array[Byte]): Result =
+  def apply(body: HttpResponse | String | Array[Byte] | InputStream): Result =
     new Result(ResponseHeader(Map.empty), body, Map.empty, None, None, Nil, None)
 
 }
 
 case class Result(header: ResponseHeader,
-                  body: HttpResponse | String | Array[Byte],
+                  body: HttpResponse | String | Array[Byte] | InputStream,
                   queryString: Map[String, Seq[String]] = Map.empty,
                   newSessionOpt: Option[Session] = None,
                   newFlashOpt: Option[Flash] = None,
@@ -65,8 +67,9 @@ case class Result(header: ResponseHeader,
    * @param headers the headers to add to this result.
    * @return the new result
    */
-  def withHeaders(headers: (String, String)*): Result = 
-    copy(header = header.copy(headers = header.headers ++ headers))
+  def withHeaders(headers: (String | AsciiString, String)*): Result =
+    val _headers = headers.map(tup2 => tup2._1.toString -> tup2._2)
+    copy(header = header.copy(headers = header.headers ++ _headers))
 
   /**
    * Add a header with a DateTime formatted using the default http date format
@@ -282,9 +285,14 @@ case class Result(header: ResponseHeader,
   def toHttpResponse(req: Request): HttpResponse =
     given Request = req
     val httpResp = body match
-      case httpResponse: HttpResponse => httpResponse
-      case bytes: Array[Byte] => HttpResponse.of(HttpStatus.OK, req.contentType, bytes)
-      case string: String => HttpResponse.of(string)
+      case httpResponse: HttpResponse =>
+        httpResponse
+      case bytes: Array[Byte] =>
+        HttpResponse.of(HttpStatus.OK,  contentTypeOpt.getOrElse(req.contentType), bytes)
+      case is: InputStream =>
+        HttpResponse.of(HttpStatus.OK, contentTypeOpt.getOrElse(req.contentType), is.readAllBytes())
+      case string: String =>
+        HttpResponse.of(string)
 
     val result:Try[HttpResponse] = for {
       respWithCookies <- Try(addCookiesToHttpResponse(getAllCookies, httpResp))

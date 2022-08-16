@@ -54,3 +54,8 @@ TODO
 Need to ensure Address is not recyle
 [error] 	com.greenfossil.webserver.SessionSuite - need to have assertions
 
+
+[error] 	com.greenfossil.webserver.HeadersSuite
+[error] 	com.greenfossil.webserver.SessionSuite
+[error] 	com.greenfossil.webserver.RequestSuite
+[error] 	com.greenfossil.data.mapping.QuerystringFormPlayCompatibilitySuite
