@@ -3,16 +3,16 @@ val scala3Version = "3.1.3"
 scalacOptions ++= Seq("-feature", "-deprecation")
 
 lazy val commonsCryptoVersion = "0.1.0"
-lazy val commonsI18nVersion = "0.1.1-SNAPSHOT"
+lazy val commonsI18nVersion = "0.1.1"
 lazy val typesafeConfigExtVersion = "0.1.0"
-lazy val datamappingVersion="0.1.0"
+lazy val datamappingVersion="0.1.2-RC1"
 
 lazy val webServer = project
   .in(file("."))
   .settings(
     name := "web-server",
     organization := "com.greenfossil",
-    version := "0.1.0-RC13-SNAPSHOT",
+    version := "0.1.0-RC13",
 
     scalaVersion := scala3Version,
 
