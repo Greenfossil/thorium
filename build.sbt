@@ -23,9 +23,10 @@ lazy val webServer = project
       "com.greenfossil" %% "commons-i18n" % commonsI18nVersion,
       "com.greenfossil" %% "typesafe-config-ext" % typesafeConfigExtVersion,
       "com.greenfossil" %% "data-mapping" % datamappingVersion,
+      "io.projectreactor" % "reactor-core" % "3.4.22",
       "com.linecorp.armeria" %% "armeria-scala" % "1.17.1",
       "org.slf4j" % "slf4j-api" % "2.0.0-alpha7",
-      "ch.qos.logback" % "logback-classic" % "1.3.0-alpha16",
+      "ch.qos.logback" % "logback-classic" % "1.3.0-alpha16" % Test,
       "org.scalameta" %% "munit" % "0.7.29" % Test
     )
   )

@@ -11,6 +11,7 @@
     </root>
 
     <logger name="com.linecorp.armeria" level="info"/>
+    <logger name="com.linecorp.armeria.common.Flags" level="off"/>
 
 
 </configuration>
