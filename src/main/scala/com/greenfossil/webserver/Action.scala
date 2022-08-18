@@ -1,6 +1,6 @@
 package com.greenfossil.webserver
 
-import com.linecorp.armeria.common.{AggregatedHttpRequest, HttpData, HttpRequest, HttpResponse, HttpStatus}
+import com.linecorp.armeria.common.{AggregatedHttpRequest, HttpData, HttpRequest, HttpResponse, HttpStatus, MediaType}
 import com.linecorp.armeria.server.{HttpService, ServiceRequestContext}
 import org.slf4j.LoggerFactory
 
@@ -39,7 +39,8 @@ trait EssentialAction extends HttpService:
           case s: String => HttpResponse.of(s)
           case hr: HttpResponse => hr
           case result: Result => result.toHttpResponse(req)
-          case bytes: Array[Byte] => HttpResponse.of(HttpData.wrap(bytes))
+          case bytes: Array[Byte] => HttpResponse.of(HttpStatus.OK, Option(req.contentType).getOrElse(MediaType.ANY_TYPE), HttpData.wrap(bytes))
+          case is: InputStream => HttpResponse.of(HttpStatus.OK, Option(req.contentType).getOrElse(MediaType.ANY_TYPE), HttpData.wrap(is.readAllBytes()))
         f.complete(resp)
       } catch {
         case t: Throwable =>

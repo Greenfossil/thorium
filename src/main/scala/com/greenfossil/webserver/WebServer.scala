@@ -1,5 +1,6 @@
 package com.greenfossil.webserver
 
+import com.greenfossil.commons.json.Json
 import com.linecorp.armeria.common.{AggregatedHttpRequest, HttpData, HttpHeaders, HttpResponse, ResponseHeaders}
 import com.linecorp.armeria.server.*
 import com.linecorp.armeria.server.annotation.{ExceptionHandlerFunction, RequestConverterFunction, ResponseConverterFunction}
@@ -8,6 +9,7 @@ import com.typesafe.config.Config
 import org.slf4j.LoggerFactory
 
 import java.lang.reflect.ParameterizedType
+import java.time.LocalDateTime
 import scala.util.Try
 
 object WebServer:
@@ -155,6 +157,24 @@ case class WebServer(server: Server,
     errorHandlerOpt.foreach{ handler => sb.errorHandler(handler.orElse(ServerErrorHandler.ofDefault()))}
     beforeStartInitOpt.foreach(_.apply(sb))
     docServiceNameOpt.foreach(name => sb.serviceUnder(name, new DocService()))
+    //Setup request logging
+    sb.accessLogWriter(requestLog => {
+      com.greenfossil.commons.Logger("com.linecorp.armeria.logging.access").info(
+        Json.obj(
+          "timestamp" -> LocalDateTime.now.toString,
+          "requestId" -> requestLog.context().id.text(),
+          "remoteIP" -> requestLog.context().asInstanceOf[ServiceRequestContext].clientAddress().getHostAddress,
+          "status" -> requestLog.responseHeaders().status().code(),
+          "method" -> requestLog.context().method().toString,
+          "path" -> requestLog.context().path(),
+          "query" -> requestLog.context().query(),
+          "scheme" -> requestLog.context().request().scheme(),
+          "requestLength" -> requestLog.responseLength(),
+          "headers" -> requestLog.context().request().headers().toString,
+          "requestStartTimeMillis" -> requestLog.responseStartTimeMillis(),
+        ).toString
+      )
+    }, true)
     sb.build
 
   def addBeforeStartInit(initFn: ServerBuilder => Unit): WebServer =
