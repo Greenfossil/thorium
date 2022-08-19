@@ -66,7 +66,7 @@ object TestService {
 //curl -v -X POST http://localhost:8080/post3\?queryArg\=hello
 // curl -v -X POST http://localhost:8080/post3\?queryArg\=hello -d "name=world"
 
-
+//Query string cause an exception in Armeria, there is a fix in the future
 //  @Post("/post3") //curl -v -X POST http://localhost:8080/post2\?queryArg\=hello -d "name=world"
 //  def post3(@Param queryArg: String, request: HttpRequest) =
 //    HttpResponse.from(ServiceRequestContext.current().request().aggregate().thenApply(aggregate => {

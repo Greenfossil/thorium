@@ -54,5 +54,5 @@ object SSEController3 {
     .annotatedService(SSEController3)
     .build()
     .start()
-  Thread.sleep(60000)
+  Thread.sleep(2000)
 }
