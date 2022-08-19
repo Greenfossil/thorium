@@ -49,6 +49,13 @@ case class MultipartFormData(aggMultipart: AggregatedMultipart):
         copyInputStreamToPath(inputStream, filePath)
       else throw new FileSystemNotFoundException
     }
+
+    @deprecated("to use input stream instead")
+    def photoUrlOpt: Option[java.net.URL] = saveFileTo("/tmp").map(_.toURL).toOption
+
+    def photoFileSizeGB: Double = part.content().length().toDouble / 1000 / 1000 / 1000
+    def photoFileSizeMB: Double = part.content().length().toDouble / 1000 / 1000
+    def photoFileSizeByte: Int = part.content().length()
   }
 
   def files: List[TemporaryFile] =
@@ -59,3 +66,5 @@ case class MultipartFormData(aggMultipart: AggregatedMultipart):
       if part.filename() != null
     } yield  TemporaryFile(name, part.filename(), part.contentType(), part)
     xs.toList
+
+  def findFile(fileName: String): Option[TemporaryFile] = files.find(file => file.name.equals(fileName))

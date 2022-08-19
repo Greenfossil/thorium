@@ -90,7 +90,7 @@ trait Request(val requestContext: ServiceRequestContext, val aggregatedHttpReque
 
   //https://www.javatips.net/api/java.util.locale.languagerange
   def acceptLanguages: Seq[LanguageRange] = 
-    requestContext.request().acceptLanguages().asScala.toSeq
+    Option(requestContext.request().acceptLanguages()).map(_.asScala.toSeq).getOrElse(Nil)
 
   lazy val cookies: Set[Cookie] =
     requestContext.request().headers().cookies().asInstanceOf[java.util.Set[Cookie]].asScala.toSet
