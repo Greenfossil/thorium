@@ -42,8 +42,11 @@ case class ResponseHeader(headers: TreeMap[String, String], reasonPhrase:Option[
 
 object Result {
 
-  def apply(body: HttpResponse | String | Array[Byte] | InputStream): Result =
-    new Result(ResponseHeader(Map.empty), body, Map.empty, None, None, Nil, None)
+  def apply(body: ActionResponse): Result =
+    body match
+      case bodyResult: Result => bodyResult
+      case body: (HttpResponse | String | Array[Byte] | InputStream) =>
+        new Result(ResponseHeader(Map.empty), body, Map.empty, None, None, Nil, None)
 
 }
 

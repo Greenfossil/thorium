@@ -35,6 +35,22 @@ object FormServices extends Controller {
       )
   }
 
+  //https://stackoverflow.com/questions/19116016/what-is-the-right-way-to-post-multipart-form-data-using-curl
+  //https://everything.curl.dev/http/multipart
+  //curl -v -F person=anonymous -F secret=file.txt http://localhost:8080/multipart2
+  @Post("/multipart2")
+  def multipartForm2 = Action.multipart { implicit request =>
+    val names = request.names()
+    println(s"names = $names")
+    val map = request.asFormUrlEncoded
+    println(s"map = ${map}")
+    val files = request.files
+    println(s"files = ${files}")
+    
+    val form = Mapping("person", text).bindFromRequest()
+    Ok(s"Received Multipart form - ${form.value}")
+  }
+
   @Post("/form-mapping") //curl -d "name=homer&id=8" -X POST  http://localhost:8080/form-mapping
   def tupleForm = Action { implicit request =>
     val form = tuple(

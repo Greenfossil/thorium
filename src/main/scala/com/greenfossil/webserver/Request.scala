@@ -161,7 +161,7 @@ trait Request(val requestContext: ServiceRequestContext, val aggregatedHttpReque
       .aggregate()
       .thenApply(mp => MultipartFormData(mp))
     
-  def asMultipartFormData(fn: MultipartFormData => Result): Result =
+  def asMultipartFormData(fn: MultipartFormData => ActionResponse): ActionResponse =
     asMultipartFormData.thenApply(fn(_)).get
 
   //Raw Buffer - TODO - testcase needed and check for conformance

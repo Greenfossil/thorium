@@ -16,6 +16,18 @@ type ActionResponse =  HttpResponse | Result | String | Array[Byte] | InputStrea
 private[webserver] val _actionLogger = LoggerFactory.getLogger("webserver-action")
 
 trait EssentialAction extends HttpService:
+
+  /**
+   * An EssentialAction is an Request => ActionResponse
+   * All subclasses must implements this function signature
+   *
+   * This method will be invoked by EssentialAction.serve
+   *
+   * @param request
+   * @return
+   */
+  protected def apply(request: Request): ActionResponse
+
   /**
    * Armeria invocation during an incoming request
    * @param svcRequestContext
@@ -51,20 +63,30 @@ trait EssentialAction extends HttpService:
     f
   }
 
-  /**
-   * This method is only invoked EssentialAction.serve
-   * @param request
-   * @return
-   */
-  protected def apply(request: Request): ActionResponse
-
 end EssentialAction
 
 trait Action extends EssentialAction
 
 object Action:
 
-  def apply(fn: Request => ActionResponse): Action = (request: Request) => fn(request)
+  /**
+   * AnyContent request
+   * @param fn
+   * @return
+   */
+  def apply(fn: Request => ActionResponse): Action =
+    (request: Request) => fn(request)
+
+  /**
+   * Multipart form request
+   * @param fn
+   * @return
+   */
+  def multipart(fn: MultipartRequest => ActionResponse): Action =
+    (request: Request) => request.asMultipartFormData { form =>
+      fn(MultipartRequest(form, request.requestContext, request.aggregatedHttpRequest))
+    }
+
 
   //TODO - need to add test cases
   def async(fn: Request => ActionResponse)(using executor: ExecutionContext): Future[Action] =
