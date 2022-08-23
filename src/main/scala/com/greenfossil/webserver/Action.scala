@@ -46,7 +46,7 @@ trait EssentialAction extends HttpService:
     val f = new CompletableFuture[HttpResponse]()
     svcRequestContext.blockingTaskExecutor().execute(() => {
       try{
-        val req = new Request(svcRequestContext, aggregateRequest) {}
+        val req = new com.greenfossil.webserver.Request(svcRequestContext, aggregateRequest) {}
         val resp = apply(req) match
           case s: String => HttpResponse.of(s)
           case hr: HttpResponse => hr
@@ -71,7 +71,7 @@ object Action:
 
   /**
    * AnyContent request
-   * @param fn
+   * @param actionResponder
    * @return
    */
   def apply(fn: Request => ActionResponse): Action =
@@ -79,7 +79,7 @@ object Action:
 
   /**
    * Multipart form request
-   * @param fn
+   * @param actionResponder
    * @return
    */
   def multipart(fn: MultipartRequest => ActionResponse): Action =
