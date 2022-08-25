@@ -12,6 +12,8 @@ import java.lang.reflect.ParameterizedType
 import java.time.LocalDateTime
 import scala.util.Try
 
+import scala.language.implicitConversions
+
 object WebServer:
   /**
    * Port is read from app.http.port in application.conf

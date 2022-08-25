@@ -15,8 +15,8 @@ object Redirect3Services extends Controller {
   @Get("/fn1")
   def fn1 =
     //Redirect with Ref and Constant
-    val time = java.time.LocalDate.now.toString
-    val ep = EndpointMcr(fn2(time, "World2!")(using null))
+    val timeString = java.time.LocalDate.now.toString
+    val ep = EndpointMcr(fn2(timeString, "World2!")(using null))
     Redirect(ep)
 
   @Get("/fn2/:data/:msg")

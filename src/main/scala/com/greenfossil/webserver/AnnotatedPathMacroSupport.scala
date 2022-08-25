@@ -146,7 +146,18 @@ object AnnotatedPathMacroSupport extends MacroSupport(globalDebug = false) {
             case Literal(c: StringConstant)  =>
               //UrlEncode for all String value
               Expr(java.net.URLEncoder.encode(c.value.asInstanceOf[String], StandardCharsets.UTF_8))
-            case x => x.asExpr
+
+            case id @ Ident(_) if id.symbol.isValDef =>
+              //UrlEncode all the Idents of type String
+              id.tpe.asType match {
+                case '[String] =>
+                  '{java.net.URLEncoder.encode(${id.asExprOf[String]}, StandardCharsets.UTF_8)}
+                case _ =>
+                  id.asExpr
+              }
+
+            case x =>
+              x.asExpr
           }
         case None =>
           report.errorAndAbort(s"Path param [$name] of path [$declaredPath] cannot be found in method's param names [${paramNameValueLookup.keySet.mkString(",")}]  ", actionExpr)
@@ -191,7 +202,19 @@ object AnnotatedPathMacroSupport extends MacroSupport(globalDebug = false) {
         case Literal(c: StringConstant) =>
           //UrlEncode for all String value
           Expr(java.net.URLEncoder.encode(c.value.asInstanceOf[String], StandardCharsets.UTF_8))
-        case x => x.asExpr
+
+        case id@Ident(_) if id.symbol.isValDef =>
+          //UrlEncode all the Idents of type String
+          id.tpe.asType match {
+            case '[String] =>
+              ' {java.net.URLEncoder.encode ($ {id.asExprOf[String]}, StandardCharsets.UTF_8)}
+
+            case _ =>
+              id.asExpr
+          }
+
+        case x =>
+          x.asExpr
     }
 
     (computedPath, queryParamKeys, queryParamValues)
