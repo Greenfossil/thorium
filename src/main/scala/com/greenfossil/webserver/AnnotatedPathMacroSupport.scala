@@ -147,13 +147,13 @@ object AnnotatedPathMacroSupport extends MacroSupport(globalDebug = false) {
               //UrlEncode for all String value
               Expr(java.net.URLEncoder.encode(c.value.asInstanceOf[String], StandardCharsets.UTF_8))
 
-            case id @ Ident(_) if id.symbol.isValDef =>
+            case valOrDef if valOrDef.symbol.isValDef || valOrDef.symbol.isDefDef =>
               //UrlEncode all the Idents of type String
-              id.tpe.asType match {
+              valOrDef.tpe.asType match {
                 case '[String] =>
-                  '{java.net.URLEncoder.encode(${id.asExprOf[String]}, StandardCharsets.UTF_8)}
+                  '{java.net.URLEncoder.encode(${valOrDef.asExprOf[String]}, StandardCharsets.UTF_8)}
                 case _ =>
-                  id.asExpr
+                  valOrDef.asExpr
               }
 
             case x =>
@@ -203,14 +203,14 @@ object AnnotatedPathMacroSupport extends MacroSupport(globalDebug = false) {
           //UrlEncode for all String value
           Expr(java.net.URLEncoder.encode(c.value.asInstanceOf[String], StandardCharsets.UTF_8))
 
-        case id@Ident(_) if id.symbol.isValDef =>
+        case valOrDef if valOrDef.symbol.isValDef || valOrDef.symbol.isDefDef =>
           //UrlEncode all the Idents of type String
-          id.tpe.asType match {
+          valOrDef.tpe.asType match {
             case '[String] =>
-              ' {java.net.URLEncoder.encode ($ {id.asExprOf[String]}, StandardCharsets.UTF_8)}
+              '{java.net.URLEncoder.encode ($ {valOrDef.asExprOf[String]}, StandardCharsets.UTF_8)}
 
             case _ =>
-              id.asExpr
+              valOrDef.asExpr
           }
 
         case x =>

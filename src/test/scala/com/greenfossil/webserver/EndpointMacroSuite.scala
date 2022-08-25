@@ -42,15 +42,24 @@ class EndpointMacroSuite extends munit.FunSuite {
     assertEquals(ep4.queryParams.size, 2)
   }
 
-  test("url-encoded param string"){
-    val token = "Homer/Marge Simpson"
-    val url =  Endpoint(endpoint2(token)).url
-    println(s"url = ${url}")
+  test("url-encoded param Val string"){
+    val valToken = "Homer/Marge Simpson"
+    val url =  Endpoint(endpoint2(valToken)).url
 
     val url2 = Endpoint(endpoint2("Homer/Marge Simpson")).url
-    println(s"url2 = ${url2}")
 
     assertNoDiff(url, url2)
     assertNoDiff(url, "/endpoint2/Homer%2FMarge+Simpson")
   }
+
+  test("url-encoded param Def string") {
+    def defToken = "Homer/Marge Simpson"
+    val url = Endpoint(endpoint2(defToken)).url
+
+    val url2 = Endpoint(endpoint2("Homer/Marge Simpson")).url
+
+    assertNoDiff(url, url2)
+    assertNoDiff(url, "/endpoint2/Homer%2FMarge+Simpson")
+  }
+
 }
