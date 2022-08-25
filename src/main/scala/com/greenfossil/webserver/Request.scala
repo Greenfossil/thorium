@@ -147,7 +147,7 @@ trait Request(val requestContext: ServiceRequestContext, val aggregatedHttpReque
 
   def availableLanguages: Seq[Locale] = Seq(Locale.getDefault)
 
-  def localeVariantOpt: Option[String] = None
+  def localeVariantOpt: Option[String] = Try(config.config.getString("app.i18n.variant")).toOption
 
   def locale: Locale = LocaleUtil.getBestMatchLocale(acceptLanguages, availableLanguages, localeVariantOpt)
 
