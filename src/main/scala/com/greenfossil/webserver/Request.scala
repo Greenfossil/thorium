@@ -145,7 +145,9 @@ trait Request(val requestContext: ServiceRequestContext, val aggregatedHttpReque
 
   def authorization: Option[String] = Option(headers.get(HttpHeaderNames.AUTHORIZATION))
 
-  def availableLanguages: Seq[Locale] = Seq(Locale.getDefault)
+  def availableLanguages: Seq[Locale] =
+    Try(config.config.getStringList("app.i18n.langs").asScala.toList.map(Locale.forLanguageTag))
+      .getOrElse(Seq(Locale.getDefault))
 
   def localeVariantOpt: Option[String] = Try(config.config.getString("app.i18n.variant")).toOption
 
