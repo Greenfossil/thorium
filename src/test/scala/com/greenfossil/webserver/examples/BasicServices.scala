@@ -18,6 +18,12 @@ object BasicServices extends Controller {
     "HelloWorld!"
   }
 
+  //curl http://localhost:8080/simple2?name=Homer
+  @Get("/simple2")
+  def simpleQueryString = Action { request =>
+    s"HelloWorld! - ${request.uri} ${request.uri}"
+  }
+
   //curl http://localhost:8080/hello
   @Get("/hello")
   def helloText = Action { request =>

@@ -80,7 +80,7 @@ object FormServices extends Controller {
 
   @Post("/post-query") //curl -X POST  http://localhost:8080/post-query\?name\=homer\&postalCode\=12345
   def postQuery(@Param name: String, @Param postalCode: Int) = Action { implicit request =>
-    Ok(s"Hello !${name}, postalCode:${postalCode}")
+    Ok(s"Hello !${name}, postalCode:${postalCode} - uri ${request.uri}")
   }
 
   @Post("/post-patharg-query/:arg") //curl -X POST  http://localhost:8080/post-patharg-query/abc\?name\=homer\&postalCode\=12345
@@ -101,10 +101,10 @@ object FormServices extends Controller {
   @Post("/form-request1") //curl -d "name=homer" -X POST  http://localhost:8080/form-request1\?queryArg\=12345
   def formRequest1(@Param queryArg: Int) =
     Action { implicit request =>
-      s"queryArg:${queryArg} , req ${request.asFormUrlEncoded}"
+      s"queryArg:${queryArg} , req ${request.asFormUrlEncoded} - uri ${request.uri}"
     }
 
   @Post("/form-request2") //curl -d "name=homer" -X POST  http://localhost:8080/form-request2\?queryArg\=12345
   def formRequest2(@Param queryArg: Int)(using request: Request) =
-    s"queryArg:${queryArg} , req ${request.asFormUrlEncoded}"
+    s"queryArg:${queryArg} , req ${request.asFormUrlEncoded} - uri ${request.uri}"
 }
