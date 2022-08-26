@@ -3,21 +3,21 @@ val scala3Version = "3.1.3"
 scalacOptions ++= Seq("-feature", "-deprecation")
 
 lazy val commonsCryptoVersion = "0.1.0"
-lazy val commonsI18nVersion = "0.1.1"
-lazy val commonsJsonVersion = "0.1.0"
+lazy val commonsI18nVersion = "0.1.2-RC1"
+lazy val commonsJsonVersion = "0.1.1-RC1"
+lazy val datamappingVersion="0.1.2-RC2"
 lazy val typesafeConfigExtVersion = "0.1.0"
-lazy val datamappingVersion="0.1.2-RC1"
 
 lazy val webServer = project
   .in(file("."))
   .settings(
     name := "web-server",
     organization := "com.greenfossil",
-    version := "0.1.0-RC14-SNAPSHOT",
+    version := "0.1.0-RC14",
 
     scalaVersion := scala3Version,
 
-    Compile / javacOptions ++= Seq("-source", "17", "-target", "17"),
+    Compile / javacOptions ++= Seq("-source", "17"),
 
     libraryDependencies ++= Seq(
       "com.greenfossil" %% "commons-crypto" % commonsCryptoVersion,

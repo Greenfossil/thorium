@@ -187,9 +187,7 @@ case class Result(header: ResponseHeader,
    * @param flash the flash scope to set with this result
    * @return the new result
    */
-  //TODO - check if need to warnFlashingIfNotRedirect
   def flashing(flash: Flash): Result =
-//    Result.warnFlashingIfNotRedirect(flash, header)
     copy(newFlashOpt = Some(flash))
 
   /**

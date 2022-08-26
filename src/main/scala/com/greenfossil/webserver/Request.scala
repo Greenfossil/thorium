@@ -94,6 +94,8 @@ trait Request(val requestContext: ServiceRequestContext, val aggregatedHttpReque
   def headers: RequestHeaders = requestContext.request().headers()
 
   def getHeader(name: CharSequence): Option[String] = Option(headers.get(name))
+  
+  def getHeaderAll(name: CharSequence): List[String] = headers.getAll(name).asScala.toList
 
   //https://www.javatips.net/api/java.util.locale.languagerange
   def acceptLanguages: Seq[LanguageRange] = 
