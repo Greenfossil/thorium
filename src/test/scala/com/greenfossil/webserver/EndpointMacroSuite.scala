@@ -19,22 +19,22 @@ class EndpointMacroSuite extends munit.FunSuite {
   def endpoint4(@Param members: Seq[String], @Param name: String, @Param time: LocalDateTime) = Action { req => "endpoint5"}
 
   test("annotated endpoint"){
-    val ep1 = Endpoint(endpoint1)
+    val ep1 = endpoint1.endpoint
     assertNoDiff(ep1.url, "/endpoint1")
     assertNoDiff(ep1.method, "Get")
 
-    val ep2 = Endpoint(endpoint2("homer"))
+    val ep2 = endpoint2("homer").endpoint
     assertNoDiff(ep2.url, "/endpoint2/homer")
     assertNoDiff(ep2.method, "Get")
 
-    val ep3 = Endpoint(endpoint3("homer"))
+    val ep3 = endpoint3("homer").endpoint
     assertNoDiff(ep3.url, "/endpoint3?name=homer")
     assertNoDiff(ep3.method, "Get")
     assertEquals(ep3.queryParams.size, 1)
 
     val now = LocalDateTime.now
     val members = Seq("Marge Simpson", "Bart Simpson", "Maggie Simpson")
-    val ep4 = Endpoint(endpoint4(members, "homer", now))
+    val ep4 = endpoint4(members, "homer", now).endpoint
     assertNoDiff(ep4.url, "/endpoint4/homer?" +
         Endpoint.paramKeyValue("members", members) + "&" +
         Endpoint.paramKeyValue("time", now.toString))
@@ -44,9 +44,9 @@ class EndpointMacroSuite extends munit.FunSuite {
 
   test("url-encoded param Val string"){
     val valToken = "Homer/Marge Simpson"
-    val url =  Endpoint(endpoint2(valToken)).url
+    val url =  endpoint2(valToken).url
 
-    val url2 = Endpoint(endpoint2("Homer/Marge Simpson")).url
+    val url2 = endpoint2("Homer/Marge Simpson").url
 
     assertNoDiff(url, url2)
     assertNoDiff(url, "/endpoint2/Homer%2FMarge+Simpson")
@@ -54,9 +54,9 @@ class EndpointMacroSuite extends munit.FunSuite {
 
   test("url-encoded param Def string") {
     def defToken = "Homer/Marge Simpson"
-    val url = Endpoint(endpoint2(defToken)).url
+    val url = endpoint2(defToken).url
 
-    val url2 = Endpoint(endpoint2("Homer/Marge Simpson")).url
+    val url2 = endpoint2("Homer/Marge Simpson").url
 
     assertNoDiff(url, url2)
     assertNoDiff(url, "/endpoint2/Homer%2FMarge+Simpson")

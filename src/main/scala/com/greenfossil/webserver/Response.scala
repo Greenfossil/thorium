@@ -30,7 +30,7 @@ def Redirect(url: String, queryString: Map[String, Seq[String]], status: HttpSta
  * @return
  */
 inline def Redirect[A <: EssentialAction](inline action: A): Result =
-  Redirect(Endpoint(action))
+  Redirect(EndpointMcr(action))
 
 def Redirect(endpoint: Endpoint): Result = Redirect(endpoint.url)
 

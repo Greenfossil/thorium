@@ -8,7 +8,7 @@ object NestedRedirectServices extends Controller {
   def nestedRedirect = Action { request2 =>
     println("This is a println")
     //Reference class' action
-    nestedRedirectFn(Endpoint(actionEnd))
+    nestedRedirectFn(actionEnd.endpoint)
   }
 
   def nestedRedirectFn(ep: Endpoint): Result =
@@ -24,7 +24,7 @@ object NestedRedirectServices extends Controller {
 class NestedRedirectMacroSuite extends munit.FunSuite {
 
   test("Endpoint.apply()") {
-    val ep = Endpoint(NestedRedirectServices.actionEnd)
+    val ep = NestedRedirectServices.actionEnd.endpoint
     assertNoDiff(ep.url, "/actionEnd")
   }
 

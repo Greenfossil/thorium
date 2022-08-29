@@ -31,9 +31,6 @@ object Endpoint {
 
   def apply(path: String): Endpoint = new Endpoint(path, "GET", Nil)
 
-  inline def apply(inline action: EssentialAction): Endpoint = EndpointMcr(action)
-
-
   def paramKeyValue(name: String, value: Any): String =
     (name, value) match {
       case (name, xs: Seq[Any]) => xs.map(x => s"${name}[]=${urlencode(x.toString)}").mkString("&")

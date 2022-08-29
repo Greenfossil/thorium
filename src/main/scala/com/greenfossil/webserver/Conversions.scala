@@ -18,3 +18,9 @@ extension (bytes: Array[Byte])
 
   def as(contentType: MediaType): Result =
     Result(bytes).as(contentType)
+
+extension (inline action: EssentialAction)
+  inline def url: String = EndpointMcr(action).url
+
+extension (inline action: EssentialAction)
+  inline def endpoint: Endpoint = EndpointMcr(action)
