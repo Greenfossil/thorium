@@ -49,7 +49,7 @@ class EndpointMacroSuite extends munit.FunSuite {
     val url2 = endpoint2("Homer/Marge Simpson").url
 
     assertNoDiff(url, url2)
-    assertNoDiff(url, "/endpoint2/Homer%2FMarge+Simpson")
+    assertNoDiff(url, "/endpoint2/Homer%2FMarge%20Simpson")
   }
 
   test("url-encoded param Def string") {
@@ -59,7 +59,7 @@ class EndpointMacroSuite extends munit.FunSuite {
     val url2 = endpoint2("Homer/Marge Simpson").url
 
     assertNoDiff(url, url2)
-    assertNoDiff(url, "/endpoint2/Homer%2FMarge+Simpson")
+    assertNoDiff(url, "/endpoint2/Homer%2FMarge%20Simpson")
   }
 
 }

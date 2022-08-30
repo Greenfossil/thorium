@@ -8,7 +8,7 @@ import java.time.LocalDateTime
 /*
  *Test path with prefix, regex, glob
  */
-class EndpointMacroParameterizedServicesSuite extends munit.FunSuite {
+class  EndpointMacroParameterizedServicesSuite extends munit.FunSuite {
 
   test("prefix endpoint") {
     val prefixEp = EndpointMcr(ParameterizedServices.prefixEndpoint)
@@ -19,7 +19,7 @@ class EndpointMacroParameterizedServicesSuite extends munit.FunSuite {
   test("braced param"){
     val bracedEndpoint = EndpointMcr(ParameterizedServices.bracedParams("homer simpson",42, "spring/field"))
     println(s" = ${bracedEndpoint}")
-    assertNoDiff(bracedEndpoint.url, "/braced-params/homer+simpson/42/spring%2Ffield")
+    assertNoDiff(bracedEndpoint.url, "/braced-params/homer%20simpson/42/spring%2Ffield")
   }
 
   test("regex string endpoint") {

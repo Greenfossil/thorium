@@ -6,7 +6,8 @@ import java.nio.charset.{Charset, StandardCharsets}
 
 object AnnotatedPathMacroSupport extends MacroSupport(globalDebug = false) {
 
-  val pathEscaper = UrlEscapers.urlFragmentEscaper()
+  def urlEncode(str: String): String =
+    java.net.URLEncoder.encode(str, StandardCharsets.UTF_8).replaceAll("\\+", "%20")
 
   import scala.quoted.*
 
@@ -149,13 +150,13 @@ object AnnotatedPathMacroSupport extends MacroSupport(globalDebug = false) {
           value match {
             case Literal(c: StringConstant)  =>
               //UrlEncode for all String value
-              Expr(pathEscaper.escape(c.value.asInstanceOf[String]))
+              Expr(urlEncode(c.value.asInstanceOf[String]))
 
             case valOrDef if valOrDef.symbol.isValDef || valOrDef.symbol.isDefDef =>
               //UrlEncode all the Idents of type String
               valOrDef.tpe.asType match {
                 case '[String] =>
-                  '{pathEscaper.escape(${valOrDef.asExprOf[String]})}
+                  '{urlEncode(${valOrDef.asExprOf[String]})}
                 case _ =>
                   valOrDef.asExpr
               }
@@ -205,7 +206,7 @@ object AnnotatedPathMacroSupport extends MacroSupport(globalDebug = false) {
       paramNameValueLookup(k) match
         case Literal(c: StringConstant) =>
           //UrlEncode for all String value
-          Expr(pathEscaper.escape(c.value.asInstanceOf[String]))
+          Expr(urlEncode(c.value.asInstanceOf[String]))
 
         case valOrDef if valOrDef.symbol.isValDef || valOrDef.symbol.isDefDef =>
           //UrlEncode all the Idents of type String
