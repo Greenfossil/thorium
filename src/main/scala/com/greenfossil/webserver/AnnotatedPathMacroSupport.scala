@@ -1,8 +1,12 @@
 package com.greenfossil.webserver
 
+import com.linecorp.armeria.internal.shaded.guava.net.UrlEscapers
+
 import java.nio.charset.{Charset, StandardCharsets}
 
 object AnnotatedPathMacroSupport extends MacroSupport(globalDebug = false) {
+
+  val pathEscaper = UrlEscapers.urlFragmentEscaper()
 
   import scala.quoted.*
 
@@ -145,13 +149,13 @@ object AnnotatedPathMacroSupport extends MacroSupport(globalDebug = false) {
           value match {
             case Literal(c: StringConstant)  =>
               //UrlEncode for all String value
-              Expr(java.net.URLEncoder.encode(c.value.asInstanceOf[String], StandardCharsets.UTF_8))
+              Expr(pathEscaper.escape(c.value.asInstanceOf[String]))
 
             case valOrDef if valOrDef.symbol.isValDef || valOrDef.symbol.isDefDef =>
               //UrlEncode all the Idents of type String
               valOrDef.tpe.asType match {
                 case '[String] =>
-                  '{java.net.URLEncoder.encode(${valOrDef.asExprOf[String]}, StandardCharsets.UTF_8)}
+                  '{pathEscaper.escape(${valOrDef.asExprOf[String]})}
                 case _ =>
                   valOrDef.asExpr
               }
@@ -201,13 +205,13 @@ object AnnotatedPathMacroSupport extends MacroSupport(globalDebug = false) {
       paramNameValueLookup(k) match
         case Literal(c: StringConstant) =>
           //UrlEncode for all String value
-          Expr(java.net.URLEncoder.encode(c.value.asInstanceOf[String], StandardCharsets.UTF_8))
+          Expr(pathEscaper.escape(c.value.asInstanceOf[String]))
 
         case valOrDef if valOrDef.symbol.isValDef || valOrDef.symbol.isDefDef =>
           //UrlEncode all the Idents of type String
           valOrDef.tpe.asType match {
             case '[String] =>
-              '{java.net.URLEncoder.encode ($ {valOrDef.asExprOf[String]}, StandardCharsets.UTF_8)}
+              '{pathEscaper.escape($ {valOrDef.asExprOf[String]})}
 
             case _ =>
               valOrDef.asExpr
