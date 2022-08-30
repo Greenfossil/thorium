@@ -67,4 +67,10 @@ case class MultipartFormData(aggMultipart: AggregatedMultipart):
     } yield  TemporaryFile(name, part.filename(), part.contentType(), part)
     xs.toList
 
-  def findFile(fileName: String): Option[TemporaryFile] = files.find(file => file.name.equals(fileName))
+  /**
+   *
+   * @param fileNameRegex
+   * @return
+   */
+  def findFile(fileNameRegex: String): Option[TemporaryFile] =
+    files.find(file => file.name.matches(fileNameRegex))

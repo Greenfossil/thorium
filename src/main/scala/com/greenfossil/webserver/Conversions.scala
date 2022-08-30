@@ -22,5 +22,11 @@ extension (bytes: Array[Byte])
 extension (inline action: EssentialAction)
   inline def url: String = EndpointMcr(action).url
 
+  inline def absoluteUrl(authority: String, secure: Boolean) =
+    EndpointMcr(action).absoluteUrl(authority, secure)
+
+  inline def absoluteUrl(using request: Request): String =
+    EndpointMcr(action).absoluteUrl(using request)
+
 extension (inline action: EssentialAction)
   inline def endpoint: Endpoint = EndpointMcr(action)
