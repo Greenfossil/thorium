@@ -212,7 +212,7 @@ object AnnotatedPathMacroSupport extends MacroSupport(globalDebug = false) {
           //UrlEncode all the Idents of type String
           valOrDef.tpe.asType match {
             case '[String] =>
-              '{pathEscaper.escape($ {valOrDef.asExprOf[String]})}
+              '{urlEncode($ {valOrDef.asExprOf[String]})}
 
             case _ =>
               valOrDef.asExpr
