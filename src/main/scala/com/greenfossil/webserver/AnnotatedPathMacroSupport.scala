@@ -12,7 +12,8 @@ object AnnotatedPathMacroSupport extends MacroSupport(globalDebug = false) {
   import scala.quoted.*
 
   def computeActionAnnotatedPath[A : Type, R : Type](epExpr: Expr[A],
-                                                     onSuccessCallback: (Expr[String], Expr[List[Any]], Expr[List[String]], Expr[List[Any]]) =>  Expr[R]
+                                                     onSuccessCallback: (Expr[String], Expr[List[Any]], Expr[List[String]], Expr[List[Any]]) =>  Expr[R],
+                                                     supportQueryStringPost: Boolean = false
                                                     )(using Quotes): Expr[R] =
     import quotes.reflect.*
     searchForAnnotations(epExpr.asTerm, 1) match
@@ -38,7 +39,7 @@ object AnnotatedPathMacroSupport extends MacroSupport(globalDebug = false) {
             .filter((key, value) => annotatedParamNames.contains(key))
 
         val annList = applyTerm.symbol.annotations
-        getAnnotatedPath(epExpr, annList, paramNameValueLookup, onSuccessCallback)
+        getAnnotatedPath(epExpr, annList, paramNameValueLookup, onSuccessCallback, supportQueryStringPost)
 
       case typedTerm: Typed =>
         report.errorAndAbort(s"Check function body for '???' code", epExpr)
@@ -47,7 +48,7 @@ object AnnotatedPathMacroSupport extends MacroSupport(globalDebug = false) {
         //Handle - Method
         show("Method Term", methodTerm)
         val annList = methodTerm.symbol.annotations
-        getAnnotatedPath(epExpr, annList, Map.empty[String, Term], onSuccessCallback)
+        getAnnotatedPath(epExpr, annList, Map.empty[String, Term], onSuccessCallback, supportQueryStringPost)
 
       case otherTerm =>
         show("otherTerm", otherTerm)
@@ -84,18 +85,24 @@ object AnnotatedPathMacroSupport extends MacroSupport(globalDebug = false) {
     epExpr: Expr[A],
     annList: List[quotes.reflect.Term],
     paramNameValueLookup: Map[String, quotes.reflect.Term],
-    successCallback: (Expr[String], Expr[List[Any]], Expr[List[String]], Expr[List[Any]]) =>  Expr[P]
+    successCallback: (Expr[String], Expr[List[Any]], Expr[List[String]], Expr[List[Any]]) =>  Expr[P],
+    supportQueryStringPost: Boolean
   ): Expr[P] =
     import quotes.reflect.*
     getDeclaredPath(annList) match
       case None =>
         report.errorAndAbort(s"No annotated path found ${epExpr}", epExpr)
 
-      case Some((method, declaredPath)) =>
+      case Some((method: String, declaredPath: String)) =>
         /*
          * update the del
          */
-        val (computedPath, queryParamKeys, queryParamValues) = getComputedPathExpr(epExpr, paramNameValueLookup, declaredPath)
+        val (computedPath: List[Expr[Any]], queryParamKeys: List[String], queryParamValues: List[Expr[Any]]) =
+          getComputedPathExpr(epExpr, paramNameValueLookup, declaredPath)
+        if  !supportQueryStringPost && method.equalsIgnoreCase("Post") && queryParamKeys.nonEmpty then {
+          report.errorAndAbort("Query String for Post method is not supported")
+        } else ()
+
         successCallback(Expr(method), Expr.ofList(computedPath), Expr[List[String]](queryParamKeys), Expr.ofList(queryParamValues))
 
   /**
@@ -123,7 +130,7 @@ object AnnotatedPathMacroSupport extends MacroSupport(globalDebug = false) {
    * @param annList
    * @return Option[(GET|POST|PATH, path),
    */
-  private def getDeclaredPath(using Quotes)(annList: List[quotes.reflect.Term]): Option[(String, String)] = {
+  private def getDeclaredPath(using Quotes)(annList: List[quotes.reflect.Term]): Option[(String, String)] =
     import quotes.reflect.*
     annList.collectFirst {
       case Apply(Select(New(annMethod), _), args) =>
@@ -131,7 +138,6 @@ object AnnotatedPathMacroSupport extends MacroSupport(globalDebug = false) {
         show("Annotation Path Parts", args)
         args.collectFirst { case Literal(c) => (annMethod.symbol.name, c.value.toString) }
     }.flatten
-  }
 
   private def getComputedPathExpr[A : Type](using Quotes)(
     actionExpr: Expr[A],

@@ -8,12 +8,14 @@ lazy val commonsJsonVersion = "0.1.1"
 lazy val datamappingVersion="0.1.4-RC3"
 lazy val typesafeConfigExtVersion = "0.1.0"
 
+//lazy val databMapping = RootProject(file("../data-mapping"))
+
 lazy val webServer = project
   .in(file("."))
   .settings(
     name := "web-server",
     organization := "com.greenfossil",
-    version := "0.1.2-RC1",
+    version := "0.1.2-RC2",
 
     scalaVersion := scala3Version,
 
@@ -33,6 +35,7 @@ lazy val webServer = project
       "org.scalameta" %% "munit" % "0.7.29" % Test
     )
   )
+//  .dependsOn(databMapping)
 
 lazy val nexus = "https://dev2.greenfossil.com:8001/repository/"
 
