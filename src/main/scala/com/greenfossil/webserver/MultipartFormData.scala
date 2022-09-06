@@ -63,7 +63,7 @@ case class MultipartFormData(aggMultipart: AggregatedMultipart):
       name <- names()
       part <- aggMultipart.fields(name).asScala
       //      if part.headers().get(HttpHeaderNames.CONTENT_TRANSFER_ENCODING, "").equals("binary")
-      if part.filename() != null
+      if part.filename() != null && !part.content().isEmpty
     } yield  TemporaryFile(name, part.filename(), part.contentType(), part)
     xs.toList
 
