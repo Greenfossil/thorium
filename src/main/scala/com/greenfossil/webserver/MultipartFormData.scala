@@ -51,11 +51,11 @@ case class MultipartFormData(aggMultipart: AggregatedMultipart):
     }
 
     @deprecated("to use input stream instead")
-    def photoUrlOpt: Option[java.net.URL] = saveFileTo("/tmp").map(_.toURL).toOption
+    def fileUrlOpt: Option[java.net.URL] = saveFileTo("/tmp").map(_.toURL).toOption
 
-    def photoFileSizeGB: Double = part.content().length().toDouble / 1000 / 1000 / 1000
-    def photoFileSizeMB: Double = part.content().length().toDouble / 1000 / 1000
-    def photoFileSizeByte: Int = part.content().length()
+    def fileSizeGB: Double = part.content().length().toDouble / 1000 / 1000 / 1000
+    def fileSizeMB: Double = part.content().length().toDouble / 1000 / 1000
+    def fileSizeByte: Int = part.content().length()
   }
 
   def files: List[TemporaryFile] =
@@ -73,4 +73,4 @@ case class MultipartFormData(aggMultipart: AggregatedMultipart):
    * @return
    */
   def findFile(fileNameRegex: String): Option[TemporaryFile] =
-    files.find(file => file.name.matches(fileNameRegex))
+    files.find(file => file.name.matches(fileNameRegex) && file.fileSizeByte > 0)
