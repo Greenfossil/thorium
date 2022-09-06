@@ -37,8 +37,8 @@ object Endpoint {
 
   def paramKeyValue(name: String, value: Any): String =
     (name, value) match {
-      case (name, xs: Seq[Any]) => xs.map(x => s"${name}[]=${urlencode(x.toString)}").mkString("&")
-      case (name, x: Any) => s"$name=${urlencode(x.toString)}"
+      case (name, xs: Seq[Any]) => xs.map(x => s"${name}[]=${x.toString}").mkString("&")
+      case (name, x: Any) => s"$name=${x.toString}"
     }
 
   def urlencode(value: String): String =
