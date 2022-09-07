@@ -5,7 +5,7 @@ scalacOptions ++= Seq("-feature", "-deprecation")
 lazy val commonsCryptoVersion = "0.1.0"
 lazy val commonsI18nVersion = "0.1.2"
 lazy val commonsJsonVersion = "0.1.1"
-lazy val datamappingVersion="0.1.4"
+lazy val datamappingVersion="0.1.5-SNAPSHOT"
 lazy val typesafeConfigExtVersion = "0.1.0"
 
 //lazy val databMapping = RootProject(file("../data-mapping"))
