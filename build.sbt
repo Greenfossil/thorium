@@ -5,7 +5,7 @@ scalacOptions ++= Seq("-feature", "-deprecation")
 lazy val commonsCryptoVersion = "0.1.0"
 lazy val commonsI18nVersion = "0.1.2"
 lazy val commonsJsonVersion = "0.1.1"
-lazy val datamappingVersion="0.1.5-SNAPSHOT"
+lazy val datamappingVersion="0.1.5-RC2"
 lazy val typesafeConfigExtVersion = "0.1.0"
 
 //lazy val databMapping = RootProject(file("../data-mapping"))
@@ -15,7 +15,7 @@ lazy val webServer = project
   .settings(
     name := "web-server",
     organization := "com.greenfossil",
-    version := "0.1.3-RC1-SNAPSHOT",
+    version := "0.1.3-RC1",
 
     scalaVersion := scala3Version,
 
@@ -37,18 +37,4 @@ lazy val webServer = project
   )
 //  .dependsOn(databMapping)
 
-lazy val nexus = "https://dev2.greenfossil.com:8001/repository/"
-
 parallelExecution := false
-
-ThisBuild / resolvers ++= Seq(
-  "GF Release" at nexus + "public/",
-  "GF Snapshot" at nexus + "public-snapshots/"
-)
-
-ThisBuild / publishTo := {
-  if (isSnapshot.value) Some("snapshots" at nexus + "snapshots/")
-  else Some("releases"  at nexus + "releases/")
-}
-
-credentials += Credentials(Path.userHome / ".sbt" / ".credentials")
