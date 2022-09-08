@@ -37,7 +37,7 @@ object FormServices extends Controller {
 
   //https://stackoverflow.com/questions/19116016/what-is-the-right-way-to-post-multipart-form-data-using-curl
   //https://everything.curl.dev/http/multipart
-  //curl -v -F person=anonymous -F secret=file.txt http://localhost:8080/multipart2
+  //curl -v -F person=anonymous -F secret=@file.txt http://localhost:8080/multipart2
   @Post("/multipart2")
   def multipartForm2 = Action.multipart { implicit request =>
     val names = request.names()
@@ -49,6 +49,19 @@ object FormServices extends Controller {
     
     val form = Mapping("person", text).bindFromRequest()
     Ok(s"Received Multipart form - ${form.value}")
+  }
+
+  //https://stackoverflow.com/questions/19116016/what-is-the-right-way-to-post-multipart-form-data-using-curl
+  //https://everything.curl.dev/http/multipart
+  //curl -v -F secret=@file.txt http://localhost:8080/multipart3
+  @Post("/multipart3")
+  def multipartForm3 = Action.multipart { implicit request =>
+    println(s"request.names() = ${request.names()}")
+
+    val files = request.files
+    println(s"files = ${files}")
+
+    Ok(s"Received multipart request with files: ${files.size}")
   }
 
   @Post("/form-mapping") //curl -d "name=homer&id=8" -X POST  http://localhost:8080/form-mapping
