@@ -1,12 +1,12 @@
-val scala3Version = "3.1.3"
+val scala3Version = "3.2.0"
 
 scalacOptions ++= Seq("-feature", "-deprecation")
 
-lazy val commonsCryptoVersion = "0.1.0"
-lazy val commonsI18nVersion = "0.1.2"
-lazy val commonsJsonVersion = "0.1.1"
-lazy val datamappingVersion="0.1.6"
-lazy val typesafeConfigExtVersion = "0.1.0"
+lazy val commonsCryptoVersion = "0.2.0-RC1"
+lazy val commonsI18nVersion = "0.2.0-RC1"
+lazy val commonsJsonVersion = "0.2.0-RC1"
+lazy val datamappingVersion="0.2.0-RC1"
+lazy val typesafeConfigExtVersion = "0.2.0-RC1"
 
 //lazy val databMapping = RootProject(file("../data-mapping"))
 
@@ -15,7 +15,7 @@ lazy val webServer = project
   .settings(
     name := "web-server",
     organization := "com.greenfossil",
-    version := "0.1.4",
+    version := "0.2.0-RC1",
 
     scalaVersion := scala3Version,
 
@@ -28,10 +28,10 @@ lazy val webServer = project
       "com.greenfossil" %% "typesafe-config-ext" % typesafeConfigExtVersion,
       "com.greenfossil" %% "data-mapping" % datamappingVersion,
       "io.projectreactor" % "reactor-core" % "3.4.22",
-      "com.linecorp.armeria" %% "armeria-scala" % "1.17.1",
-      "com.linecorp.armeria" % "armeria-logback" % "1.17.1",
-      "org.slf4j" % "slf4j-api" % "2.0.0-alpha7",
-      "ch.qos.logback" % "logback-classic" % "1.3.0-alpha16" % Test,
+      "com.linecorp.armeria" %% "armeria-scala" % "1.18.0",
+      "com.linecorp.armeria" % "armeria-logback" % "1.18.0",
+      "org.slf4j" % "slf4j-api" % "2.0.0",
+      "ch.qos.logback" % "logback-classic" % "1.4.0" % Test,
       "org.scalameta" %% "munit" % "0.7.29" % Test
     )
   )
