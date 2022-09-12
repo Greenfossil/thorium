@@ -5,7 +5,7 @@ scalacOptions ++= Seq("-feature", "-deprecation")
 lazy val commonsCryptoVersion = "0.2.0-RC1"
 lazy val commonsI18nVersion = "0.2.0-RC1"
 lazy val commonsJsonVersion = "0.2.0-RC1"
-lazy val datamappingVersion="0.2.0-RC1"
+lazy val datamappingVersion="0.2.0-RC2"
 lazy val typesafeConfigExtVersion = "0.2.0-RC1"
 
 //lazy val databMapping = RootProject(file("../data-mapping"))
@@ -15,7 +15,7 @@ lazy val webServer = project
   .settings(
     name := "web-server",
     organization := "com.greenfossil",
-    version := "0.2.0-RC1",
+    version := "0.2.0-RC2",
 
     scalaVersion := scala3Version,
 

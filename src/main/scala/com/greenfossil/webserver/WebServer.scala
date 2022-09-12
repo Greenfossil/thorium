@@ -98,7 +98,8 @@ case class WebServer(server: Server,
     copy(services = services :+ (endpoint, action))
 
   def addServices(newServices: (Controller| Tuple2[String, HttpService]) *): WebServer  =
-    val (controllers: Seq[Controller @unchecked], newSvcs: Seq[(String, HttpService) @unchecked]) = newServices.partition(s => s.isInstanceOf[Controller])
+    val (controllers: Seq[Controller @unchecked], newSvcs: Seq[(String, HttpService) @unchecked]) =
+      newServices.partition(s => s.isInstanceOf[Controller]) : @unchecked
     copy(services = services ++ newSvcs, annotatedServices = annotatedServices ++ controllers)
 
   def setErrorHandler(h: ServerErrorHandler): WebServer =
