@@ -9,12 +9,25 @@ import scala.sys.process.*
 
 class MultiPartFormSuite extends FunSuite{
 
-  var port: Int = 8080
+  var server: WebServer = null
 
   override def beforeAll(): Unit = {
-    WebServer(port).addServices(FormServices).start()
-    println(s"Server started... ${Thread.currentThread()}")
+
+    try{
+
+      server = WebServer(8080).addServices(FormServices).start()
+      println(s"Server started.${server.server.activeLocalPort()}.. ${Thread.currentThread()}")
+    }catch {
+      case ex: Throwable =>
+        println(s"ex = ${ex}")
+    }
   }
+
+  override def afterAll(): Unit = {
+    println("Stopping server ...")
+    server.server.stop()
+  }
+
 
   test("POST with file content") {
     Files.write(Paths.get("/tmp/file.txt"), "Hello world".getBytes(StandardCharsets.UTF_8))
@@ -30,10 +43,10 @@ class MultiPartFormSuite extends FunSuite{
     assertEquals(result, "Received multipart request with files: 0")
   }
 
-  test("POST without file content using web browser's raw data") {
+  test("POST empty body raw data") {
     val result =
-      "curl http://localhost:8080/multipart3 -H 'Content-Type: multipart/form-data; boundary=----WebKitFormBoundaryaDaB4MtEkj4a1pYx' --data-raw $'------WebKitFormBoundaryaDaB4MtEkj4a1pYx--\r\n'".!!.trim
-    println(s"Result: [${result}]")
+      ("curl http://localhost:8080/multipart3 -H 'Content-Type: multipart/form-data; boundary=----WebKitFormBoundaryaDaB4MtEkj4a1pYx' " +
+        "--data-raw $'------WebKitFormBoundaryaDaB4MtEkj4a1pYx--\r\n'").!!.trim
     assertEquals(result, "Received multipart request with files: 0")
   }
 
@@ -51,7 +64,6 @@ class MultiPartFormSuite extends FunSuite{
       "------WebKitFormBoundaryOrtvYGBXE2gxan8t\r\nContent-Disposition: form-data; name=\"dtEnd\"\r\n\r\n\r\n" +
       "------WebKitFormBoundaryOrtvYGBXE2gxan8t--\r\n'"
     val result = command.!!.trim
-    println(s"Result: [${result}]")
     assertEquals(result, "Received multipart request with files: 0")
   }
 

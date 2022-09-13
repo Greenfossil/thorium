@@ -13,7 +13,7 @@ object AnnotatedPathMacroSupport extends MacroSupport(globalDebug = false) {
 
   def computeActionAnnotatedPath[A : Type, R : Type](epExpr: Expr[A],
                                                      onSuccessCallback: (Expr[String], Expr[List[Any]], Expr[List[String]], Expr[List[Any]]) =>  Expr[R],
-                                                     supportQueryStringPost: Boolean = false
+                                                     supportQueryStringPost: Boolean = true
                                                     )(using Quotes): Expr[R] =
     import quotes.reflect.*
     searchForAnnotations(epExpr.asTerm, 1) match

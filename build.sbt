@@ -15,7 +15,7 @@ lazy val webServer = project
   .settings(
     name := "web-server",
     organization := "com.greenfossil",
-    version := "0.2.0-RC2",
+    version := "0.2.0-RC3-SNAPSHOT",
 
     scalaVersion := scala3Version,
 
@@ -28,8 +28,8 @@ lazy val webServer = project
       "com.greenfossil" %% "typesafe-config-ext" % typesafeConfigExtVersion,
       "com.greenfossil" %% "data-mapping" % datamappingVersion,
       "io.projectreactor" % "reactor-core" % "3.4.22",
-      "com.linecorp.armeria" %% "armeria-scala" % "1.18.0",
-      "com.linecorp.armeria" % "armeria-logback" % "1.18.0",
+      "com.linecorp.armeria" %% "armeria-scala" % "1.19.0",
+      "com.linecorp.armeria" % "armeria-logback" % "1.19.0",
       "org.slf4j" % "slf4j-api" % "2.0.0",
       "ch.qos.logback" % "logback-classic" % "1.4.0" % Test,
       "org.scalameta" %% "munit" % "0.7.29" % Test

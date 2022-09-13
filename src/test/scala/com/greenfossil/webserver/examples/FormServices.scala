@@ -108,7 +108,7 @@ object FormServices extends Controller {
   }
 
   /*
-   * NB: Currently, for Method Post, both data and query arg will not work,
+   * NB: Currently, for Method Post, both data and query arg will work only from Armeria 1.19.0 onwards,
    * the only workround is to use Request as an function argument as in /form-request2
    */
   @Post("/form-request1") //curl -d "name=homer" -X POST  http://localhost:8080/form-request1\?queryArg\=12345
