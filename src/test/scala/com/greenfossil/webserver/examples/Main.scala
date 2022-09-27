@@ -9,6 +9,7 @@ import com.greenfossil.webserver.*
       Ok(s"Howdy! env:${request.env.mode}")
     })
     .addServices(BasicServices,FormServices,SimpleServices, ParameterizedServices)
+    .addServices(MultipartServices)
     .addDocService()
     .addBeforeStartInit(sb => {
       sb.serviceUnder("/docs", new com.linecorp.armeria.server.docs.DocService())
