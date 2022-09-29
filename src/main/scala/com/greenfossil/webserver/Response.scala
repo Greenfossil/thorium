@@ -22,7 +22,8 @@ def Redirect(url: String, queryString: Map[String, Seq[String]]): Result =
   Redirect(url, queryString, HttpStatus.SEE_OTHER)
 
 def Redirect(url: String, queryString: Map[String, Seq[String]], status: HttpStatus): Result =
-  toResult(status,url).copy(queryString = queryString)
+  val loc = s"${url}${ queryString.toList.map{case (k, v) => Endpoint.paramKeyValueUrlEncoded(k, v)}.mkString("?", "&", "")}"
+  toResult(status,loc)
 
 /**
  * Inline redirect macro

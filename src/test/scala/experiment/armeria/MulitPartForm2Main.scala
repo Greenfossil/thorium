@@ -35,6 +35,8 @@ import java.util.concurrent.CompletableFuture
     }
   })
 
+  sb.decorator((delegate, ctx, req) => ???)
+
   object MultiPartAction {
     def apply(fn: AggregatedHttpRequest => HttpResponse): MultiPartAction =
       (req: AggregatedHttpRequest) => fn(req)

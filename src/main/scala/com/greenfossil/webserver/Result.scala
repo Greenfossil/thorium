@@ -52,7 +52,7 @@ object Result {
 
 case class Result(header: ResponseHeader,
                   body: HttpResponse | String | Array[Byte] | InputStream,
-                  queryString: Map[String, Seq[String]] = Map.empty,
+                  queryString: Map[String, Seq[String]] = Map.empty, //TODO - check if this is missing or not being used
                   newSessionOpt: Option[Session] = None,
                   newFlashOpt: Option[Flash] = None,
                   newCookies:Seq[Cookie],
