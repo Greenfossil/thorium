@@ -21,6 +21,10 @@ class EndpointMacroSuite extends munit.FunSuite {
   @Post("/endpoint4/:name")
   def endpoint4(@Param members: Seq[String], @Param name: String, @Param time: LocalDateTime) = Action { req => "endpoint5"}
 
+  @Post
+  @Path("/endpoint5/:id/:name")
+  def endpoint5(@Param id: Long, @Param name: String) = Action { req => "endpoint5" }
+
   test("annotated endpoint"){
     val ep1 = endpoint1.endpoint
     assertNoDiff(ep1.url, "/endpoint1")
@@ -88,6 +92,12 @@ class EndpointMacroSuite extends munit.FunSuite {
 
     assertNoDiff(url, url2)
     assertNoDiff(url, "/endpoint3?name=Homer%2FMarge%20Simpson")
+  }
+
+  test("endpoint with Path annotation"){
+    val endpoint = endpoint5(1, "Homer").endpoint
+    assertEquals(endpoint.url, "/endpoint5/1/Homer")
+    assertEquals(endpoint.method, "Post")
   }
 
 }

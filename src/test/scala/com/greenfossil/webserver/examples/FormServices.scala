@@ -2,7 +2,7 @@ package com.greenfossil.webserver.examples
 
 import com.greenfossil.data.mapping.*
 import com.greenfossil.webserver.{*, given}
-import com.linecorp.armeria.server.annotation.{Get, Param, Post}
+import com.linecorp.armeria.server.annotation.{Get, Param, Path, Post}
 
 /*
  * Please ensure com.greenfossil.webserver.examples.main is started
@@ -120,4 +120,10 @@ object FormServices extends Controller {
   @Post("/form-request2") //curl -d "name=homer" -X POST  http://localhost:8080/form-request2\?queryArg\=12345
   def formRequest2(@Param queryArg: Int)(using request: Request) =
     s"queryArg:${queryArg} , req ${request.asFormUrlEncoded} - uri ${request.uri}"
+
+  @Post
+  @Path("/form-request3/:queryArg")
+  def formRequest3(@Param queryArg: Int)(using request: Request) =
+    s"queryArg:${queryArg} , req ${request.asFormUrlEncoded} - uri ${request.uri}"
+
 }

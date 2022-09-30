@@ -2,7 +2,7 @@ package com.greenfossil.webserver.examples
 
 import com.greenfossil.webserver.{*, given}
 import com.linecorp.armeria.common.MediaType
-import com.linecorp.armeria.server.annotation.{Get, Post}
+import com.linecorp.armeria.server.annotation.{Get, Post, Param}
 
 import java.io.ByteArrayInputStream
 import scala.language.implicitConversions
