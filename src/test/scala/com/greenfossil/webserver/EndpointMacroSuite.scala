@@ -94,7 +94,7 @@ class EndpointMacroSuite extends munit.FunSuite {
     assertNoDiff(url, "/endpoint3?name=Homer%2FMarge%20Simpson")
   }
 
-  test("endpoint with Path annotation"){
+  test("endpoint with Path annotation".flaky){
     val endpoint = endpoint5(1, "Homer").endpoint
     assertEquals(endpoint.url, "/endpoint5/1/Homer")
     assertEquals(endpoint.method, "Post")
