@@ -38,7 +38,7 @@ object AnnotatedPathMacroSupport extends MacroSupport(globalDebug = false) {
             .toMap
             .filter((key, value) => annotatedParamNames.contains(key))
 
-        val annList = applyTerm.symbol.annotations
+        val annList = applyTerm.symbol.annotations //Get Endpoint annotations
         getAnnotatedPath(epExpr, annList, paramNameValueLookup, onSuccessCallback, supportQueryStringPost)
 
       case typedTerm: Typed =>
@@ -89,7 +89,7 @@ object AnnotatedPathMacroSupport extends MacroSupport(globalDebug = false) {
     supportQueryStringPost: Boolean
   ): Expr[P] =
     import quotes.reflect.*
-    getDeclaredPath(annList) match
+    extractAnnotations(annList) match
       case None =>
         report.errorAndAbort(s"No annotated path found ${epExpr}", epExpr)
 
@@ -130,14 +130,28 @@ object AnnotatedPathMacroSupport extends MacroSupport(globalDebug = false) {
    * @param annList
    * @return Option[(GET|POST|PATH, path),
    */
-  private def getDeclaredPath(using Quotes)(annList: List[quotes.reflect.Term]): Option[(String, String)] =
+  private def extractAnnotations(using Quotes)(annList: List[quotes.reflect.Term]): Option[(String, String)] =
     import quotes.reflect.*
-    annList.collectFirst {
+    show("AnnotationList", annList)
+    val xs = annList.collect {
       case Apply(Select(New(annMethod), _), args) =>
-        show("Annotation HttpMethod", annMethod)
-        show("Annotation Path Parts", args)
-        args.collectFirst { case Literal(c) => (annMethod.symbol.name, c.value.toString) }
+        show("Annotation HttpMethod", annMethod, true)
+        show("Annotation Path Parts", args, true)
+        args.collectFirst {
+          case Literal(c) => (annMethod.symbol.name, c.value.toString)
+          case Wildcard() => (annMethod.symbol.name, "")
+        }
     }.flatten
+    if xs.isEmpty then None
+    else
+      val tup = xs.foldLeft(("", "")){(res, tup2) =>
+        tup2 match {
+          case ("Path", path) if path.nonEmpty => (res._1, path)
+          case (method, path) if path.isEmpty => (method, res._2)
+          case (method, path) => (method, path)
+        }
+      }
+      Some(tup)
 
   private def getComputedPathExpr[A : Type](using Quotes)(
     actionExpr: Expr[A],
