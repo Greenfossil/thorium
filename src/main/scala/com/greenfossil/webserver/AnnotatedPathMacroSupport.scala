@@ -135,8 +135,8 @@ object AnnotatedPathMacroSupport extends MacroSupport(globalDebug = false) {
     show("AnnotationList", annList)
     val xs = annList.collect {
       case Apply(Select(New(annMethod), _), args) =>
-        show("Annotation HttpMethod", annMethod, true)
-        show("Annotation Path Parts", args, true)
+        show("Annotation HttpMethod", annMethod)
+        show("Annotation Path Parts", args)
         args.collectFirst {
           case Literal(c) => (annMethod.symbol.name, c.value.toString)
           case Wildcard() => (annMethod.symbol.name, "")
