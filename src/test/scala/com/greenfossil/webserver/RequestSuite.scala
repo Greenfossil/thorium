@@ -38,9 +38,6 @@ class RequestSuite extends munit.FunSuite{
         req.asMultipartFormData(mpForm => {
           val form = mpForm.asFormUrlEncoded
           val files = mpForm.files
-          println(s"form = ${form}")
-          println(s"files.size = ${files.size}")
-          files foreach println
           if form.nonEmpty then Ok("Received Text")
           else BadRequest("Did not receive the right text")
         })

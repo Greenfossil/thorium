@@ -14,7 +14,6 @@ object FormServices extends Controller {
   @Post("/form")
   def form = Action { request =>
     val f = request.asFormUrlEncoded
-    println(s"form = ${f}")
     s"Form f ${f}"
   }
 
@@ -26,11 +25,8 @@ object FormServices extends Controller {
     request
       .asMultipartFormData(form =>
         val names  = form.names()
-          println(s"names = $names")
         val map = form.asFormUrlEncoded
-          println(s"map = ${map}")
         val files = form.files
-          println(s"files = ${files}")
           Ok("Received Multipart form")
       )
   }
@@ -41,12 +37,9 @@ object FormServices extends Controller {
   @Post("/multipart2")
   def multipartForm2 = Action.multipart { implicit request =>
     val names = request.names()
-    println(s"names = $names")
     val map = request.asFormUrlEncoded
-    println(s"map = ${map}")
     val files = request.files
-    println(s"files = ${files}")
-    
+
     val form = Mapping("person", text).bindFromRequest()
     Ok(s"Received Multipart form - ${form.value}")
   }
@@ -56,11 +49,7 @@ object FormServices extends Controller {
   //curl -v -F secret=@file.txt http://localhost:8080/multipart3
   @Post("/multipart3")
   def multipartForm3 = Action.multipart { implicit request =>
-    println(s"request.names() = ${request.names()}")
-
     val files = request.files
-    println(s"files = ${files}")
-
     Ok(s"Received multipart request with files: ${files.size}")
   }
 

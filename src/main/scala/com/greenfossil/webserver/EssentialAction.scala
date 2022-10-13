@@ -1,10 +1,11 @@
 package com.greenfossil.webserver
 
-import com.linecorp.armeria.common.{AggregatedHttpRequest, HttpData, HttpRequest, HttpResponse, HttpStatus, MediaType}
+import com.linecorp.armeria.common.stream.StreamMessage
+import com.linecorp.armeria.common.{AggregatedHttpRequest, HttpData, HttpHeaders, HttpRequest, HttpResponse, HttpStatus, MediaType}
 import com.linecorp.armeria.server.{HttpService, ServiceRequestContext}
 import org.slf4j.LoggerFactory
 
-import java.io.InputStream
+import java.io.{InputStream, PipedInputStream}
 import java.time.Duration
 import java.util.concurrent.CompletableFuture
 import scala.concurrent.{ExecutionContext, Future}
@@ -39,29 +40,39 @@ trait EssentialAction extends HttpService:
       svcRequestContext
         .request()
         .aggregate()
-        .thenCompose(aggregateRequest => invokeAction(svcRequestContext, aggregateRequest))
+        .thenApplyAsync(aggregateRequest => invokeAction(svcRequestContext, aggregateRequest))
     HttpResponse.from(f)
 
-  private def invokeAction(svcRequestContext:ServiceRequestContext, aggregateRequest: AggregatedHttpRequest): CompletableFuture[HttpResponse] = {
-    val f = new CompletableFuture[HttpResponse]()
-    svcRequestContext.blockingTaskExecutor().execute(() => {
-      try{
-        val req = new com.greenfossil.webserver.Request(svcRequestContext, aggregateRequest) {}
-        val resp = apply(req) match
-          case s: String => HttpResponse.of(s)
-          case hr: HttpResponse => hr
-          case result: Result => result.toHttpResponse(req)
-          case bytes: Array[Byte] => HttpResponse.of(HttpStatus.OK, Option(req.contentType).getOrElse(MediaType.ANY_TYPE), HttpData.wrap(bytes))
-          case is: InputStream => HttpResponse.of(HttpStatus.OK, Option(req.contentType).getOrElse(MediaType.ANY_TYPE), HttpData.wrap(is.readAllBytes()))
-        f.complete(resp)
-      } catch {
-        case t: Throwable =>
-          _actionLogger.error("Invoke Action error", t)
-          f.complete(HttpResponse.ofFailure(t)) // allow exceptionHandlerFunctions and serverErrorHandler to kick in
-      }
-    })
-    f
-  }
+  private def invokeAction(svcRequestContext: ServiceRequestContext, aggregateRequest: AggregatedHttpRequest): HttpResponse =
+    try {
+      val req = new com.greenfossil.webserver.Request(svcRequestContext, aggregateRequest) {}
+      val resp = apply(req) match
+        case s: String => HttpResponse.of(s)
+        case hr: HttpResponse => hr
+        case result: Result => result.toHttpResponse(req)
+        case bytes: Array[Byte] =>
+          HttpResponse.of(HttpStatus.OK, Option(req.contentType).getOrElse(MediaType.ANY_TYPE), HttpData.wrap(bytes))
+        case is: InputStream =>
+          val headers =
+            com.linecorp.armeria.common.ResponseHeaders.builder(HttpStatus.OK)
+              .contentType(Option(req.contentType).getOrElse(MediaType.ANY_TYPE))
+              .build()
+          HttpResponse.of(headers, StreamMessage.fromOutputStream(os => {
+            var doRead = true
+            val READ_BLOCK_SIZE = 8192
+            while (doRead) {
+              val bytes = is.readNBytes(READ_BLOCK_SIZE)
+              doRead = bytes.size == READ_BLOCK_SIZE
+              os.write(bytes)
+            }
+            os.close()
+          }))
+      resp
+    } catch {
+      case t: Throwable =>
+        _actionLogger.error("Invoke Action error", t)
+        HttpResponse.ofFailure(t) // allow exceptionHandlerFunctions and serverErrorHandler to kick in
+    }
 
 end EssentialAction
 
@@ -86,7 +97,6 @@ object Action:
     (request: Request) => request.asMultipartFormData { form =>
       fn(MultipartRequest(form, request.requestContext, request.aggregatedHttpRequest))
     }
-
 
   //TODO - need to add test cases
   def async(fn: Request => ActionResponse)(using executor: ExecutionContext): Future[Action] =

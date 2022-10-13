@@ -6,9 +6,6 @@ import com.linecorp.armeria.server.annotation.{Get, Param, Post}
 
 object MultipartServices extends Controller {
 
-  // These services are used for testing if Armeria multipart request is working correctly
-  
-
   /*
    * Method Multipart, both data and query arg does not work from Armeria 1.19.0 and before
    */

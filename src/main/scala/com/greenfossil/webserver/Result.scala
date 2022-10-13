@@ -1,7 +1,8 @@
 package com.greenfossil.webserver
 
 import com.greenfossil.commons.json.Json
-import com.linecorp.armeria.common.{Cookie, HttpResponse, HttpStatus, MediaType}
+import com.linecorp.armeria.common.stream.StreamMessage
+import com.linecorp.armeria.common.{Cookie, HttpHeaders, HttpResponse, HttpStatus, MediaType}
 import io.netty.util.AsciiString
 
 import java.io.InputStream
@@ -291,7 +292,22 @@ case class Result(header: ResponseHeader,
       case bytes: Array[Byte] =>
         HttpResponse.of(HttpStatus.OK,  contentTypeOpt.getOrElse(req.contentType), bytes)
       case is: InputStream =>
-        HttpResponse.of(HttpStatus.OK, contentTypeOpt.getOrElse(req.contentType), is.readAllBytes())
+        val headers =
+          com.linecorp.armeria.common.ResponseHeaders.builder(HttpStatus.OK)
+            .contentType(contentTypeOpt.getOrElse(req.contentType))
+            .build()
+        val s = StreamMessage.fromOutputStream(os => {
+          var doRead = true
+          val READ_BLOCK_SIZE = 8192
+          while (doRead) {
+            val bytes = is.readNBytes(READ_BLOCK_SIZE)
+            doRead = bytes.size == READ_BLOCK_SIZE
+            os.write(bytes)
+          }
+          os.close()
+        })
+        HttpResponse.of(headers, s)
+
       case string: String =>
         HttpResponse.of(string)
 

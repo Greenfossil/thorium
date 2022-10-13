@@ -14,17 +14,13 @@ class MultiPartFormSuite extends FunSuite{
   override def beforeAll(): Unit = {
 
     try{
-
       server = WebServer(8080).addServices(FormServices).start()
-      println(s"Server started.${server.server.activeLocalPort()}.. ${Thread.currentThread()}")
     }catch {
       case ex: Throwable =>
-        println(s"ex = ${ex}")
     }
   }
 
   override def afterAll(): Unit = {
-    println("Stopping server ...")
     server.server.stop()
   }
 
@@ -33,13 +29,11 @@ class MultiPartFormSuite extends FunSuite{
     Files.write(Paths.get("/tmp/file.txt"), "Hello world".getBytes(StandardCharsets.UTF_8))
 
     val result = "curl http://localhost:8080/multipart3 -F resourceFile=@/tmp/file.txt ".!!.trim
-    println(s"Result: [$result]")
     assertEquals(result, "Received multipart request with files: 1")
   }
 
   test("POST without file content but with form param") {
     val result = "curl http://localhost:8080/multipart3 -F name=homer ".!!.trim
-    println(s"Result: [${result}]")
     assertEquals(result, "Received multipart request with files: 0")
   }
 

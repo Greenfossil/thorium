@@ -52,7 +52,7 @@ object BasicServices extends Controller {
   @Get("/image")
   def image = Action {request =>
     import com.linecorp.armeria.common.HttpHeaderNames.CACHE_CONTROL
-    val is: java.io.InputStream = new ByteArrayInputStream(null)
+    val is = ClassLoader.getSystemResourceAsStream("favicon.png")
     is.withHeaders(CACHE_CONTROL -> "no-store").as(MediaType.PNG)
   }
 

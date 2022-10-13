@@ -85,10 +85,8 @@ class EndpointMacroSuite extends munit.FunSuite {
   test("url-encoded param Def string") {
     def defToken = "Homer/Marge Simpson"
     val url = endpoint3(defToken).url
-    println(s"url = ${url}")
 
     val url2 = endpoint3("Homer/Marge Simpson").url
-    println(s"url2 = ${url2}")
 
     assertNoDiff(url, url2)
     assertNoDiff(url, "/endpoint3?name=Homer%2FMarge%20Simpson")

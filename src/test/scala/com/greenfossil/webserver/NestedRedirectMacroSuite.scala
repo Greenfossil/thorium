@@ -6,7 +6,6 @@ object NestedRedirectServices extends Controller {
 
   @Get("/nestedRedirect")
   def nestedRedirect = Action { request2 =>
-    println("This is a println")
     //Reference class' action
     nestedRedirectFn(actionEnd.endpoint)
   }

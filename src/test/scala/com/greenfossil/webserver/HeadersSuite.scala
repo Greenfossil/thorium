@@ -8,7 +8,6 @@ import scala.annotation.nowarn
 object HeadersServices extends Controller {
   @Get("/headers") @nowarn
   def headers = Action { request =>
-    println(s"S0 request.session = ${request.session}")
     Ok("Headers sent")
       .withHeaders(
         "Access-Control-Allow-Origin" -> "*",
@@ -30,7 +29,6 @@ class HeadersSuite extends munit.FunSuite {
     val client = WebClient.of(s"http://localhost:${server.port}")
     val resp = client.get("/headers")
     resp.aggregate().thenApply{ aggResp =>
-      println(s"aggResp.headers() = ${aggResp.headers()}")
       assertEquals(aggResp.status(), HttpStatus.OK)
       assertNoDiff(aggResp.contentUtf8(), "Headers sent")
     }.join()
