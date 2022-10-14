@@ -8,7 +8,7 @@ lazy val commonsI18nVersion = "0.2.0-RC3"
 lazy val commonsCryptoVersion = "0.2.0-RC2"
 lazy val typesafeConfigExtVersion = "0.2.0-RC1"
 
-lazy val databMapping = RootProject(file("../data-mapping"))
+//lazy val databMapping = RootProject(file("../data-mapping"))
 
 lazy val webServer = project
   .in(file("."))
@@ -35,6 +35,6 @@ lazy val webServer = project
       "org.scalameta" %% "munit" % "0.7.29" % Test
     )
   )
-  .dependsOn(databMapping)
+//  .dependsOn(databMapping)
 
 parallelExecution := false
