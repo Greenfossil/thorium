@@ -13,9 +13,9 @@ lazy val databMapping = RootProject(file("../data-mapping"))
 lazy val webServer = project
   .in(file("."))
   .settings(
-    name := "web-server",
+    name := "thorium",
     organization := "com.greenfossil",
-    version := "0.2.0-RC11-SNAPSHOT",
+    version := "0.2.0",
 
     scalaVersion := scala3Version,
 

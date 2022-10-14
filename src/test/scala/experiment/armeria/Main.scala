@@ -1,6 +1,6 @@
 package experiment.armeria
 
-import com.greenfossil.webserver.{Action, Controller, Request, Result}
+import com.greenfossil.thorium.{Action, Controller, Request, Result}
 import com.linecorp.armeria.common.*
 import com.linecorp.armeria.server.annotation.{ExceptionHandlerFunction, Get, RequestConverterFunction, ResponseConverterFunction}
 import com.linecorp.armeria.server.{Server, ServiceRequestContext}

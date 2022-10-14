@@ -1,6 +1,6 @@
 package experiment.endpoint
 
-import com.greenfossil.webserver.*
+import com.greenfossil.thorium.{*, given}
 
 inline def EndpointMcr[A <: EssentialAction](inline action: A): Endpoint =
   ${ EndpointMcrImpl( '{action} ) }

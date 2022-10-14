@@ -1,6 +1,6 @@
 package experiment.armeria
 
-import com.greenfossil.webserver.Request
+import com.greenfossil.thorium.{*, given}
 import com.linecorp.armeria.common.{AggregatedHttpRequest, HttpHeaders, HttpRequest, HttpResponse, ResponseHeaders}
 import com.linecorp.armeria.server.{Server, ServiceRequestContext}
 import com.linecorp.armeria.server.annotation.{Param, Post, ResponseConverterFunction}

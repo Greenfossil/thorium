@@ -1,6 +1,6 @@
 package experiment.endpoint
 
-import com.greenfossil.webserver.{EssentialAction, MacroSupport}
+import com.greenfossil.thorium.{*, given}
 
 object AnnotatedPathMcr extends MacroSupport(globalDebug = false) {
 

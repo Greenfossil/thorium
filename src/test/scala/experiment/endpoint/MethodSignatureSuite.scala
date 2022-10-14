@@ -1,6 +1,6 @@
 package experiment.endpoint
 
-import com.greenfossil.webserver.{*, given}
+import com.greenfossil.thorium.{*, given}
 import com.linecorp.armeria.server.annotation.*
 
 object TestActionController extends Controller {

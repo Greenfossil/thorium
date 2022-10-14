@@ -1,7 +1,7 @@
 package com.greenfossil.data.mapping
 
 import com.greenfossil.commons.json.Json
-import com.greenfossil.webserver.{*, given}
+import com.greenfossil.thorium.{*, given}
 import com.linecorp.armeria.client.*
 import com.linecorp.armeria.common.*
 
