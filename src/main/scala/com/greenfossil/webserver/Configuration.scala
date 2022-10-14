@@ -17,8 +17,6 @@ object Configuration:
     val env = Environment.from(config)
     new Configuration(config, env, HttpConfiguration.from(config, env))
 
-end Configuration
-
 case class Configuration(config: Config, environment: Environment, httpConfiguration: HttpConfiguration) :
   def httpPort: Int = httpConfiguration.httpPort
 

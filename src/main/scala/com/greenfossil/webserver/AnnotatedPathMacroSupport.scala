@@ -4,7 +4,7 @@ import com.linecorp.armeria.internal.shaded.guava.net.UrlEscapers
 
 import java.nio.charset.{Charset, StandardCharsets}
 
-object AnnotatedPathMacroSupport extends MacroSupport(globalDebug = false) {
+object AnnotatedPathMacroSupport extends MacroSupport(globalDebug = false):
 
   def urlEncode(str: String): String =
     java.net.URLEncoder.encode(str, StandardCharsets.UTF_8).replaceAll("\\+", "%20")
@@ -145,18 +145,17 @@ object AnnotatedPathMacroSupport extends MacroSupport(globalDebug = false) {
     if xs.isEmpty then None
     else
       val tup = xs.foldLeft(("", "")){(res, tup2) =>
-        tup2 match {
+        tup2 match 
           case ("Path", path) if path.nonEmpty => (res._1, path)
           case (method, path) if path.isEmpty => (method, res._2)
           case (method, path) => (method, path)
-        }
       }
       Some(tup)
 
   private def getComputedPathExpr[A : Type](using Quotes)(
     actionExpr: Expr[A],
     paramNameValueLookup: Map[String, quotes.reflect.Term],
-    declaredPath: String): (List[Expr[Any]], List[String], List[Expr[Any]])  = {
+    declaredPath: String): (List[Expr[Any]], List[String], List[Expr[Any]])  = 
 
     import quotes.reflect.*
 
@@ -243,6 +242,3 @@ object AnnotatedPathMacroSupport extends MacroSupport(globalDebug = false) {
     }
 
     (computedPath, queryParamKeys, queryParamValues)
-  }
-
-}

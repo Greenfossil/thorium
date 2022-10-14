@@ -1,7 +1,7 @@
 package com.greenfossil.webserver
 
 import com.linecorp.armeria.common.stream.StreamMessage
-import com.linecorp.armeria.common.{AggregatedHttpRequest, HttpData, HttpHeaders, HttpRequest, HttpResponse, HttpStatus, MediaType}
+import com.linecorp.armeria.common.{AggregatedHttpRequest, HttpData, HttpHeaderNames, HttpHeaders, HttpRequest, HttpResponse, HttpStatus, MediaType, ResponseHeaders}
 import com.linecorp.armeria.server.{HttpService, ServiceRequestContext}
 import org.slf4j.LoggerFactory
 
@@ -53,20 +53,9 @@ trait EssentialAction extends HttpService:
         case bytes: Array[Byte] =>
           HttpResponse.of(HttpStatus.OK, Option(req.contentType).getOrElse(MediaType.ANY_TYPE), HttpData.wrap(bytes))
         case is: InputStream =>
-          val headers =
-            com.linecorp.armeria.common.ResponseHeaders.builder(HttpStatus.OK)
-              .contentType(Option(req.contentType).getOrElse(MediaType.ANY_TYPE))
-              .build()
-          HttpResponse.of(headers, StreamMessage.fromOutputStream(os => {
-            var doRead = true
-            val READ_BLOCK_SIZE = 8192
-            while (doRead) {
-              val bytes = is.readNBytes(READ_BLOCK_SIZE)
-              doRead = bytes.size == READ_BLOCK_SIZE
-              os.write(bytes)
-            }
-            os.close()
-          }))
+          HttpResponse.of(
+            ResponseHeaders.of(HttpStatus.OK, HttpHeaderNames.CONTENT_TYPE, Option(req.contentType).getOrElse(MediaType.ANY_TYPE)), 
+            StreamMessage.fromOutputStream(os => is.transferTo(os)))
       resp
     } catch {
       case t: Throwable =>

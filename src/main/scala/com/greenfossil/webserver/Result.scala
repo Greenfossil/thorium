@@ -2,7 +2,7 @@ package com.greenfossil.webserver
 
 import com.greenfossil.commons.json.Json
 import com.linecorp.armeria.common.stream.StreamMessage
-import com.linecorp.armeria.common.{Cookie, HttpHeaders, HttpResponse, HttpStatus, MediaType}
+import com.linecorp.armeria.common.{Cookie, HttpHeaderNames, HttpHeaders, HttpResponse, HttpStatus, MediaType, ResponseHeaders}
 import io.netty.util.AsciiString
 
 import java.io.InputStream
@@ -11,20 +11,11 @@ import java.time.{ZoneOffset, ZonedDateTime}
 import scala.collection.immutable.TreeMap
 import scala.util.Try
 
-/**
- * Case Insensitive Ordering. We first compare by length, then
- * use a case insensitive lexicographic order. This allows us to
- * use a much faster length comparison before we even start looking
- * at the content of the strings.
- */
-private object CaseInsensitiveOrdered extends Ordering[String] {
-  def compare(x: String, y: String): Int =
-    val xl = x.length
-    val yl = y.length
-    if xl < yl then -1 else if (xl > yl) 1 else x.compareToIgnoreCase(y)
-}
+private object CaseInsensitiveOrdered extends Ordering[String]:
+  def compare(left: String, right: String): Int =
+    left.compareToIgnoreCase(right)
 
-object ResponseHeader {
+object ResponseHeader:
   val basicDateFormatPattern = "EEE, dd MMM yyyy HH:mm:ss"
   val httpDateFormat: DateTimeFormatter =
     DateTimeFormatter
@@ -37,28 +28,24 @@ object ResponseHeader {
   def apply(headers: Map[String, String], reasonPhrase: String): ResponseHeader =
     val ciHeaders = TreeMap[String, String]()(CaseInsensitiveOrdered) ++ headers
     new ResponseHeader(ciHeaders, Option(reasonPhrase))
-}
 
 case class ResponseHeader(headers: TreeMap[String, String], reasonPhrase:Option[String] = None)
 
-object Result {
+object Result:
 
   def apply(body: ActionResponse): Result =
     body match
       case bodyResult: Result => bodyResult
       case body: (HttpResponse | String | Array[Byte] | InputStream) =>
-        new Result(ResponseHeader(Map.empty), body, Map.empty, None, None, Nil, None)
-
-}
+        new Result(ResponseHeader(Map.empty), body, None, None, Nil, None)
 
 case class Result(header: ResponseHeader,
                   body: HttpResponse | String | Array[Byte] | InputStream,
-                  queryString: Map[String, Seq[String]] = Map.empty, //TODO - check if this is missing or not being used
                   newSessionOpt: Option[Session] = None,
                   newFlashOpt: Option[Flash] = None,
                   newCookies:Seq[Cookie],
                   contentTypeOpt: Option[MediaType] = None
-                 ){
+                 ):
 
   /**
    * Adds headers to this result.
@@ -242,25 +229,25 @@ case class Result(header: ResponseHeader,
    * Forward Session, if not new values
    * Discard session is newSession isEmpty or append new values
    */
-  private def getNewSessionCookie(using req: Request): Option[Cookie] = newSessionOpt.map{ newSession =>
-    //If newSession isEmtpy, expire session cookie
-    if newSession.isEmpty then
-      CookieUtil.bakeDiscardCookie(req.httpConfiguration.sessionConfig.cookieName)
-    else
-      //Append new session will to session cookie
-      val session = req.session + newSession
-      CookieUtil.bakeSessionCookie(session).orNull
-  }
+  private def getNewSessionCookie(using req: Request): Option[Cookie] =
+    newSessionOpt.map { newSession =>
+      //If newSession isEmtpy, expire session cookie
+      if newSession.isEmpty then
+        CookieUtil.bakeDiscardCookie(req.httpConfiguration.sessionConfig.cookieName)
+      else
+        //Append new session will to session cookie
+        val session = req.session + newSession
+        CookieUtil.bakeSessionCookie(session).orNull
+    }
 
-  private def getNewFlashCookie(using req: Request): Option[Cookie] = newFlashOpt.flatMap{newFlash =>
-    //Create a new flash cookie
-    CookieUtil.bakeFlashCookie(newFlash)
-  }.orElse{
-    //Expire the current flash cookie
-    if req.flash.nonEmpty
-    then Some(CookieUtil.bakeDiscardCookie(req.httpConfiguration.flashConfig.cookieName))
-    else None
-  }
+  private def getNewFlashCookie(using req: Request): Option[Cookie] =
+    newFlashOpt.flatMap { newFlash =>
+      CookieUtil.bakeFlashCookie(newFlash) //Create a new flash cookie
+    }.orElse {
+      //Expire the current flash cookie
+      if req.flash.isEmpty then None
+      else Some(CookieUtil.bakeDiscardCookie(req.httpConfiguration.flashConfig.cookieName))
+    }
 
   private def getAllCookies(using req: Request): Seq[Cookie] = (getNewSessionCookie ++ getNewFlashCookie).toList ++ newCookies
 
@@ -292,22 +279,10 @@ case class Result(header: ResponseHeader,
       case bytes: Array[Byte] =>
         HttpResponse.of(HttpStatus.OK,  contentTypeOpt.getOrElse(req.contentType), bytes)
       case is: InputStream =>
-        val headers =
-          com.linecorp.armeria.common.ResponseHeaders.builder(HttpStatus.OK)
-            .contentType(contentTypeOpt.getOrElse(req.contentType))
-            .build()
-        val s = StreamMessage.fromOutputStream(os => {
-          var doRead = true
-          val READ_BLOCK_SIZE = 8192
-          while (doRead) {
-            val bytes = is.readNBytes(READ_BLOCK_SIZE)
-            doRead = bytes.size == READ_BLOCK_SIZE
-            os.write(bytes)
-          }
-          os.close()
-        })
-        HttpResponse.of(headers, s)
-
+        HttpResponse.of(
+          ResponseHeaders.of(HttpStatus.OK, HttpHeaderNames.CONTENT_TYPE, contentTypeOpt.getOrElse(req.contentType)),
+          StreamMessage.fromOutputStream(os => is.transferTo(os))
+        )
       case string: String =>
         HttpResponse.of(string)
 
@@ -319,4 +294,3 @@ case class Result(header: ResponseHeader,
 
     result.getOrElse(httpResp)
 
-}

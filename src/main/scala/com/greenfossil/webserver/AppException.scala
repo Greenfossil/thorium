@@ -4,7 +4,7 @@ import java.util.concurrent.atomic.AtomicLong
 
 
 /** A UsefulException is something useful to display in the User browser. */
-trait UsefulException extends RuntimeException {
+trait UsefulException extends RuntimeException:
   /** Exception title. */
   val title: String
 
@@ -23,7 +23,6 @@ trait UsefulException extends RuntimeException {
   
   def nextId = java.lang.Long.toString(generator.incrementAndGet(), 26)
   
-}
 
 trait AppException extends UsefulException
 

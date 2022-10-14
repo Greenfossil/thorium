@@ -7,7 +7,7 @@ import java.io.{File, InputStream}
 enum Mode extends Enum[Mode]:
   case Dev, Test, Prod, Demo
 
-object Environment {
+object Environment:
 
   def from(classLoader: ClassLoader): Environment =
     from(ConfigFactory.load(classLoader))
@@ -22,10 +22,8 @@ object Environment {
     val mode = config.getEnum(classOf[Mode], "app.env")
     Environment(config.getClass.getClassLoader, new File("."), mode)
 
-}
 
-
-case class Environment(classLoader: ClassLoader, rootPath: File,  mode: Mode) {
+case class Environment(classLoader: ClassLoader, rootPath: File,  mode: Mode):
 
   /**
    * Retrieves a file relative to the application root path.
@@ -105,6 +103,4 @@ case class Environment(classLoader: ClassLoader, rootPath: File,  mode: Mode) {
   def isDev: Boolean = mode == Mode.Dev
 
   def modeName: String = mode.toString.toLowerCase
-
-}
 

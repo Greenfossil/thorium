@@ -13,7 +13,7 @@ import scala.util.*
 
 type SameSiteCookie = "Strict" | "Lax"
 
-object HttpConfiguration{
+object HttpConfiguration:
 
   def from(config: Config, environment: Environment): HttpConfiguration =
     HttpConfiguration(
@@ -55,7 +55,6 @@ object HttpConfiguration{
       environment = environment
     )
 
-}
 
 /**
  *
@@ -183,7 +182,7 @@ case class FlashConfiguration(
  */
 case class SecretConfiguration(secret: String = "changeme", provider: Option[String] = None)
 
-object SecretConfiguration {
+object SecretConfiguration:
 
   // https://crypto.stackexchange.com/a/34866 = 32 bytes (256 bits)
   // https://security.stackexchange.com/a/11224 = (128 bits is more than enough)
@@ -201,8 +200,6 @@ object SecretConfiguration {
   // entropy.
   val SHORT_SECRET_LENGTH = 16
 
-}
-
 /**
  * The JSON Web Token configuration
  *
@@ -218,7 +215,7 @@ case class JWTConfiguration(
                              dataClaim: String = "data"
                            )
 
-object JWTConfigurationParser {
+object JWTConfigurationParser:
   def apply(config: Config, parent: String): JWTConfiguration =
     JWTConfiguration(
       signatureAlgorithm = config.getString(s"${parent}.signatureAlgorithm"),
@@ -226,7 +223,6 @@ object JWTConfigurationParser {
       clockSkew = config.getDuration(s"${parent}.clockSkew"),
       dataClaim = config.getString(s"${parent}.dataClaim")
     )
-}
 
 private def configError(
   message: String,
@@ -289,10 +285,9 @@ private def getSecretConfiguration(config: Config, environment: Environment): Se
    * @param e the related exception
    * @return a configuration exception
    */
-  def reportError(path: String, message: String, e: Option[Throwable] = None) = {
+  def reportError(path: String, message: String, e: Option[Throwable] = None) = 
     val origin = Option(if (config.hasPath(path)) config.getValue(path).origin else config.root.origin)
     configError(message, origin, e)
-  }
 
   val Blank = """\s*""".r
 

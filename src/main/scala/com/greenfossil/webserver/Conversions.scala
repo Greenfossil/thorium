@@ -1,7 +1,10 @@
 package com.greenfossil.webserver
 
-import com.linecorp.armeria.common.{HttpResponse, MediaType}
+import com.greenfossil.data.mapping.Mapping
+import com.linecorp.armeria.common.{HttpMethod, HttpResponse, MediaType}
 import io.netty.util.AsciiString
+
+import scala.util.Try
 
 given Conversion[HttpResponse, Result] = Result(_)
 
@@ -30,3 +33,22 @@ extension (inline action: EssentialAction)
 
 extension (inline action: EssentialAction)
   inline def endpoint: Endpoint = EndpointMcr(action)
+
+extension[A](field: Mapping[A])
+  def bindFromRequest()(using request: Request): Mapping[A] =
+    val queryData: List[(String, String)] =
+      request.method match {
+        case HttpMethod.POST | HttpMethod.PUT | HttpMethod.PATCH => Nil
+        case _ => request.queryParamsList
+      }
+
+    request match
+      //TODO - to be tested
+      //      case req if req.asMultipartFormData.get().bodyPart.nonEmpty =>
+      //        field.bind(req.asMultipartFormData.get().asFormUrlEncoded ++ queryData.groupMap(_._1)(_._2))
+
+      case req if Try(req.asJson).isSuccess =>
+        field.bind(request.asJson)
+
+      case req =>
+        field.bind(req.asFormUrlEncoded ++ queryData.groupMap(_._1)(_._2))

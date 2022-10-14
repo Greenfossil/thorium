@@ -7,9 +7,6 @@ import java.io.{ByteArrayInputStream, InputStream}
 trait Writeable[-C] :
   def content(x: C):(MediaType, InputStream)
 
-//given Writeable[InputStream] with
-//  def content(is: InputStream) = (MediaType.OCTET_STREAM, is)
-
 given Writeable[String] with
   def content(x: String) = (MediaType.PLAIN_TEXT_UTF_8, new ByteArrayInputStream(x.getBytes))
 

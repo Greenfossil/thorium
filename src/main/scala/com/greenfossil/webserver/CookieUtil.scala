@@ -55,7 +55,7 @@ import scala.concurrent.duration.*
  * A boolean, true if the cookie is a host-only cookie (i.e. the request's host must
  * exactly match the domain of the cookie), or false otherwise.
  */
-object CookieUtil {
+object CookieUtil:
 
   def cookieBuilder(config: CookieConfiguration, name: String, value: String): CookieBuilder =
     val cb = Cookie.secureBuilder(name, value)
@@ -134,4 +134,3 @@ object CookieUtil {
       flashCookieBuilder(request.httpConfiguration.flashConfig, request.httpConfiguration.secretConfig.secret, flash.data)
         .build()
     }
-}

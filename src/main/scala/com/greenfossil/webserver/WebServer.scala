@@ -56,12 +56,11 @@ case class WebServer(server: Server,
           //embed the env and http config
           svcRequestContext.setAttr(RequestAttrs.Config, configuration)
           if expectedResultType == classOf[com.greenfossil.webserver.Request]
-          then {
+          then 
             val request = new com.greenfossil.webserver.Request(svcRequestContext, aggHttpRequest) {}
             //Create a request for use in ResponseConverter
             svcRequestContext.setAttr(RequestAttrs.Request, request)
             request
-          }
           else RequestConverterFunction.fallthrough()
 
   lazy val defaultResponseConverter: ResponseConverterFunction =

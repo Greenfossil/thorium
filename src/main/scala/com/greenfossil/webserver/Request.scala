@@ -14,23 +14,21 @@ import java.util.concurrent.CompletableFuture
 import java.util.stream.Collectors
 import scala.util.{Failure, Try}
 
-object RequestAttrs {
+object RequestAttrs:
   import io.netty.util.AttributeKey
   val TZ = AttributeKey.valueOf[ZoneId]("tz")
   val Session = AttributeKey.valueOf[Session]("session")
   val Flash = AttributeKey.valueOf[Flash]("flash")
   val Config = AttributeKey.valueOf[Configuration]("config")
   val Request = AttributeKey.valueOf[com.greenfossil.webserver.Request]("request")
-}
 
-object Request {
+object Request:
   
   def actionResponder(request: Request, actionResponseFn: Request => ActionResponse): ActionResponse =
     actionResponseFn(request)
-    
-}
 
-trait Request(val requestContext: ServiceRequestContext, val aggregatedHttpRequest: AggregatedHttpRequest) extends com.greenfossil.commons.LocaleProvider {
+trait Request(val requestContext: ServiceRequestContext, 
+              val aggregatedHttpRequest: AggregatedHttpRequest) extends com.greenfossil.commons.LocaleProvider:
 
   import scala.jdk.CollectionConverters.*
 
@@ -177,28 +175,3 @@ trait Request(val requestContext: ServiceRequestContext, val aggregatedHttpReque
 
   //Raw Buffer - TODO - testcase needed and check for conformance
   def asRaw: HttpData = aggregatedHttpRequest.content()
-}
-
-
-import com.greenfossil.data.mapping.Mapping
-
-extension[A](field: Mapping[A])
-  def bindFromRequest()(using request: Request): Mapping[A] =
-    val queryData: List[(String, String)] =
-      request.method match {
-        case HttpMethod.POST | HttpMethod.PUT | HttpMethod.PATCH => Nil
-        case _ => request.queryParamsList
-      }
-
-    request match {
-
-      //TODO - to be tested
-//      case req if req.asMultipartFormData.get().bodyPart.nonEmpty =>
-//        field.bind(req.asMultipartFormData.get().asFormUrlEncoded ++ queryData.groupMap(_._1)(_._2))
-
-      case req if Try(req.asJson).isSuccess =>
-        field.bind(request.asJson)
-
-      case req =>
-        field.bind(req.asFormUrlEncoded ++ queryData.groupMap(_._1)(_._2))
-    }

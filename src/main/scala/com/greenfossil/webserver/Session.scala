@@ -8,7 +8,7 @@ import scala.annotation.targetName
  * Session data are encoded into an HTTP cookie, and can only contain simple String values.
  * @param data
  */
-case class Session(data: Map[String, String] = Map.empty.withDefaultValue("")) {
+case class Session(data: Map[String, String] = Map.empty.withDefaultValue("")):
   export data.{- as _, apply as  _, *}
 
   def apply(key: String): String = data(key)
@@ -78,5 +78,3 @@ case class Session(data: Map[String, String] = Map.empty.withDefaultValue("")) {
    */
   @targetName("diff")
   def --(keys: Iterable[String]): Session = copy(data -- keys)
-
-}

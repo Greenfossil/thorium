@@ -2,16 +2,16 @@ package com.greenfossil.webserver
 
 import java.nio.charset.StandardCharsets
 
-case class Endpoint(path: String, method: String, queryParams: List[(String, Any)]) {
+case class Endpoint(path: String, method: String, queryParams: List[(String, Any)]):
 
   //TODO - the query-string is not urlencoded
-  def url: String = queryParams match {
-    case Nil => path
-    case _ => path +
-      queryParams
-        .map(kv => s"${Endpoint.paramKeyValue(kv._1, kv._2)}")
-        .mkString("?", "&", "")
-  }
+  def url: String =
+    queryParams match
+      case Nil => path
+      case _ => path +
+        queryParams
+          .map(kv => s"${Endpoint.paramKeyValue(kv._1, kv._2)}")
+          .mkString("?", "&", "")
 
   def absoluteUrl(authority: String, secure: Boolean): String =
     val protocol = if secure then "https" else "http"
@@ -20,9 +20,7 @@ case class Endpoint(path: String, method: String, queryParams: List[(String, Any
   def absoluteUrl(using request: Request): String =
     absoluteUrl(request.uriAuthority, request.secure)
 
-}
-
-object Endpoint {
+object Endpoint:
 
   val Login: Endpoint = apply("/login")
 
@@ -48,5 +46,3 @@ object Endpoint {
 
   def urlencode(value: String): String =
     java.net.URLEncoder.encode(value, StandardCharsets.UTF_8.toString)
-
-}
