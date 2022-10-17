@@ -34,7 +34,7 @@ object SessionServices extends Controller {
 class SessionSuite extends munit.FunSuite {
 
   test("Session, Flash propagation") {
-    val server = WebServer()
+    val server = Server()
       .addServices(SessionServices)
       .start()
 

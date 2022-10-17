@@ -3,7 +3,7 @@ package com.greenfossil.thorium.examples
 import com.greenfossil.thorium.{*, given}
 
 @main def main =
-  val server = WebServer(8080)
+  val server = Server(8080)
     .addService("/simpleHttpService", Action{ request =>
       Ok(s"Howdy! env:${request.env.mode}")
     })

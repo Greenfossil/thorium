@@ -4,7 +4,7 @@ import com.greenfossil.thorium.{*, given}
 import com.linecorp.armeria.server.annotation.{Get, Param}
 
 @main def redirect2Main =
-  val server = WebServer(8080)
+  val server = Server(8080)
     .addServices(Redirect3Services)
     .addServices(Redirect4Services)
     .start()

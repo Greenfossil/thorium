@@ -10,7 +10,7 @@ lazy val typesafeConfigExtVersion = "0.2.0-RC1"
 
 //lazy val databMapping = RootProject(file("../data-mapping"))
 
-lazy val webServer = project
+lazy val thorium = project
   .in(file("."))
   .settings(
     name := "thorium",

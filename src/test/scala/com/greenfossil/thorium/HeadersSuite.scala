@@ -22,7 +22,7 @@ object HeadersServices extends Controller {
 
 class HeadersSuite extends munit.FunSuite {
   test("header, session, flash"){
-    val server = WebServer()
+    val server = Server()
       .addServices(HeadersServices)
       .start()
 

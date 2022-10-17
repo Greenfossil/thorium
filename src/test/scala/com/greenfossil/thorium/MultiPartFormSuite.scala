@@ -10,12 +10,12 @@ import scala.sys.process.*
 
 class MultiPartFormSuite extends FunSuite{
 
-  var server: WebServer = null
+  var server: Server = null
 
   override def beforeAll(): Unit = {
 
     try{
-      server = WebServer(8080).addServices(FormServices).start()
+      server = Server(8080).addServices(FormServices).start()
     }catch {
       case ex: Throwable =>
     }

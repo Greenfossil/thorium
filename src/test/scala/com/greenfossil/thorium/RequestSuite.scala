@@ -10,10 +10,10 @@ class RequestSuite extends munit.FunSuite{
   import com.linecorp.armeria.client.*
   import com.linecorp.armeria.common.*
 
-  var server: WebServer = null
+  var server: Server = null
 
   override def beforeAll(): Unit = {
-    server = WebServer()
+    server = Server()
       .addService("/text", Action { req =>
         val method = req.method
         if req.asText == "Hello Armeria!" && method == HttpMethod.POST then Ok("Received Text")

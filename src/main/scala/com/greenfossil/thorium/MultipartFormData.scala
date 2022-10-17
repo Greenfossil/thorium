@@ -1,21 +1,21 @@
 package com.greenfossil.thorium
 
 import com.linecorp.armeria.common.MediaType
-import com.linecorp.armeria.common.multipart.{AggregatedBodyPart, AggregatedMultipart}
+import com.linecorp.armeria.common.multipart.{AggregatedBodyPart, AggregatedMultipart, MultipartFile}
 
-import java.io.{File, InputStream}
+import java.io.{File, FileInputStream, InputStream}
 import java.nio.charset.Charset
-import scala.util.Try
+import java.nio.file.*
+import scala.util.{Failure, Success, Try}
 
-case class MultipartFormData(aggMultipart: AggregatedMultipart):
+case class MultipartFormData(aggMultipart: AggregatedMultipart, multipartUploadLocation: Path):
   import scala.jdk.CollectionConverters.*
 
   def bodyPart: Seq[AggregatedBodyPart] = aggMultipart.bodyParts().asScala.toSeq
 
   def names() = aggMultipart.names().asScala
 
-  //TODO - need to be deterministic about the content type - form or file/bindary/octet stream etc.
-  def asFormUrlEncoded: Map[String, Seq[String]] =
+  lazy val asFormUrlEncoded: Map[String, Seq[String]] =
     val xs = for {
       name <- names()
       part <- aggMultipart.fields(name).asScala
@@ -23,54 +23,28 @@ case class MultipartFormData(aggMultipart: AggregatedMultipart):
     } yield (name, part.content(Option(part.contentType().charset()).getOrElse(Charset.forName("UTF-8"))))
     xs.toList.groupMap(_._1)(_._2)
 
-  /**
-   * Seq(name, filename, content-type, content)
-   * @return
-   */
-  case class TemporaryFile(name: String, filename: String, contentType: MediaType, part: AggregatedBodyPart) {
-    import java.nio.file.*
-
-    private def copyInputStreamToPath(is: InputStream, path: Path): File =
-      Files.copy(is, path, StandardCopyOption.REPLACE_EXISTING)
+  private def saveFileTo( part: AggregatedBodyPart): Option[File] =
+    Try {
+      if !Files.exists(multipartUploadLocation) then multipartUploadLocation.toFile.mkdirs()
+      val filePath = multipartUploadLocation.resolve(part.filename())
+      val is: InputStream = part.content().toInputStream
+      Files.copy(is, filePath, StandardCopyOption.REPLACE_EXISTING)
       is.close()
-      path.toFile
+      filePath.toFile
+    }.toOption
 
-    def inputStream: InputStream = part.content.toInputStream
-
-    def saveFileTo(pathStr: String): Try[File] = saveFileTo(pathStr, filename, false)
-
-    def saveFileTo(dirPathStr: String, targetFilename: String, createDirectoryIfNotExist: Boolean): Try[File] = Try {
-      val path = Paths.get(dirPathStr)
-      val filePath = Paths.get(s"$dirPathStr/$targetFilename")
-      if Files.exists(path)
-      then copyInputStreamToPath(inputStream, filePath)
-      else if createDirectoryIfNotExist then
-        Files.createDirectory(path)
-        copyInputStreamToPath(inputStream, filePath)
-      else throw new FileSystemNotFoundException
-    }
-
-    @deprecated("to use input stream instead")
-    def fileUrlOpt: Option[java.net.URL] = saveFileTo("/tmp").map(_.toURL).toOption
-
-    def fileSizeGB: Double = part.content().length().toDouble / 1000 / 1000 / 1000
-    def fileSizeMB: Double = part.content().length().toDouble / 1000 / 1000
-    def fileSizeByte: Int = part.content().length()
-  }
-
-  def files: List[TemporaryFile] =
-    val xs = for {
-      name <- names()
+  lazy val files: List[MultipartFile] =
+    for {
+      name <- names().toList
       part <- aggMultipart.fields(name).asScala
-      //      if part.headers().get(HttpHeaderNames.CONTENT_TRANSFER_ENCODING, "").equals("binary")
       if part.filename() != null && !part.content().isEmpty
-    } yield  TemporaryFile(name, part.filename(), part.contentType(), part)
-    xs.toList
+      file <- saveFileTo(part)
+    } yield  MultipartFile.of(name, part.filename(), file)
 
   /**
    *
    * @param fileNameRegex
    * @return
    */
-  def findFile(fileNameRegex: String): Option[TemporaryFile] =
-    files.find(file => file.name.matches(fileNameRegex) && file.fileSizeByte > 0)
+  def findFile(fileNameRegex: String): Option[MultipartFile] =
+    files.find(file => file.name.matches(fileNameRegex) && file.file().length() > 0)

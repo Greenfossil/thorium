@@ -168,7 +168,7 @@ trait Request(val requestContext: ServiceRequestContext,
   def asMultipartFormData: CompletableFuture[MultipartFormData] =
     Multipart.from(aggregatedHttpRequest.toHttpRequest)
       .aggregate()
-      .thenApply(mp => MultipartFormData(mp))
+      .thenApply(mp => MultipartFormData(mp, requestContext.config().multipartUploadsLocation()))
     
   def asMultipartFormData(fn: MultipartFormData => ActionResponse): ActionResponse =
     asMultipartFormData.thenApply(fn(_)).get

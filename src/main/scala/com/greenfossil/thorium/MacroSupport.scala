@@ -22,8 +22,6 @@ trait MacroSupport(globalDebug: Boolean):
         case term: Tree @unchecked =>
           println(s"$msg: ${term.show(using Printer.TreeStructure)}")
 
-    else ()
-
   def showCode(using quotes:Quotes)(msg: String, x: quotes.reflect.Tree | List[quotes.reflect.Tree], debug: Boolean = globalDebug): Unit =
     import quotes.reflect.*
     if debug
@@ -34,8 +32,6 @@ trait MacroSupport(globalDebug: Boolean):
 
         case term: Tree @unchecked =>
           println(s"$msg: ${term.show(using quotes.reflect.Printer.TreeAnsiCode)}")
-
-    else ()
 
   def show(using quotes:Quotes)(msg: String, x: quotes.reflect.Tree | List[quotes.reflect.Tree], debug: Boolean = globalDebug): Unit =
     import quotes.reflect.*
@@ -55,6 +51,3 @@ trait MacroSupport(globalDebug: Boolean):
           println(s"Symbol: ${term.symbol.flags.show}")
           println(s"Code: ${term.show(using quotes.reflect.Printer.TreeAnsiCode)}")
           println(s"Struct: ${term.show(using Printer.TreeStructure)}")
-
-    else ()
-

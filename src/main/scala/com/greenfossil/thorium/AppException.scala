@@ -1,7 +1,5 @@
 package com.greenfossil.thorium
 
-import java.util.concurrent.atomic.AtomicLong
-
 
 /** A UsefulException is something useful to display in the User browser. */
 trait UsefulException extends RuntimeException:
@@ -19,7 +17,7 @@ trait UsefulException extends RuntimeException:
 
   override def toString: String = "@" + id + ": " + getMessage
 
-  private val generator = new AtomicLong(System.currentTimeMillis())
+  private val generator = new java.util.concurrent.atomic.AtomicLong(System.currentTimeMillis())
   
   def nextId = java.lang.Long.toString(generator.incrementAndGet(), 26)
   

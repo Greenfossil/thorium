@@ -4,8 +4,8 @@ import java.nio.charset.StandardCharsets
 
 case class Endpoint(path: String, method: String, queryParams: List[(String, Any)]):
 
-  //TODO - the query-string is not urlencoded
   def url: String =
+    //Query Param is expected to be UrlEncoded
     queryParams match
       case Nil => path
       case _ => path +
@@ -22,15 +22,7 @@ case class Endpoint(path: String, method: String, queryParams: List[(String, Any
 
 object Endpoint:
 
-  val Login: Endpoint = apply("/login")
-
-  val Logout: Endpoint = apply("/logout")
-
   def apply(path: String): Endpoint = new Endpoint(path, "GET", Nil)
-
-  @deprecated("to be removed - use extension EssentialAction.endpoint instead")
-  inline def apply(inline action: EssentialAction): Endpoint =
-    EndpointMcr(action)
 
   def paramKeyValue(name: String, value: Any): String =
     (name, value) match
@@ -41,8 +33,8 @@ object Endpoint:
   def paramKeyValueUrlEncoded(name: String, value: Any): String =
     (name, value) match
       case (name, x :: Nil) => paramKeyValueUrlEncoded(name, x)
-      case (name, xs: Seq[Any]) => xs.map(x => s"${name}[]=${urlencode(x.toString)}").mkString("&")
-      case (name, x: Any) => s"$name=${urlencode(x.toString)}"
+      case (name, xs: Seq[Any]) => xs.map(x => s"${urlencode(name)}[]=${urlencode(x.toString)}").mkString("&")
+      case (name, x: Any) => s"${urlencode(name)}=${urlencode(x.toString)}"
 
   def urlencode(value: String): String =
     java.net.URLEncoder.encode(value, StandardCharsets.UTF_8.toString)

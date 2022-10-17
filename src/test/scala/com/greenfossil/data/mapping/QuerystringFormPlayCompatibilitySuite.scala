@@ -9,7 +9,7 @@ class QuerystringFormPlayCompatibilitySuite extends munit.FunSuite {
 
   import Mapping.*
   
-  var server: WebServer = null
+  var server: Server = null
 
   private def simpleForm: Mapping[(String, String)] = tuple(
     "id" -> text,
@@ -17,7 +17,7 @@ class QuerystringFormPlayCompatibilitySuite extends munit.FunSuite {
   )
 
   override def beforeAll(): Unit = {
-    server = WebServer()
+    server = Server()
       .addService("/form", Action { implicit req =>
         simpleForm.bindFromRequest().fold(
           ex => BadRequest(s"Errors in form, ${ex.errors.mkString(", ")}"),

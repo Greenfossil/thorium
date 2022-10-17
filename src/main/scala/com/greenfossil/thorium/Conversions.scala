@@ -1,6 +1,7 @@
 package com.greenfossil.thorium
 
 import com.greenfossil.data.mapping.Mapping
+import com.linecorp.armeria.common.multipart.MultipartFile
 import com.linecorp.armeria.common.{HttpMethod, HttpResponse, MediaType}
 import io.netty.util.AsciiString
 
@@ -36,19 +37,20 @@ extension (inline action: EssentialAction)
 
 extension[A](field: Mapping[A])
   def bindFromRequest()(using request: Request): Mapping[A] =
-    val queryData: List[(String, String)] =
-      request.method match {
-        case HttpMethod.POST | HttpMethod.PUT | HttpMethod.PATCH => Nil
-        case _ => request.queryParamsList
-      }
-
     request match
-      //TODO - to be tested
-      //      case req if req.asMultipartFormData.get().bodyPart.nonEmpty =>
-      //        field.bind(req.asMultipartFormData.get().asFormUrlEncoded ++ queryData.groupMap(_._1)(_._2))
-
-      case req if Try(req.asJson).isSuccess =>
+      case req if req.contentType == MediaType.JSON =>
         field.bind(request.asJson)
 
       case req =>
-        field.bind(req.asFormUrlEncoded ++ queryData.groupMap(_._1)(_._2))
+        //QueryParams for POST,PUT,PATCH will be not be used for binding
+        val queryParams: List[(String, String)] =
+          request.method match {
+            case HttpMethod.POST | HttpMethod.PUT | HttpMethod.PATCH => Nil
+            case _ => request.queryParamsList
+          }
+        field.bind(req.asFormUrlEncoded ++ queryParams.groupMap(_._1)(_._2))
+        
+extension(mpFile: MultipartFile)
+  def fileSizeGB: Double = mpFile.file().length().toDouble / 1000 / 1000 / 1000
+  def fileSizeMB: Double = mpFile.file().length().toDouble / 1000 / 1000
+  def fileSizeByte: Long = mpFile.file().length()   

@@ -33,6 +33,3 @@ case class Configuration(config: Config, environment: Environment, httpConfigura
   def isDemo: Boolean = environment.isDemo
 
   def isTest: Boolean = environment.isTest
-
-
-

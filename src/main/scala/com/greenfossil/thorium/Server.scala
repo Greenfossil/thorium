@@ -2,7 +2,7 @@ package com.greenfossil.thorium
 
 import com.greenfossil.commons.json.Json
 import com.linecorp.armeria.common.{AggregatedHttpRequest, HttpData, HttpHeaders, HttpResponse, ResponseHeaders}
-import com.linecorp.armeria.server.*
+import com.linecorp.armeria.server.{Server as AServer, *}
 import com.linecorp.armeria.server.annotation.{ExceptionHandlerFunction, RequestConverterFunction, ResponseConverterFunction}
 import com.linecorp.armeria.server.docs.DocService
 import com.typesafe.config.Config
@@ -14,29 +14,29 @@ import scala.util.Try
 
 import scala.language.implicitConversions
 
-object WebServer:
+object Server:
   /**
    * Port is read from app.http.port in application.conf
    * @return
    */
-  def apply(): WebServer = WebServer(null, Nil, Nil, None, Configuration())
+  def apply(): Server = Server(null, Nil, Nil, None, Configuration())
 
-  def apply(classLoader: ClassLoader): WebServer =
-    WebServer(null, Nil, Nil, None, Configuration.from(classLoader))
-    
-  def apply(port: Int): WebServer =
-    WebServer(null, Nil, Nil, None, Configuration.usingPort(port))
+  def apply(classLoader: ClassLoader): Server =
+    Server(null, Nil, Nil, None, Configuration.from(classLoader))
 
-case class WebServer(server: Server,
-                     services: Seq[(String, HttpService)],
-                     annotatedServices: Seq[Controller] = Nil,
-                     errorHandlerOpt: Option[ServerErrorHandler],
-                     configuration: Configuration,
-                     requestConverters: Seq[RequestConverterFunction] = Nil,
-                     responseConverters: Seq[ResponseConverterFunction] = Nil,
-                     exceptionHandlers: Seq[ExceptionHandlerFunction] = Nil,
-                     beforeStartInitOpt: Option[ServerBuilder => Unit] = None,
-                     docServiceNameOpt: Option[String] = None) {
+  def apply(port: Int): Server =
+    Server(null, Nil, Nil, None, Configuration.usingPort(port))
+
+case class Server(server: AServer,
+                  services: Seq[(String, HttpService)],
+                  annotatedServices: Seq[Controller] = Nil,
+                  errorHandlerOpt: Option[ServerErrorHandler],
+                  configuration: Configuration,
+                  requestConverters: Seq[RequestConverterFunction] = Nil,
+                  responseConverters: Seq[ResponseConverterFunction] = Nil,
+                  exceptionHandlers: Seq[ExceptionHandlerFunction] = Nil,
+                  beforeStartInitOpt: Option[ServerBuilder => Unit] = None,
+                  docServiceNameOpt: Option[String] = None):
 
   private val logger = LoggerFactory.getLogger("webserver")
 
@@ -56,7 +56,7 @@ case class WebServer(server: Server,
           //embed the env and http config
           svcRequestContext.setAttr(RequestAttrs.Config, configuration)
           if expectedResultType == classOf[Request]
-          then 
+          then
             val request = new Request(svcRequestContext, aggHttpRequest) {}
             //Create a request for use in ResponseConverter
             svcRequestContext.setAttr(RequestAttrs.Request, request)
@@ -93,24 +93,24 @@ case class WebServer(server: Server,
 
   def port: Int = server.activeLocalPort()
 
-  def addService(endpoint: String, action: HttpService): WebServer =
+  def addService(endpoint: String, action: HttpService): Server =
     copy(services = services :+ (endpoint, action))
 
-  def addServices(newServices: (Controller| Tuple2[String, HttpService]) *): WebServer  =
+  def addServices(newServices: (Controller| Tuple2[String, HttpService]) *): Server  =
     val (controllers: Seq[Controller @unchecked], newSvcs: Seq[(String, HttpService) @unchecked]) =
       newServices.partition(s => s.isInstanceOf[Controller]) : @unchecked
     copy(services = services ++ newSvcs, annotatedServices = annotatedServices ++ controllers)
 
-  def setErrorHandler(h: ServerErrorHandler): WebServer =
+  def setErrorHandler(h: ServerErrorHandler): Server =
     copy(errorHandlerOpt = Some(h))
 
-  def addRequestConverters(newRequestConverters: RequestConverterFunction*): WebServer =
+  def addRequestConverters(newRequestConverters: RequestConverterFunction*): Server =
     copy(requestConverters = newRequestConverters ++ this.requestConverters)
 
-  def addResponseConverters(newResponseConverters: ResponseConverterFunction*): WebServer =
+  def addResponseConverters(newResponseConverters: ResponseConverterFunction*): Server =
     copy(responseConverters = newResponseConverters ++ this.responseConverters)
 
-  def addExceptionHandlers(newExceptionHandlers: ExceptionHandlerFunction*): WebServer =
+  def addExceptionHandlers(newExceptionHandlers: ExceptionHandlerFunction*): Server =
     copy(exceptionHandlers = newExceptionHandlers ++ this.exceptionHandlers)
 
   import scala.jdk.CollectionConverters.*
@@ -130,14 +130,14 @@ case class WebServer(server: Server,
   lazy val allExceptionHandlers: java.util.List[ExceptionHandlerFunction] =
     exceptionHandlers.asJava
 
-  private def buildServer(): Server =
+  private def buildServer(): AServer =
     buildServer(false)
 
-  private def buildSecureServer(): Server =
+  private def buildSecureServer(): AServer =
     buildServer(true)
 
-  private def buildServer(secure:Boolean): Server =
-    val sb = Server.builder()
+  private def buildServer(secure:Boolean): AServer =
+    val sb = AServer.builder()
     if configuration.httpPort > 0 then {
       if secure then
         sb.https(configuration.httpPort)
@@ -179,14 +179,14 @@ case class WebServer(server: Server,
     }, true)
     sb.build
 
-  def addBeforeStartInit(initFn: ServerBuilder => Unit): WebServer =
+  def addBeforeStartInit(initFn: ServerBuilder => Unit): Server =
     copy(beforeStartInitOpt = Option(initFn))
 
-  def addDocService(): WebServer = addDocService("/docs")
+  def addDocService(): Server = addDocService("/docs")
 
-  def addDocService(prefix: String): WebServer = copy(docServiceNameOpt = Option(prefix))
+  def addDocService(prefix: String): Server = copy(docServiceNameOpt = Option(prefix))
 
-  def start(): WebServer =
+  def start(): Server =
     val newServer = buildServer()
     Runtime.getRuntime.addShutdownHook(Thread(
       () => {
@@ -198,7 +198,7 @@ case class WebServer(server: Server,
     newServer.start().join()
     copy(server = newServer)
 
-  def startSecure(): WebServer =
+  def startSecure(): Server =
     val newSecureServer = buildSecureServer()
     Runtime.getRuntime.addShutdownHook(Thread(
       () => {
@@ -209,6 +209,4 @@ case class WebServer(server: Server,
     logger.info(s"Starting Server.")
     newSecureServer.start().join()
     copy(server = newSecureServer)
-
-}
 
