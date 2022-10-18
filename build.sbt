@@ -4,10 +4,11 @@ scalacOptions ++= Seq("-feature", "-deprecation")
 
 lazy val datamappingVersion="0.2.0-RC11-SNAPSHOT"
 lazy val commonsJsonVersion = "0.2.0-RC1"
-lazy val commonsI18nVersion = "0.2.0-RC3"
+lazy val commonsI18nVersion = "0.2.0-RC4"
 lazy val typesafeConfigExtVersion = "0.2.0-RC1"
 
 //lazy val databMapping = RootProject(file("../data-mapping"))
+//lazy val commonsI18n = RootProject(file("../commons-i18n"))
 
 lazy val thorium = project
   .in(file("."))
@@ -34,5 +35,6 @@ lazy val thorium = project
     )
   )
 //  .dependsOn(databMapping)
+//  .dependsOn(commonsI18n)
 
 parallelExecution := false

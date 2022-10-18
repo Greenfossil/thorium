@@ -1,5 +1,6 @@
 package com.greenfossil.thorium
 
+import com.greenfossil.commons.LocaleUtil
 import com.greenfossil.commons.json.{JsValue, Json}
 import com.linecorp.armeria.common.*
 import com.linecorp.armeria.server.ServiceRequestContext
@@ -12,6 +13,8 @@ import java.util.Locale.LanguageRange
 import java.util.concurrent.CompletableFuture
 import java.util.stream.Collectors
 import scala.util.{Failure, Try}
+
+private[thorium] val requestLogger = LoggerFactory.getLogger("http.request")
 
 object RequestAttrs:
   import io.netty.util.AttributeKey
@@ -31,12 +34,10 @@ trait Request(val requestContext: ServiceRequestContext,
 
   import scala.jdk.CollectionConverters.*
 
-  val logger = LoggerFactory.getLogger("http.request")
-
   def config: Configuration = requestContext.attr(RequestAttrs.Config)
 
   def env: Environment = config.environment
-  
+
   def httpConfiguration: HttpConfiguration = config.httpConfiguration
 
   def contentType: MediaType = requestContext.request().contentType()
@@ -45,7 +46,7 @@ trait Request(val requestContext: ServiceRequestContext,
 
   def queryParams(param: String): List[String] = requestContext.queryParams(param).asScala.toList
 
-  def isXhr: Boolean = 
+  def isXhr: Boolean =
     // Check header key and value if XHR (case insensitive)
     requestContext.request().headers().contains("X-Requested-With","XMLHttpRequest" )
 
@@ -53,13 +54,13 @@ trait Request(val requestContext: ServiceRequestContext,
 
   def queryString: String = queryParams.toQueryString
 
-  def queryParamsList: List[(String, String)] = 
+  def queryParamsList: List[(String, String)] =
     queryParams.stream()
       .map(e => e.getKey -> e.getValue)
       .collect(Collectors.toList[(String, String)])
       .asScala
       .toList
-  
+
   def remoteAddress: InetAddress =
     requestContext.remoteAddress[InetSocketAddress]().getAddress
 
@@ -87,15 +88,15 @@ trait Request(val requestContext: ServiceRequestContext,
   def path: String = requestContext.path()
 
   def endpoint: Endpoint = Endpoint(path)
-  
+
   def headers: RequestHeaders = requestContext.request().headers()
 
   def getHeader(name: CharSequence): Option[String] = Option(headers.get(name))
-  
+
   def getHeaderAll(name: CharSequence): List[String] = headers.getAll(name).asScala.toList
 
   //https://www.javatips.net/api/java.util.locale.languagerange
-  def acceptLanguages: Seq[LanguageRange] = 
+  def acceptLanguages: Seq[LanguageRange] =
     Option(requestContext.request().acceptLanguages()).map(_.asScala.toSeq).getOrElse(Nil)
 
   lazy val cookies: Set[Cookie] =
@@ -119,7 +120,7 @@ trait Request(val requestContext: ServiceRequestContext,
     val cookieValue = AESUtil.decrypt(httpConfiguration.secretConfig.secret, cookie.value())
     Json.parse(cookieValue).asOpt[Map[String, String]]
   }.recoverWith{case e =>
-    logger.trace(s"Failed to decrypt the retrieved cookie: [${cookie.name()}] -> [${cookie.value()}]", e)
+    requestLogger.trace(s"Failed to decrypt the retrieved cookie: [${cookie.name()}] -> [${cookie.value()}]", e)
     Failure(e)
   }.toOption.flatten
 

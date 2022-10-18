@@ -13,6 +13,8 @@ import scala.util.*
 
 type SameSiteCookie = "Strict" | "Lax"
 
+private[thorium] val configurationLogger: Logger = LoggerFactory.getLogger("com.greenfossil.thorium.configuration")
+
 object HttpConfiguration:
 
   def from(config: Config, environment: Environment): HttpConfiguration =
@@ -238,15 +240,13 @@ private def configError(
   val originUrlOpt     = origin.flatMap(o => Option(o.url))
 
   def readUrlAsString(url: java.net.URL): String =
-    scala.util.Using
     Using.resource(url.openStream()){is =>
-      val len = is.available()
       val buffer = Array.ofDim[Byte](is.available())
       is.read(buffer)
       new String(buffer)
     }
 
-  new ExceptionSource {
+  new ExceptionSource:
     val title = "Configuration error"
     val description = message
     val cause = e.orNull
@@ -256,7 +256,6 @@ private def configError(
     def input             = originUrlOpt.map(readUrlAsString).orNull
     def sourceName        = originSourceName
     override def toString = "Configuration error: " + message
-  }
 }
 
 /**
@@ -269,8 +268,7 @@ private def md5(text: String): String =
   val digest = MessageDigest.getInstance("MD5").digest(text.getBytes(StandardCharsets.UTF_8))
   new String(Base64.getEncoder.encode(digest))
 
-private def getSecretConfiguration(config: Config, environment: Environment): SecretConfiguration = {
-  val logger: Logger = LoggerFactory.getLogger("app.configuration")
+private def getSecretConfiguration(config: Config, environment: Environment): SecretConfiguration =
   /**
    * Creates a configuration error for a specific configuration key.
    *
@@ -280,12 +278,12 @@ private def getSecretConfiguration(config: Config, environment: Environment): Se
    * throw configuration.reportError("engine.connectionUrl", "Cannot connect!")
    * }}}
    *
-   * @param path the configuration key, related to this error
+   * @param path    the configuration key, related to this error
    * @param message the error message
-   * @param e the related exception
+   * @param e       the related exception
    * @return a configuration exception
    */
-  def reportError(path: String, message: String, e: Option[Throwable] = None) = 
+  def reportError(path: String, message: String, e: Option[Throwable] = None) =
     val origin = Option(if (config.hasPath(path)) config.getValue(path).origin else config.root.origin)
     configError(message, origin, e)
 
@@ -313,7 +311,7 @@ private def getSecretConfiguration(config: Config, environment: Environment): Se
             |Your secret key is very short, and may be vulnerable to dictionary attacks.  Your application may not be secure.
             |The application secret should ideally be 32 bytes of completely random input, encoded in base64.
           """.stripMargin
-        logger.warn(message)
+        configurationLogger.warn(message)
         s
 
       case Some(s)
@@ -323,7 +321,7 @@ private def getSecretConfiguration(config: Config, environment: Environment): Se
             |The application secret is too short and does not have the recommended amount of entropy.  Your application is not secure
             |and it will fail to start in production mode.
           """.stripMargin
-        logger.warn(message)
+        configurationLogger.warn(message)
         s
 
       case Some(s)
@@ -334,7 +332,7 @@ private def getSecretConfiguration(config: Config, environment: Environment): Se
             |The application secret should ideally be 32 bytes of completely random input, encoded in base64. While the application
             |will be able to start in production mode, you will also see a warning when it is starting.
           """.stripMargin
-        logger.warn(message)
+        configurationLogger.warn(message)
         s
 
       case Some("changeme") | Some(Blank()) | None =>
@@ -345,14 +343,11 @@ private def getSecretConfiguration(config: Config, environment: Environment): Se
           "she sells sea shells on the sea shore"
         )(_.toString)
         val md5Secret = md5(secret)
-        logger.debug(
+        configurationLogger.debug(
           s"Generated dev mode secret $md5Secret for app at ${appConfLocation.getOrElse("unknown location")}"
         )
         md5Secret
       case Some(s) => s
     }
-
   val provider = config.getStringOpt("app.http.secret.provider")
-
   SecretConfiguration(String.valueOf(secret), provider)
-}

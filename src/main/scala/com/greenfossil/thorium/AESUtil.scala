@@ -1,13 +1,18 @@
 package com.greenfossil.thorium
 
 import java.security.*
+import java.security.spec.AlgorithmParameterSpec
 import java.util.Base64
 import javax.crypto.*
-import javax.crypto.spec.{IvParameterSpec, PBEKeySpec, SecretKeySpec}
+import javax.crypto.spec.{GCMParameterSpec, IvParameterSpec, PBEKeySpec, SecretKeySpec}
 
 object AESUtil:
 
   val AES = "AES"
+  val AES_CTR_NOPADDING = "AES/CTR/NoPadding"
+  val AES_GCM_NOPADDING = "AES/GCM/NoPadding"
+
+  val GCM_TAG_LENGTH = 16
 
   /**
    * Generate an AES key
@@ -18,7 +23,7 @@ object AESUtil:
     val gen = KeyGenerator.getInstance(AES)
     gen.init(n)
     gen.generateKey()
-    
+
   def generateKeyPair(algorithm: String, n: Int): KeyPair =
     val keygen = KeyPairGenerator.getInstance(algorithm)
     keygen.initialize(n)
@@ -44,7 +49,7 @@ object AESUtil:
    * @param algorithm
    * @return
    */
-  private def generateDerivedSecretKey(privateKey: String): SecretKeySpec = 
+  private def generateDerivedSecretKey(privateKey: String): SecretKeySpec =
     import java.security.MessageDigest
     val messageDigest = MessageDigest.getInstance("SHA-256")
     messageDigest.update(privateKey.getBytes())
@@ -68,10 +73,10 @@ object AESUtil:
    * @param plainText
    * @return
    */
-  def encrypt(key: String, plainText: String): String =
+  def encrypt(key: String, plainText: String, algorithm: String = AES_CTR_NOPADDING): String =
     val secretKey = generateDerivedSecretKey(key)
     val iv = generateIV
-    val payload = iv.getIV ++ encrypt("AES/CTR/NoPadding", plainText, secretKey, iv)
+    val payload = iv.getIV ++ encrypt(algorithm, plainText, secretKey, iv)
     Base64.getEncoder.encodeToString(payload)
 
   /**
@@ -80,11 +85,11 @@ object AESUtil:
    * @param cipherText
    * @return
    */
-  def decrypt(key: String, cipherText: String) : String =
+  def decrypt(key: String, cipherText: String, algorithm: String = AES_CTR_NOPADDING) : String =
     val secretKey = generateDerivedSecretKey(key)
     val cipherTextBytes = Base64.getDecoder.decode(cipherText)
     val iv = IvParameterSpec(cipherTextBytes.take(16))
-    val bytes = decrypt("AES/CTR/NoPadding", cipherTextBytes.drop(16), secretKey, iv)
+    val bytes = decrypt(algorithm, cipherTextBytes.drop(16), secretKey, iv)
     new String(bytes)
 
   def base64Encrypt(algorithm: String, input:String, key: SecretKey, iv: IvParameterSpec): String =
@@ -95,24 +100,33 @@ object AESUtil:
     val bytes = decrypt(algorithm, Base64.getDecoder.decode(cipherText), key, iv)
     new String(bytes)
 
+  private def getParamSpec(algorithm: String, iv: IvParameterSpec): AlgorithmParameterSpec =
+    if algorithm.startsWith("AES/GCM")
+    then GCMParameterSpec(GCM_TAG_LENGTH * 8, iv.getIV)
+    else iv
+
   def encrypt(algorithm: String, input: String, key: SecretKey, iv: IvParameterSpec): Array[Byte] =
     val cipher = Cipher.getInstance(algorithm)
-    cipher.init(Cipher.ENCRYPT_MODE, key, iv)
+    val paramSpec = getParamSpec(algorithm, iv)
+    cipher.init(Cipher.ENCRYPT_MODE, key, paramSpec)
     cipher.doFinal(input.getBytes)
 
   def decrypt(algorithm: String, bytes: Array[Byte], key: SecretKey, iv: IvParameterSpec): Array[Byte] =
     val cipher = Cipher.getInstance(algorithm)
-    cipher.init(Cipher.DECRYPT_MODE, key, iv)
+    val paramSpec = getParamSpec(algorithm, iv)
+    cipher.init(Cipher.DECRYPT_MODE, key, paramSpec)
     cipher.doFinal(bytes)
 
   def encryptObject(algorithm: String, obj: Serializable, key: SecretKey, iv: IvParameterSpec): SealedObject =
     val cipher = Cipher.getInstance(algorithm)
-    cipher.init(Cipher.ENCRYPT_MODE, key, iv)
+    val paramSpec = getParamSpec(algorithm, iv)
+    cipher.init(Cipher.ENCRYPT_MODE, key, paramSpec)
     SealedObject(obj, cipher)
 
   def decryptObject[T](algorithm: String,  sealedObject: SealedObject, key: SecretKey, iv: IvParameterSpec): T =
     val cipher = Cipher.getInstance(algorithm)
-    cipher.init(Cipher.DECRYPT_MODE, key, iv)
+    val paramSpec = getParamSpec(algorithm, iv)
+    cipher.init(Cipher.DECRYPT_MODE, key, paramSpec)
     sealedObject.getObject(cipher).asInstanceOf[T]
 
   /**

@@ -4,6 +4,9 @@ import com.linecorp.armeria.internal.shaded.guava.net.UrlEscapers
 
 import java.nio.charset.{Charset, StandardCharsets}
 
+/**
+ * Note: annotations for glob is not supported
+ */
 object AnnotatedPathMacroSupport extends MacroSupport(globalDebug = false):
 
   def urlEncode(str: String): String =
@@ -198,7 +201,7 @@ object AnnotatedPathMacroSupport extends MacroSupport(globalDebug = false):
 
     //compute Path
     val computedPath: List[Expr[Any]] =
-      declaredPath match {
+      declaredPath match 
         case path if path.startsWith("prefix:/") =>
           List(Expr(path.replaceFirst("prefix:","")))
         case path if path.matches("regex:\\^?.+") =>
@@ -209,15 +212,10 @@ object AnnotatedPathMacroSupport extends MacroSupport(globalDebug = false):
               .replaceAll("/\\(\\?<(\\w+)>.+?\\)", "/:$1") //replace regex-param with :param
 
           paramPathExtractor(paramPath)
-
-// FIXME        case path if path.startsWith("glob:/") =>
-//          scala.compiletime.error("glob: is not supported")
-
         case path =>
           //convert all braced params to colon params
           val _path=path.replaceAll("/\\{(\\w+)}", "/:$1")
           paramPathExtractor(_path)
-      }
 
     //compute QueryString
     val queryParamKeys: List[String] = paramNameValueLookup.keys.toList diff usedPathParamNames

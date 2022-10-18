@@ -11,4 +11,3 @@ case class Flash(data: Map[String, String]):
   @targetName("add")
   def +(tup: (String, String)): Flash =
     copy(data =  data + tup )
-

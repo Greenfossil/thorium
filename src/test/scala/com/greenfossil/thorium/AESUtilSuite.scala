@@ -8,11 +8,13 @@ case class User(id: Long, name: String) extends Serializable
 
 class AESUtilSuite extends munit.FunSuite {
 
+  val ALGO = AESUtil.AES_CTR_NOPADDING
+
   test("Encrypt then Decrypt using generateKey") {
     val input = "thorium 钍"
     val key =  AESUtil.generateKey(128)
     val ivSpec = AESUtil.generateIV
-    val algo = "AES/CBC/PKCS5Padding"
+    val algo = ALGO
     val cipherText = AESUtil.base64Encrypt(algo, input, key, ivSpec)
     val plainText =  AESUtil.base64Decrypt(algo, cipherText, key, ivSpec)
     assertNoDiff(plainText, input)
@@ -24,7 +26,7 @@ class AESUtilSuite extends munit.FunSuite {
     val salt = "12345678"
     val key = AESUtil.getSaltedKeyFromPassword(password, salt)
     val ivSpec = AESUtil.generateIV
-    val algo = "AES/CBC/PKCS5Padding"
+    val algo = ALGO
     val cipherText = AESUtil.base64Encrypt(algo, input, key, ivSpec)
     val plainText = AESUtil.base64Decrypt(algo, cipherText, key, ivSpec)
     assertNoDiff(plainText, input)
@@ -34,7 +36,7 @@ class AESUtilSuite extends munit.FunSuite {
     val homer = User(42, "Homer")
     val key = AESUtil.generateKey(128)
     val iv = AESUtil.generateIV
-    val algo = "AES/CBC/PKCS5Padding"
+    val algo = ALGO
     val sealedObject = AESUtil.encryptObject(algo, homer, key, iv)
     val obj = AESUtil.decryptObject[User](algo, sealedObject, key, iv)
     assertEquals(obj, homer)
@@ -53,6 +55,14 @@ class AESUtilSuite extends munit.FunSuite {
     val key = "thorium"
     val cipherText = AESUtil.encrypt(key, input)
     val plainText = AESUtil.decrypt(key, cipherText)
+    assertNoDiff(plainText, input)
+  }
+
+  test("encrypt/decrypt with Derived Key") {
+    val input = "Thorium 钍"
+    val key = "thorium"
+    val cipherText = AESUtil.encrypt(key, input, AESUtil.AES_GCM_NOPADDING)
+    val plainText = AESUtil.decrypt(key, cipherText, AESUtil.AES_GCM_NOPADDING)
     assertNoDiff(plainText, input)
   }
 

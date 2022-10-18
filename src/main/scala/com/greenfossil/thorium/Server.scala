@@ -14,6 +14,8 @@ import scala.util.Try
 
 import scala.language.implicitConversions
 
+private[thorium] val serverLogger = LoggerFactory.getLogger("com.greenfossil.thorium.server")
+
 object Server:
   /**
    * Port is read from app.http.port in application.conf
@@ -38,7 +40,6 @@ case class Server(server: AServer,
                   beforeStartInitOpt: Option[ServerBuilder => Unit] = None,
                   docServiceNameOpt: Option[String] = None):
 
-  private val logger = LoggerFactory.getLogger("webserver")
 
   def mode: Mode = configuration.environment.mode
 
@@ -191,10 +192,10 @@ case class Server(server: AServer,
     Runtime.getRuntime.addShutdownHook(Thread(
       () => {
         newServer.stop().join
-        logger.info("Server stopped.")
+        serverLogger.info("Server stopped.")
       }
     ))
-    logger.info(s"Starting Server.")
+    serverLogger.info(s"Starting Server.")
     newServer.start().join()
     copy(server = newServer)
 
@@ -203,10 +204,10 @@ case class Server(server: AServer,
     Runtime.getRuntime.addShutdownHook(Thread(
       () => {
         newSecureServer.stop().join
-        logger.info("Server stopped.")
+        serverLogger.info("Server stopped.")
       }
     ))
-    logger.info(s"Starting Server.")
+    serverLogger.info(s"Starting Server.")
     newSecureServer.start().join()
     copy(server = newSecureServer)
 

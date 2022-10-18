@@ -14,7 +14,7 @@ trait Controller
 
 type ActionResponse =  HttpResponse | Result | String | Array[Byte] | InputStream
 
-private[thorium] val _actionLogger = LoggerFactory.getLogger("webserver-action")
+private[thorium] val actionLogger = LoggerFactory.getLogger("com.greenfossil.thorium.action")
 
 trait EssentialAction extends HttpService:
 
@@ -59,7 +59,7 @@ trait EssentialAction extends HttpService:
       resp
     } catch {
       case t: Throwable =>
-        _actionLogger.error("Invoke Action error", t)
+        actionLogger.error("Invoke Action error", t)
         HttpResponse.ofFailure(t) // allow exceptionHandlerFunctions and serverErrorHandler to kick in
     }
 
