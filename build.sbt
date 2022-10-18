@@ -5,7 +5,6 @@ scalacOptions ++= Seq("-feature", "-deprecation")
 lazy val datamappingVersion="0.2.0-RC11-SNAPSHOT"
 lazy val commonsJsonVersion = "0.2.0-RC1"
 lazy val commonsI18nVersion = "0.2.0-RC3"
-lazy val commonsCryptoVersion = "0.2.0-RC2"
 lazy val typesafeConfigExtVersion = "0.2.0-RC1"
 
 //lazy val databMapping = RootProject(file("../data-mapping"))
@@ -22,7 +21,6 @@ lazy val thorium = project
     Compile / javacOptions ++= Seq("-source", "17"),
 
     libraryDependencies ++= Seq(
-      "com.greenfossil" %% "commons-crypto" % commonsCryptoVersion,
       "com.greenfossil" %% "commons-i18n" % commonsI18nVersion,
       "com.greenfossil" %% "commons-json" % commonsJsonVersion,
       "com.greenfossil" %% "typesafe-config-ext" % typesafeConfigExtVersion,

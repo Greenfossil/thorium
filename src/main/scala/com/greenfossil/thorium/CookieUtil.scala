@@ -1,6 +1,5 @@
 package com.greenfossil.thorium
 
-import com.greenfossil.commons.CryptoSupport
 import com.greenfossil.commons.json.Json
 import com.linecorp.armeria.common.{Cookie, CookieBuilder}
 
@@ -72,7 +71,7 @@ object CookieUtil:
    * SessionCookie does not have hostOnly attribute
    */
   def sessionCookieBuilder(config: SessionConfiguration, secret: String, data: Map[String, String]): CookieBuilder =
-    val jwt = CryptoSupport.base64EncryptAES(secret, Json.toJson(data).toString)
+    val jwt = AESUtil.encrypt(secret, Json.toJson(data).toString)
     val cb = Cookie.secureBuilder(config.cookieName, jwt)
       .secure(config.secure)
       .path(config.path)
@@ -86,7 +85,7 @@ object CookieUtil:
    * FlashCookie does not have hostOnly, maxAge attributes
    */
   def flashCookieBuilder(config: FlashConfiguration, secret: String, data: Map[String, String]): CookieBuilder =
-    val jwt = CryptoSupport.base64EncryptAES(secret, Json.toJson(data).toString)
+    val jwt = AESUtil.encrypt(secret, Json.toJson(data).toString)
     val cb = Cookie.secureBuilder(config.cookieName, jwt)
       .secure(config.secure)
       .path(config.path)

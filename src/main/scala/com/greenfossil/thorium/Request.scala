@@ -1,6 +1,5 @@
 package com.greenfossil.thorium
 
-import com.greenfossil.commons.CryptoSupport
 import com.greenfossil.commons.json.{JsValue, Json}
 import com.linecorp.armeria.common.*
 import com.linecorp.armeria.server.ServiceRequestContext
@@ -117,7 +116,7 @@ trait Request(val requestContext: ServiceRequestContext,
   }
 
   private def decryptCookieValue(cookie: Cookie): Option[Map[String, String]] = Try{
-    val cookieValue = CryptoSupport.base64DecryptAES(httpConfiguration.secretConfig.secret, cookie.value())
+    val cookieValue = AESUtil.decrypt(httpConfiguration.secretConfig.secret, cookie.value())
     Json.parse(cookieValue).asOpt[Map[String, String]]
   }.recoverWith{case e =>
     logger.trace(s"Failed to decrypt the retrieved cookie: [${cookie.name()}] -> [${cookie.value()}]", e)
