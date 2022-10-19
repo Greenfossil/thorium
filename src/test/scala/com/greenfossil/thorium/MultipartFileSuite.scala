@@ -7,7 +7,7 @@ import java.io.File
 class MultipartFileSuite extends munit.FunSuite {
 
   test("MultipartFile extensions for image-no-ext/png") {
-    val r = ClassLoader.getSystemResource("favicon.png")
+    val r = this.getClass.getResource("/favicon.png")
     assert(r != null, "Resource not found")
     val mpFile = MultipartFile.of("file", "file",new  File(r.getFile))
     assertNoDiff(mpFile.contentType, "image/png")
@@ -18,7 +18,7 @@ class MultipartFileSuite extends munit.FunSuite {
   }
 
   test("MultipartFile extensions for image-no-ext without extension") {
-    val r = ClassLoader.getSystemResource("image-no-ext")
+    val r = this.getClass.getResource("/image-no-ext")
     assert(r != null, "Resource not found")
     val mpFile = MultipartFile.of("file", "file", new File(r.getFile))
     assertNoDiff(mpFile.contentType, "image/png")
@@ -26,7 +26,7 @@ class MultipartFileSuite extends munit.FunSuite {
   }
 
   test("MultipartFile extensions for text/xml") {
-    val r = ClassLoader.getSystemResource("logback-test.xml")
+    val r = this.getClass.getResource("/logback-test.xml")
     assert(r != null, "Resource not found")
     val mpFile = MultipartFile.of("file", "file", new File(r.getFile))
     assertNoDiff(mpFile.contentType, "application/xml")
@@ -34,7 +34,7 @@ class MultipartFileSuite extends munit.FunSuite {
   }
 
   test("MultipartFile extensions for conf") {
-    val r = ClassLoader.getSystemResource("logback-test.xml")
+    val r = this.getClass.getResource("/logback-test.xml")
     assert(r != null, "Resource not found")
     val mpFile = MultipartFile.of("file", "file", new File(r.getFile))
     println(s"mpFile.contentType = ${mpFile.contentType}")
@@ -43,7 +43,7 @@ class MultipartFileSuite extends munit.FunSuite {
   }
 
   test("Multipart inputStream") {
-    val r = ClassLoader.getSystemResource("favicon.png")
+    val r = this.getClass.getResource("/favicon.png")
     assert(r != null, "Resource not found")
     val mpFile = MultipartFile.of("file", "file", new File(r.getFile))
     1 to 5 foreach { i =>
