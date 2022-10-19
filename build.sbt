@@ -2,8 +2,8 @@ val scala3Version = "3.2.0"
 
 scalacOptions ++= Seq("-feature", "-deprecation")
 
-lazy val datamappingVersion="0.2.0-RC11-SNAPSHOT"
-lazy val commonsJsonVersion = "0.2.0-RC1"
+lazy val datamappingVersion="0.2.0-RC11"
+lazy val commonsJsonVersion = "0.2.0-RC2"
 lazy val commonsI18nVersion = "0.2.0-RC4"
 lazy val typesafeConfigExtVersion = "0.2.0-RC1"
 
@@ -15,7 +15,7 @@ lazy val thorium = project
   .settings(
     name := "thorium",
     organization := "com.greenfossil",
-    version := "0.2.0",
+    version := "0.2.1-RC1",
 
     scalaVersion := scala3Version,
 
@@ -29,6 +29,7 @@ lazy val thorium = project
       "io.projectreactor" % "reactor-core" % "3.4.22",
       "com.linecorp.armeria" %% "armeria-scala" % "1.20.1",
       "com.linecorp.armeria" % "armeria-logback" % "1.20.1",
+      "org.overviewproject" % "mime-types" % "1.0.4",
       "org.slf4j" % "slf4j-api" % "2.0.3",
       "ch.qos.logback" % "logback-classic" % "1.4.3" % Test,
       "org.scalameta" %% "munit" % "0.7.29" % Test

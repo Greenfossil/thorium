@@ -4,12 +4,14 @@ import com.greenfossil.data.mapping.Mapping
 import com.linecorp.armeria.common.multipart.MultipartFile
 import com.linecorp.armeria.common.{HttpMethod, HttpResponse, MediaType}
 import io.netty.util.AsciiString
+import org.overviewproject.mime_types.MimeTypeDetector
 
+import java.io.InputStream
 import scala.util.Try
 
 given Conversion[HttpResponse, Result] = Result(_)
 
-extension (is: java.io.InputStream)
+extension (is: InputStream)
   def withHeaders(headers: (String | AsciiString, String)*): Result =
     Result(is).withHeaders(headers*)
 
@@ -49,8 +51,15 @@ extension[A](field: Mapping[A])
             case _ => request.queryParamsList
           }
         field.bind(req.asFormUrlEncoded ++ queryParams.groupMap(_._1)(_._2))
-        
+
+val mimeTypeDetector = new MimeTypeDetector()
+
 extension(mpFile: MultipartFile)
-  def fileSizeGB: Double = mpFile.file().length().toDouble / 1000 / 1000 / 1000
-  def fileSizeMB: Double = mpFile.file().length().toDouble / 1000 / 1000
-  def fileSizeByte: Long = mpFile.file().length()   
+  def sizeInGB: Long = mpFile.file().length() / 1024 / 1024 / 1024
+  def sizeInMB: Long = mpFile.file().length() / 1024 / 1024
+  def sizeInKB: Long = mpFile.file().length() / 1024
+  def sizeInBytes: Long = mpFile.file().length()
+
+  def contentType: String = mimeTypeDetector.detectMimeType(mpFile.path())
+
+  def inputStream: InputStream = mpFile.path().toUri.toURL.openStream()
