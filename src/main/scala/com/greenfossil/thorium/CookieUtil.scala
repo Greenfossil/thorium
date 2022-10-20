@@ -3,6 +3,7 @@ package com.greenfossil.thorium
 import com.greenfossil.commons.json.Json
 import com.linecorp.armeria.common.{Cookie, CookieBuilder}
 
+import java.util.Base64
 import scala.concurrent.duration.*
 
 /*
@@ -71,7 +72,7 @@ object CookieUtil:
    * SessionCookie does not have hostOnly attribute
    */
   def sessionCookieBuilder(config: SessionConfiguration, secret: String, data: Map[String, String]): CookieBuilder =
-    val jwt = AESUtil.encrypt(secret, Json.toJson(data).toString)
+    val jwt = AESUtil.encryptWithEmbeddedIV(Json.toJson(data).toString, secret, Base64.getEncoder)
     val cb = Cookie.secureBuilder(config.cookieName, jwt)
       .secure(config.secure)
       .path(config.path)
@@ -85,7 +86,7 @@ object CookieUtil:
    * FlashCookie does not have hostOnly, maxAge attributes
    */
   def flashCookieBuilder(config: FlashConfiguration, secret: String, data: Map[String, String]): CookieBuilder =
-    val jwt = AESUtil.encrypt(secret, Json.toJson(data).toString)
+    val jwt = AESUtil.encryptWithEmbeddedIV(Json.toJson(data).toString, secret, Base64.getEncoder)
     val cb = Cookie.secureBuilder(config.cookieName, jwt)
       .secure(config.secure)
       .path(config.path)

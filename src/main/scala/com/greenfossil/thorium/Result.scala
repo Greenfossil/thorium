@@ -9,7 +9,7 @@ import java.io.InputStream
 import java.time.format.DateTimeFormatter
 import java.time.{ZoneOffset, ZonedDateTime}
 import scala.collection.immutable.TreeMap
-import scala.util.Try
+import scala.util.{Try, Using}
 
 private object CaseInsensitiveOrdered extends Ordering[String]:
   def compare(left: String, right: String): Int =
@@ -281,7 +281,7 @@ case class Result(header: ResponseHeader,
       case is: InputStream =>
         HttpResponse.of(
           ResponseHeaders.of(HttpStatus.OK, HttpHeaderNames.CONTENT_TYPE, contentTypeOpt.getOrElse(req.contentType)),
-          StreamMessage.fromOutputStream(os => is.transferTo(os))
+          StreamMessage.fromOutputStream(os => Using.resources(is, os) { (is, os) => is.transferTo(os) })
         )
       case string: String =>
         HttpResponse.of(string)

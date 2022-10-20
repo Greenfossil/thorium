@@ -9,14 +9,15 @@ import java.io.{InputStream, PipedInputStream}
 import java.time.Duration
 import java.util.concurrent.CompletableFuture
 import scala.concurrent.{ExecutionContext, Future}
+import scala.util.Using
 
 trait Controller
 
-type ActionResponse =  HttpResponse | Result | String | Array[Byte] | InputStream
+type ActionResponse = HttpResponse | Result | String | Array[Byte] | InputStream
 
 private[thorium] val actionLogger = LoggerFactory.getLogger("com.greenfossil.thorium.action")
 
-trait EssentialAction extends HttpService:
+trait EssentialAction extends HttpService :
 
   /**
    * An EssentialAction is an Request => ActionResponse
@@ -54,8 +55,8 @@ trait EssentialAction extends HttpService:
           HttpResponse.of(HttpStatus.OK, Option(req.contentType).getOrElse(MediaType.ANY_TYPE), HttpData.wrap(bytes))
         case is: InputStream =>
           HttpResponse.of(
-            ResponseHeaders.of(HttpStatus.OK, HttpHeaderNames.CONTENT_TYPE, Option(req.contentType).getOrElse(MediaType.ANY_TYPE)), 
-            StreamMessage.fromOutputStream(os => is.transferTo(os)))
+            ResponseHeaders.of(HttpStatus.OK, HttpHeaderNames.CONTENT_TYPE, Option(req.contentType).getOrElse(MediaType.ANY_TYPE)),
+            StreamMessage.fromOutputStream(os => Using.resources(is, os) { (is, os) => is.transferTo(os) }))
       resp
     } catch {
       case t: Throwable =>
@@ -71,6 +72,7 @@ object Action:
 
   /**
    * AnyContent request
+   *
    * @param actionResponder
    * @return
    */
@@ -79,6 +81,7 @@ object Action:
 
   /**
    * Multipart form request
+   *
    * @param actionResponder
    * @return
    */

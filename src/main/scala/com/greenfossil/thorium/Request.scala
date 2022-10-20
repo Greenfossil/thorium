@@ -8,7 +8,7 @@ import org.slf4j.LoggerFactory
 
 import java.net.{InetAddress, InetSocketAddress, SocketAddress}
 import java.time.ZoneId
-import java.util.Locale
+import java.util.{Base64, Locale}
 import java.util.Locale.LanguageRange
 import java.util.concurrent.CompletableFuture
 import java.util.stream.Collectors
@@ -117,7 +117,7 @@ trait Request(val requestContext: ServiceRequestContext,
   }
 
   private def decryptCookieValue(cookie: Cookie): Option[Map[String, String]] = Try{
-    val cookieValue = AESUtil.decrypt(httpConfiguration.secretConfig.secret, cookie.value())
+    val cookieValue = AESUtil.decryptWithEmbeddedIV(cookie.value(), httpConfiguration.secretConfig.secret, Base64.getDecoder)
     Json.parse(cookieValue).asOpt[Map[String, String]]
   }.recoverWith{case e =>
     requestLogger.trace(s"Failed to decrypt the retrieved cookie: [${cookie.name()}] -> [${cookie.value()}]", e)

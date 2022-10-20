@@ -15,7 +15,7 @@ class MultiPartFormSuite extends FunSuite{
   override def beforeAll(): Unit = {
 
     try{
-      server = Server(8080).addServices(FormServices).start()
+      server = Server().addServices(FormServices).start()
     }catch {
       case ex: Throwable =>
     }
@@ -25,28 +25,27 @@ class MultiPartFormSuite extends FunSuite{
     server.server.stop()
   }
 
-
   test("POST with file content") {
     Files.write(Paths.get("/tmp/file.txt"), "Hello world".getBytes(StandardCharsets.UTF_8))
 
-    val result = "curl http://localhost:8080/multipart3 -F resourceFile=@/tmp/file.txt ".!!.trim
+    val result = s"curl http://localhost:${server.port}/multipart3 -F resourceFile=@/tmp/file.txt ".!!.trim
     assertEquals(result, "Received multipart request with files: 1")
   }
 
   test("POST without file content but with form param") {
-    val result = "curl http://localhost:8080/multipart3 -F name=homer ".!!.trim
+    val result = s"curl http://localhost:${server.port}/multipart3 -F name=homer ".!!.trim
     assertEquals(result, "Received multipart request with files: 0")
   }
 
   test("POST empty body raw data") {
     val result =
-      ("curl http://localhost:8080/multipart3 -H 'Content-Type: multipart/form-data; boundary=----WebKitFormBoundaryaDaB4MtEkj4a1pYx' " +
+      (s"curl http://localhost:${server.port}/multipart3 -H 'Content-Type: multipart/form-data; boundary=----WebKitFormBoundaryaDaB4MtEkj4a1pYx' " +
         "--data-raw $'------WebKitFormBoundaryaDaB4MtEkj4a1pYx--\r\n'").!!.trim
     assertEquals(result, "Received multipart request with files: 0")
   }
 
   test("POST without file content but with form param, using web browser's raw data") {
-    val command = "curl http://localhost:8080/multipart3 -H 'Content-Type: multipart/form-data; boundary=----WebKitFormBoundaryOrtvYGBXE2gxan8t' " +
+    val command = s"curl http://localhost:${server.port}/multipart3 -H 'Content-Type: multipart/form-data; boundary=----WebKitFormBoundaryOrtvYGBXE2gxan8t' " +
       "--data-raw $'------WebKitFormBoundaryOrtvYGBXE2gxan8t\r\nContent-Disposition: form-data; name=\"resourceFile\"; " +
       "filename=\"\"\r\nContent-Type: application/octet-stream\r\n\r\n\r\n" +
       "------WebKitFormBoundaryOrtvYGBXE2gxan8t\r\nContent-Disposition: form-data; name=\"url\"\r\n\r\n\r\n" +

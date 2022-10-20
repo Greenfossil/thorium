@@ -50,7 +50,7 @@ class MultipartFileSuite extends munit.FunSuite {
       val is = mpFile.inputStream
       val size = is.available()
       println(s"i = ${i} ${is.available()}")
-      val bytes = is.readNBytes(is.available())
+      val bytes = is.readAllBytes()
       assertEquals(bytes.length, size)
       assertEquals(is.available(), 0)
       is.close()
