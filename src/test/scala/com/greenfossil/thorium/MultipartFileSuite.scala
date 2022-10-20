@@ -1,5 +1,6 @@
 package com.greenfossil.thorium
 
+import com.linecorp.armeria.common.MediaType
 import com.linecorp.armeria.common.multipart.MultipartFile
 
 import java.io.File
@@ -10,7 +11,8 @@ class MultipartFileSuite extends munit.FunSuite {
     val r = this.getClass.getResource("/favicon.png")
     assert(r != null, "Resource not found")
     val mpFile = MultipartFile.of("file", "file",new  File(r.getFile))
-    assertNoDiff(mpFile.contentType, "image/png")
+    assert(mpFile.contentType.is(MediaType.ANY_IMAGE_TYPE))
+    assert(mpFile.contentType.is(MediaType.PNG))
     assertEquals(mpFile.sizeInBytes, 3711L)
     assertEquals(mpFile.sizeInKB, 3L)
     assertEquals(mpFile.sizeInMB, 0L)
@@ -21,7 +23,8 @@ class MultipartFileSuite extends munit.FunSuite {
     val r = this.getClass.getResource("/image-no-ext")
     assert(r != null, "Resource not found")
     val mpFile = MultipartFile.of("file", "file", new File(r.getFile))
-    assertNoDiff(mpFile.contentType, "image/png")
+    assert(mpFile.contentType.is(MediaType.ANY_IMAGE_TYPE))
+    assert(mpFile.contentType.is(MediaType.PNG))
     assertEquals(mpFile.sizeInBytes, 3711L)
   }
 
@@ -29,7 +32,7 @@ class MultipartFileSuite extends munit.FunSuite {
     val r = this.getClass.getResource("/logback-test.xml")
     assert(r != null, "Resource not found")
     val mpFile = MultipartFile.of("file", "file", new File(r.getFile))
-    assertNoDiff(mpFile.contentType, "application/xml")
+    assert(mpFile.contentType.is(MediaType.parse("application/xml")))
     assertEquals(mpFile.sizeInBytes, 473L)
   }
 
@@ -38,7 +41,7 @@ class MultipartFileSuite extends munit.FunSuite {
     assert(r != null, "Resource not found")
     val mpFile = MultipartFile.of("file", "file", new File(r.getFile))
     println(s"mpFile.contentType = ${mpFile.contentType}")
-    assertNoDiff(mpFile.contentType, "application/xml")
+    assert(mpFile.contentType.is(MediaType.parse("application/xml")))
     assertEquals(mpFile.sizeInBytes, 473L)
   }
 

@@ -60,6 +60,6 @@ extension(mpFile: MultipartFile)
   def sizeInKB: Long = mpFile.file().length() / 1024
   def sizeInBytes: Long = mpFile.file().length()
 
-  def contentType: String = mimeTypeDetector.detectMimeType(mpFile.path())
+  def contentType: MediaType = MediaType.parse(mimeTypeDetector.detectMimeType(mpFile.path()))
 
   def inputStream: InputStream = mpFile.path().toUri.toURL.openStream()
