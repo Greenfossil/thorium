@@ -40,7 +40,7 @@ extension (inline action: EssentialAction)
 extension[A](field: Mapping[A])
   def bindFromRequest()(using request: Request): Mapping[A] =
     request match
-      case req if req.contentType.isJson =>
+      case req if Option(req.contentType).exists(_.isJson) =>
         field.bind(request.asJson)
 
       case req =>
