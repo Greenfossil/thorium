@@ -3,7 +3,7 @@ package com.greenfossil.thorium
 import scala.annotation.targetName
 
 /**
- * TODO - generate an Id or nounce???
+ * 
  * HTTP Session.
  * Session data are encoded into an HTTP cookie, and can only contain simple String values.
  * @param data

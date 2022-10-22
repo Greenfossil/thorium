@@ -1,6 +1,6 @@
 package experiment.armeria
 
-import com.greenfossil.thorium.{Action, Controller, Request, Result}
+import com.greenfossil.thorium.{Action, Controller, HttpResponseConverter, Request, Result}
 import com.linecorp.armeria.common.*
 import com.linecorp.armeria.server.annotation.{ExceptionHandlerFunction, Get, RequestConverterFunction, ResponseConverterFunction}
 import com.linecorp.armeria.server.{Server, ServiceRequestContext}
@@ -38,10 +38,7 @@ object ConverterFn extends RequestConverterFunction, ResponseConverterFunction, 
       case svc: ActionService =>
         val f: CompletableFuture[HttpResponse] = ctx.request().aggregate().thenApply(aggregateRequest => {
           val req = new Request(ctx, aggregateRequest) {}
-          svc.fn(req) match
-            case s: String => HttpResponse.of(s)
-            case hr: HttpResponse => hr
-            case result:Result => result.toHttpResponse(req)
+          HttpResponseConverter.convertActionResponseToHttpResponse(req, svc.fn(req))
         })
         HttpResponse.from(f)
       case _ => HttpResponse.of(s"Final result + ${result}")

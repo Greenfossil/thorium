@@ -49,6 +49,7 @@ object BasicServices extends Controller {
   }
 
   //This method should not be called, it is here to ensure compilation works for InputStream as direct return
+  // curl -v http://localhost:8080/image -o image.png
   @Get("/image")
   def image = Action {request =>
     import com.linecorp.armeria.common.HttpHeaderNames.CACHE_CONTROL
@@ -57,11 +58,21 @@ object BasicServices extends Controller {
   }
 
   //This method should not be called, it is here to ensure compilation works for InputStream as direct return
+  // curl -v http://localhost:8080/bytes
   @Get("/bytes")
   def bytes = Action { request =>
     import com.linecorp.armeria.common.HttpHeaderNames.CACHE_CONTROL
-    val bytes: Array[Byte] = Array.emptyByteArray
-    bytes.withHeaders(CACHE_CONTROL -> "no-store").as(MediaType.PNG)
+    val bytes: Array[Byte] = "HelloWorld!".getBytes
+    bytes.withHeaders(CACHE_CONTROL -> "no-store").as(MediaType.PLAIN_TEXT)
+  }
+
+  //This method should not be called, it is here to ensure compilation works for InputStream as direct return
+  // curl -v http://localhost:8080/session
+  @Get("/session")
+  def session = Action { request =>
+    import com.linecorp.armeria.common.HttpHeaderNames.CACHE_CONTROL
+    val bytes: Array[Byte] = "HelloWorld!".getBytes
+    bytes.withHeaders(CACHE_CONTROL -> "no-store").as(MediaType.PLAIN_TEXT).withSession("foo" -> "bar")
   }
 
 }

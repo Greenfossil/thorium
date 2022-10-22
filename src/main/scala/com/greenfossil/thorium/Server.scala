@@ -1,7 +1,7 @@
 package com.greenfossil.thorium
 
 import com.greenfossil.commons.json.Json
-import com.linecorp.armeria.common.{AggregatedHttpRequest, HttpData, HttpHeaders, HttpResponse, ResponseHeaders}
+import com.linecorp.armeria.common.{AggregatedHttpRequest, HttpHeaders, HttpResponse, ResponseHeaders}
 import com.linecorp.armeria.server.{Server as AServer, *}
 import com.linecorp.armeria.server.annotation.{ExceptionHandlerFunction, RequestConverterFunction, ResponseConverterFunction}
 import com.linecorp.armeria.server.docs.DocService
@@ -10,8 +10,7 @@ import org.slf4j.LoggerFactory
 
 import java.lang.reflect.ParameterizedType
 import java.time.LocalDateTime
-import scala.util.Try
-
+import scala.util.Using
 import scala.language.implicitConversions
 
 private[thorium] val serverLogger = LoggerFactory.getLogger("com.greenfossil.thorium.server")
@@ -39,7 +38,6 @@ case class Server(server: AServer,
                   exceptionHandlers: Seq[ExceptionHandlerFunction] = Nil,
                   beforeStartInitOpt: Option[ServerBuilder => Unit] = None,
                   docServiceNameOpt: Option[String] = None):
-
 
   def mode: Mode = configuration.environment.mode
 
@@ -71,23 +69,15 @@ case class Server(server: AServer,
       result match
         case action: EssentialAction =>
           action.serve(svcRequestContext, svcRequestContext.request())
-        case s: String =>
-          HttpResponse.of(s)
-        case hr: HttpResponse =>
-          hr
-        case bytes: Array[Byte] =>
-          HttpResponse.of(HttpData.wrap(bytes))
-        case result: Result =>
-          val req = svcRequestContext.attr(RequestAttrs.Request)
-          if req != null then result.toHttpResponse(req)
-          else {
-            //Handle a when no RequestConverterFunction has been invoked
-            val f = svcRequestContext.request().aggregate().thenApply { aggReq =>
-              val request = new Request(svcRequestContext, aggReq){}
-              result.toHttpResponse(request)
+        case actionResp: ActionResponse  =>
+          val f = svcRequestContext
+            .request()
+            .aggregate()
+            .thenApplyAsync { aggregateRequest =>
+              val req = new Request(svcRequestContext, aggregateRequest) {}
+              HttpResponseConverter.convertActionResponseToHttpResponse(req, actionResp)
             }
-            HttpResponse.from(f)
-          }
+          HttpResponse.from(f)
 
         case _ =>
           ResponseConverterFunction.fallthrough()

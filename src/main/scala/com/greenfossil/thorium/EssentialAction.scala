@@ -1,15 +1,12 @@
 package com.greenfossil.thorium
 
-import com.linecorp.armeria.common.stream.StreamMessage
-import com.linecorp.armeria.common.{AggregatedHttpRequest, HttpData, HttpHeaderNames, HttpHeaders, HttpRequest, HttpResponse, HttpStatus, MediaType, ResponseHeaders}
+import com.linecorp.armeria.common.{Request as _,  *}
 import com.linecorp.armeria.server.{HttpService, ServiceRequestContext}
 import org.slf4j.LoggerFactory
 
-import java.io.{InputStream, PipedInputStream}
-import java.time.Duration
+import java.io.InputStream
 import java.util.concurrent.CompletableFuture
-import scala.concurrent.{ExecutionContext, Future}
-import scala.util.Using
+import scala.util.Try
 
 trait Controller
 
@@ -41,28 +38,20 @@ trait EssentialAction extends HttpService :
       svcRequestContext
         .request()
         .aggregate()
-        .thenApplyAsync(aggregateRequest => invokeAction(svcRequestContext, aggregateRequest))
+        .thenApplyAsync{aggregateRequest =>
+          //Invoke EssentialAction
+          Try {
+            val req = new Request(svcRequestContext, aggregateRequest) {}
+            HttpResponseConverter.convertActionResponseToHttpResponse(req, apply(req))
+          }.fold(
+            throwable => {
+              actionLogger.error("Invoke Action error", throwable)
+              HttpResponse.ofFailure(throwable) // allow exceptionHandlerFunctions and serverErrorHandler to kick in
+            },
+            httpResp => httpResp
+          )
+        }
     HttpResponse.from(f)
-
-  private def invokeAction(svcRequestContext: ServiceRequestContext, aggregateRequest: AggregatedHttpRequest): HttpResponse =
-    try {
-      val req = new Request(svcRequestContext, aggregateRequest) {}
-      val resp = apply(req) match
-        case s: String => HttpResponse.of(s)
-        case hr: HttpResponse => hr
-        case result: Result => result.toHttpResponse(req)
-        case bytes: Array[Byte] =>
-          HttpResponse.of(HttpStatus.OK, Option(req.contentType).getOrElse(MediaType.ANY_TYPE), HttpData.wrap(bytes))
-        case is: InputStream =>
-          HttpResponse.of(
-            ResponseHeaders.of(HttpStatus.OK, HttpHeaderNames.CONTENT_TYPE, Option(req.contentType).getOrElse(MediaType.ANY_TYPE)),
-            StreamMessage.fromOutputStream(os => Using.resources(is, os) { (is, os) => is.transferTo(os) }))
-      resp
-    } catch {
-      case t: Throwable =>
-        actionLogger.error("Invoke Action error", t)
-        HttpResponse.ofFailure(t) // allow exceptionHandlerFunctions and serverErrorHandler to kick in
-    }
 
 end EssentialAction
 
@@ -89,7 +78,3 @@ object Action:
     (request: Request) => request.asMultipartFormData { form =>
       fn(MultipartRequest(form, request.requestContext, request.aggregatedHttpRequest))
     }
-
-  //TODO - need to add test cases
-  def async(fn: Request => ActionResponse)(using executor: ExecutionContext): Future[Action] =
-    Future((request: Request) => fn(request))
