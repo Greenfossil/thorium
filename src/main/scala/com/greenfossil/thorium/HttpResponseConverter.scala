@@ -85,19 +85,37 @@ object HttpResponseConverter:
       else Some(CookieUtil.bakeDiscardCookie(req.httpConfiguration.flashConfig.cookieName)(using req))
     }
 
+  private def _toHttpResponse(req: com.greenfossil.thorium.Request,
+                              actionResp: ActionResponse,
+                              httpResp: HttpResponse
+                             ) =
+    val result: Try[HttpResponse] = for {
+      respWithCookies <- Try(addCookiesToHttpResponse(getAllCookies(req, actionResp), httpResp))
+      respWithHeaders <- Try(addHeadersToHttpResponse(responseHeader(req, actionResp), respWithCookies))
+      respWithContentType <- Try(addContentTypeToHttpResponse(contentTypeOpt(req, actionResp), respWithHeaders))
+    } yield respWithContentType
+
+    result.getOrElse(httpResp)
+
   def convertActionResponseToHttpResponse(req: com.greenfossil.thorium.Request, actionResp: ActionResponse): HttpResponse =
     try {
       val httpResp = actionResp match
-        case hr: HttpResponse => hr
-        case s: String => HttpResponse.of(s)
+        case hr: HttpResponse => _toHttpResponse(req, actionResp, hr)
+        case s: String => _toHttpResponse(req, actionResp, HttpResponse.of(s))
         case bytes: Array[Byte] =>
-          HttpResponse.of(HttpStatus.OK, Option(req.contentType).getOrElse(MediaType.ANY_TYPE), HttpData.wrap(bytes))
+          _toHttpResponse(req, actionResp,
+            HttpResponse.of(HttpStatus.OK, Option(req.contentType).getOrElse(MediaType.ANY_TYPE), HttpData.wrap(bytes))
+          )
         case is: InputStream =>
-          HttpResponse.of(
-            ResponseHeaders.of(HttpStatus.OK, HttpHeaderNames.CONTENT_TYPE, Option(req.contentType).getOrElse(MediaType.ANY_TYPE)),
-            StreamMessage.fromOutputStream(os => Using.resources(is, os) { (is, os) => is.transferTo(os) }))
+          _toHttpResponse(req, actionResp,
+            HttpResponse.of(
+              ResponseHeaders.of(HttpStatus.OK, HttpHeaderNames.CONTENT_TYPE, Option(req.contentType).getOrElse(MediaType.ANY_TYPE)),
+              StreamMessage.fromOutputStream(os => Using.resources(is, os) { (is, os) => is.transferTo(os) }))
+          )
         case result: Result =>
-          convertActionResponseToHttpResponse(req, result.body)
+          _toHttpResponse(req, actionResp, convertActionResponseToHttpResponse(req, result.body))
+        case null =>
+          HttpResponse.ofFailure(new Exception(s"Null response in request [${req.uri}]"))
 
       val result: Try[HttpResponse] = for {
         respWithCookies <- Try(addCookiesToHttpResponse(getAllCookies(req, actionResp), httpResp))

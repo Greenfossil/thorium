@@ -56,16 +56,8 @@ trait EssentialAction extends HttpService :
         .aggregate()
         .thenApplyAsync{aggregateRequest =>
           //Invoke EssentialAction
-          Try {
-            val req = new Request(svcRequestContext, aggregateRequest) {}
-            HttpResponseConverter.convertActionResponseToHttpResponse(req, apply(req))
-          }.fold(
-            throwable => {
-              actionLogger.error("Invoke Action error", throwable)
-              HttpResponse.ofFailure(throwable) // allow exceptionHandlerFunctions and serverErrorHandler to kick in
-            },
-            httpResp => httpResp
-          )
+          val req = new Request(svcRequestContext, aggregateRequest) {}
+          HttpResponseConverter.convertActionResponseToHttpResponse(req, apply(req))
         }
     HttpResponse.from(f)
 
