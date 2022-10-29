@@ -21,7 +21,7 @@ import com.linecorp.armeria.server.annotation.*
 /*
  *  Class annotated path is currently not supported - Need to lift this restriction
  */
-object SingletonService extends Controller {
+object SingletonService {
 
 //    @Get("/classRefAction")
 //    def classRefAction = Action { request =>

@@ -23,7 +23,7 @@ import com.linecorp.armeria.client.logging.LoggingClient
 import com.linecorp.armeria.common.{HttpMethod, HttpRequest, HttpStatus}
 import com.linecorp.armeria.server.annotation.Get
 
-object SessionServices extends Controller {
+object SessionServices {
   @Get("/s0")
   def s0 = Action { request =>
     Redirect("/s1", HttpStatus.SEE_OTHER).withNewSession.flashing("News Flash" ->"Flash Value")

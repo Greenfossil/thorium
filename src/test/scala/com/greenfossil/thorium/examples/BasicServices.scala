@@ -26,7 +26,7 @@ import scala.language.implicitConversions
 /*
  * Please ensure com.greenfossil.webserver.examples.main is started
  */
-object BasicServices extends Controller {
+object BasicServices {
 
   //curl http://localhost:8080/simple
   @Get("/simple")

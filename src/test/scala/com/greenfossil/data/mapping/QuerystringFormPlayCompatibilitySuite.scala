@@ -34,7 +34,7 @@ class QuerystringFormPlayCompatibilitySuite extends munit.FunSuite {
 
   override def beforeAll(): Unit = {
     server = Server()
-      .addService("/form", Action { implicit req =>
+      .addHttpService("/form", Action { implicit req =>
         simpleForm.bindFromRequest().fold(
           ex => BadRequest(s"Errors in form, ${ex.errors.mkString(", ")}"),
           values => Ok(s"Form values: [${values._1}], [${values._2}], Query Params: [${req.queryParams}]")

@@ -25,7 +25,7 @@ import com.linecorp.armeria.server.annotation.{Get, Param}
     .addServices(Redirect4Services)
     .start()
 
-object Redirect3Services extends Controller {
+object Redirect3Services {
 
   //curl http://localhost:8080/action1 -L
   @Get("/fn1")
@@ -40,7 +40,7 @@ object Redirect3Services extends Controller {
     s"Hello value:$data, msg:$msg - req${request.path}"
 }
 
-object Redirect4Services extends Controller {
+object Redirect4Services {
 
   /*
    * curl http://localhost:8080/fn3/1 -L

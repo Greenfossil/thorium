@@ -22,7 +22,7 @@ import com.linecorp.armeria.server.annotation.{Get, Param, Post}
 /*
  * Please ensure com.greenfossil.webserver.examples.main is started
  */
-object ParameterizedServices extends Controller {
+object ParameterizedServices {
 
   /*
    * curl http://localhost:8080/howdy - this does not seems to be working?

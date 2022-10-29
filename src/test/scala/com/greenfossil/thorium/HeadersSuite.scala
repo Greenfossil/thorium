@@ -22,7 +22,7 @@ import com.linecorp.armeria.server.annotation.Get
 
 import scala.annotation.nowarn
 
-object HeadersServices extends Controller {
+object HeadersServices {
   @Get("/headers") @nowarn
   def headers = Action { request =>
     Ok("Headers sent")

@@ -19,7 +19,7 @@ package com.greenfossil.thorium
 import com.greenfossil.thorium.{*, given}
 import com.linecorp.armeria.server.annotation.Get
 
-object NestedRedirectServices extends Controller {
+object NestedRedirectServices {
 
   @Get("/nestedRedirect")
   def nestedRedirect = Action { request2 =>

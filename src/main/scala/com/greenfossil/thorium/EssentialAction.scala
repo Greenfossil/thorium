@@ -16,15 +16,13 @@
 
 package com.greenfossil.thorium
 
-import com.linecorp.armeria.common.{Request as _,  *}
+import com.linecorp.armeria.common.{Request as _, *}
 import com.linecorp.armeria.server.{HttpService, ServiceRequestContext}
 import org.slf4j.LoggerFactory
 
 import java.io.InputStream
 import java.util.concurrent.CompletableFuture
 import scala.util.Try
-
-trait Controller
 
 type ActionResponse = HttpResponse | Result | String | Array[Byte] | InputStream
 
@@ -45,6 +43,7 @@ trait EssentialAction extends HttpService :
 
   /**
    * Armeria invocation during an incoming request
+   *
    * @param svcRequestContext
    * @param httpRequest
    * @return
@@ -54,7 +53,7 @@ trait EssentialAction extends HttpService :
       svcRequestContext
         .request()
         .aggregate()
-        .thenApplyAsync{aggregateRequest =>
+        .thenApplyAsync { aggregateRequest =>
           //Invoke EssentialAction
           val req = new Request(svcRequestContext, aggregateRequest) {}
           HttpResponseConverter.convertActionResponseToHttpResponse(req, apply(req))

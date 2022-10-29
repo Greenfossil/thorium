@@ -20,7 +20,7 @@ import com.greenfossil.data.mapping.*
 import com.greenfossil.thorium.{*, given}
 import com.linecorp.armeria.server.annotation.{Get, Param, Post}
 
-object MultipartServices extends Controller {
+object MultipartServices {
 
   /*
    * Method Multipart, both data and query arg does not work from Armeria 1.19.0 and before

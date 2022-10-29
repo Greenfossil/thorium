@@ -19,7 +19,7 @@ package experiment.endpoint
 import com.greenfossil.thorium.{*, given}
 import com.linecorp.armeria.server.annotation.*
 
-object TestActionController extends Controller {
+object TestActionController {
 
   @Get("/action1")
   def action1: Action = Action { implicit request =>

@@ -26,7 +26,7 @@ import java.lang.reflect.ParameterizedType
 /*
  * Please ensure com.greenfossil.webserver.examples.main is started
  */
-object SimpleServices extends Controller {
+object SimpleServices {
 
   //curl http://localhost:8080/simple-text/homer%20simpson/2022-12-31
   @Get("/simple-text/{name}/:date")

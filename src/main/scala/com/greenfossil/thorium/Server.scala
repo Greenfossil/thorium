@@ -30,6 +30,7 @@ import scala.util.Using
 import scala.language.implicitConversions
 
 private[thorium] val serverLogger = LoggerFactory.getLogger("com.greenfossil.thorium.server")
+private [thorium] val armeriaLogger = LoggerFactory.getLogger("com.linecorp.armeria.logging.access")
 
 object Server:
   /**
@@ -45,14 +46,14 @@ object Server:
     Server(null, Nil, Nil, None, Configuration.usingPort(port))
 
 case class Server(server: AServer,
-                  services: Seq[(String, HttpService)],
-                  annotatedServices: Seq[Controller] = Nil,
+                  httpServices: Seq[(String, HttpService)],
+                  annotatedServices: Seq[AnyRef] = Nil,
                   errorHandlerOpt: Option[ServerErrorHandler],
                   configuration: Configuration,
                   requestConverters: Seq[RequestConverterFunction] = Nil,
                   responseConverters: Seq[ResponseConverterFunction] = Nil,
                   exceptionHandlers: Seq[ExceptionHandlerFunction] = Nil,
-                  beforeStartInitOpt: Option[ServerBuilder => Unit] = None,
+                  serverBuilderSetupFn: Option[ServerBuilder => Unit] = None,
                   docServiceNameOpt: Option[String] = None):
 
   def mode: Mode = configuration.environment.mode
@@ -100,13 +101,14 @@ case class Server(server: AServer,
 
   def port: Int = server.activeLocalPort()
 
-  def addService(endpoint: String, action: HttpService): Server =
-    copy(services = services :+ (endpoint, action))
+  def addHttpService(endpoint: String, action: HttpService): Server =
+    copy(httpServices = httpServices :+ (endpoint, action))
 
-  def addServices(newServices: (Controller| Tuple2[String, HttpService]) *): Server  =
-    val (controllers: Seq[Controller @unchecked], newSvcs: Seq[(String, HttpService) @unchecked]) =
-      newServices.partition(s => s.isInstanceOf[Controller]) : @unchecked
-    copy(services = services ++ newSvcs, annotatedServices = annotatedServices ++ controllers)
+  def addHttpServices(newHttpServices: (String, HttpService)*): Server =
+    copy(httpServices = httpServices ++ newHttpServices)
+
+  def addServices(newServices: AnyRef*): Server  =
+    copy(annotatedServices = annotatedServices ++ newServices)
 
   def setErrorHandler(h: ServerErrorHandler): Server =
     copy(errorHandlerOpt = Some(h))
@@ -154,7 +156,7 @@ case class Server(server: AServer,
     sb.maxRequestLength(configuration.maxRequestLength)
     configuration.maxNumConnectionOpt.foreach(maxConn => sb.maxNumConnections(maxConn))
     sb.requestTimeout(configuration.requestTimeout)
-    services.foreach{ route =>
+    httpServices.foreach{ route =>
       sb.service(route._1, route._2.decorate((delegate, ctx, req) =>{
         //embed the env and http config
         ctx.setAttr(RequestAttrs.Config, configuration)
@@ -164,11 +166,11 @@ case class Server(server: AServer,
     annotatedServices.foreach{s => sb.annotatedService(s)}
     sb.annotatedServiceExtensions(allRequestConverters, allResponseConverters, allExceptionHandlers)
     errorHandlerOpt.foreach{ handler => sb.errorHandler(handler.orElse(ServerErrorHandler.ofDefault()))}
-    beforeStartInitOpt.foreach(_.apply(sb))
+    serverBuilderSetupFn.foreach(_.apply(sb))
     docServiceNameOpt.foreach(name => sb.serviceUnder(name, new DocService()))
     //Setup request logging
     sb.accessLogWriter(requestLog => {
-      com.greenfossil.commons.Logger("com.linecorp.armeria.logging.access").info(
+      armeriaLogger.info(
         Json.obj(
           "timestamp" -> LocalDateTime.now.toString,
           "requestId" -> requestLog.context().id.text(),
@@ -186,8 +188,8 @@ case class Server(server: AServer,
     }, true)
     sb.build
 
-  def addBeforeStartInit(initFn: ServerBuilder => Unit): Server =
-    copy(beforeStartInitOpt = Option(initFn))
+  def serverBuilderSetup(setupFn: ServerBuilder => Unit): Server =
+    copy(serverBuilderSetupFn = Option(setupFn))
 
   def addDocService(): Server = addDocService("/docs")
 

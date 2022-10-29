@@ -30,26 +30,26 @@ class RequestSuite extends munit.FunSuite{
 
   override def beforeAll(): Unit = {
     server = Server()
-      .addService("/text", Action { req =>
+      .addHttpService("/text", Action { req =>
         val method = req.method
         if req.asText == "Hello Armeria!" && method == HttpMethod.POST then Ok("Received Text")
         else BadRequest("Did not receive the right text")
       })
-      .addService("/json", Action { req =>
+      .addHttpService("/json", Action { req =>
         val method = req.method
         val json = req.asJson
         val msgOpt = (json \ "msg").asOpt[String]
         if msgOpt.contains("Hello Armeria!") && method == HttpMethod.POST then Ok("Received Text")
         else BadRequest("Did not receive the right text")
       })
-      .addService("/form", Action { req =>
+      .addHttpService("/form", Action { req =>
         val method = req.method
         val form = req.asFormUrlEncoded
         val msg = form.getOrElse("msg[]", Nil)
         if msg == Seq("Hello", "Armeria!") && method == HttpMethod.POST then Ok("Received Text")
         else BadRequest("Did not receive the right text")
       })
-      .addService("/multipart-form", Action { req =>
+      .addHttpService("/multipart-form", Action { req =>
         val method = req.method
         req.asMultipartFormData(mpForm => {
           val form = mpForm.asFormUrlEncoded
@@ -58,7 +58,7 @@ class RequestSuite extends munit.FunSuite{
           else BadRequest("Did not receive the right text")
         })
       })
-      .addService("/cookie", Action { req =>
+      .addHttpService("/cookie", Action { req =>
         val cookie1 = Cookie.ofSecure("cookie1", "one")
         val cookie2 = Cookie.ofSecure("cookie2", "two")
         Ok("Here is your cookie").withCookies(cookie1, cookie2)

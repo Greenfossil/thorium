@@ -23,7 +23,7 @@ import com.linecorp.armeria.server.annotation.{Get, Param, Path, Post}
 /*
  * Please ensure com.greenfossil.webserver.examples.main is started
  */
-object FormServices extends Controller {
+object FormServices {
   import com.greenfossil.data.mapping.Mapping.*
 
   //curl -v -d "user=user1&pass=abcd" -X POST  http://localhost:8080/form
