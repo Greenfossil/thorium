@@ -7,15 +7,12 @@ lazy val commonsJsonVersion = "0.2.0"
 lazy val commonsI18nVersion = "0.2.0"
 lazy val typesafeConfigExtVersion = "0.2.0"
 
-//lazy val databMapping = RootProject(file("../data-mapping"))
-//lazy val commonsI18n = RootProject(file("../commons-i18n"))
-
 lazy val thorium = project
   .in(file("."))
   .settings(
     name := "thorium",
     organization := "com.greenfossil",
-    version := "0.2.1-RC9",
+    version := "0.2.1",
 
     scalaVersion := scala3Version,
 
@@ -35,7 +32,5 @@ lazy val thorium = project
       "org.scalameta" %% "munit" % "0.7.29" % Test
     )
   )
-//  .dependsOn(databMapping)
-//  .dependsOn(commonsI18n)
 
 parallelExecution := false
