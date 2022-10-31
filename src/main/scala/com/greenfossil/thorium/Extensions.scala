@@ -41,7 +41,7 @@ extension (bytes: Array[Byte])
   def as(contentType: MediaType): Result =
     Result(bytes).as(contentType)
 
-extension (inline action: EssentialAction)
+extension (inline action: AnyRef)
   inline def url: String = EndpointMcr(action).url
 
   inline def absoluteUrl(authority: String, secure: Boolean) =
@@ -50,7 +50,6 @@ extension (inline action: EssentialAction)
   inline def absoluteUrl(using request: Request): String =
     EndpointMcr(action).absoluteUrl(using request)
 
-extension (inline action: EssentialAction)
   inline def endpoint: Endpoint = EndpointMcr(action)
 
 extension[A](field: Mapping[A])

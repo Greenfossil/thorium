@@ -21,7 +21,7 @@ import com.linecorp.armeria.server.annotation.{Get, Param, Path, Post}
 
 import java.time.LocalDateTime
 
-class EndpointMacroSuite extends munit.FunSuite {
+class EndpointMacro1Suite extends munit.FunSuite {
 
   @Get("/endpoint1")
   def endpoint1 = Action { req => "endpoint1" }
