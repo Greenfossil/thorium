@@ -57,7 +57,7 @@ object FormServices {
     val files = request.files
 
     val form = Mapping("person", text).bindFromRequest()
-    Ok(s"Received Multipart form - ${form.value}")
+    Ok(s"Received Multipart form - ${form.typedValueOpt}")
   }
 
   //https://stackoverflow.com/questions/19116016/what-is-the-right-way-to-post-multipart-form-data-using-curl
