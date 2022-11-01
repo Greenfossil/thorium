@@ -68,9 +68,9 @@ class EndpointMacro1Suite extends munit.FunSuite {
 
   test("url-encoded param Val string"){
     val valToken = "Homer/Marge Simpson"
-    val url =  endpoint2(valToken).url
+    val url =  endpoint2(valToken).endpointUrl
 
-    val url2 = endpoint2("Homer/Marge Simpson").url
+    val url2 = endpoint2("Homer/Marge Simpson").endpointUrl
 
     assertNoDiff(url, url2)
     assertNoDiff(url, "/endpoint2/Homer%2FMarge%20Simpson")
@@ -79,9 +79,9 @@ class EndpointMacro1Suite extends munit.FunSuite {
   test("url-encoded param val string (with path and query param)") {
     val valToken = "Homer/Marge Simpson"
 
-    val url = endpoint4(1, valToken).url
+    val url = endpoint4(1, valToken).endpointUrl
 
-    val url2 = endpoint4(1, "Homer/Marge Simpson").url
+    val url2 = endpoint4(1, "Homer/Marge Simpson").endpointUrl
 
     assertNoDiff(url, url2)
     assertNoDiff(url, "/endpoint4/1?name=Homer%2FMarge%20Simpson")
@@ -90,9 +90,9 @@ class EndpointMacro1Suite extends munit.FunSuite {
   test("url-encoded param val string (with query param)") {
     val valToken = "Homer/Marge Simpson"
 
-    val url = endpoint3(valToken).url
+    val url = endpoint3(valToken).endpointUrl
 
-    val url2 = endpoint3("Homer/Marge Simpson").url
+    val url2 = endpoint3("Homer/Marge Simpson").endpointUrl
 
     assertNoDiff(url, url2)
     assertNoDiff(url, "/endpoint3?name=Homer%2FMarge%20Simpson")
@@ -101,9 +101,9 @@ class EndpointMacro1Suite extends munit.FunSuite {
 
   test("url-encoded param Def string") {
     def defToken = "Homer/Marge Simpson"
-    val url = endpoint3(defToken).url
+    val url = endpoint3(defToken).endpointUrl
 
-    val url2 = endpoint3("Homer/Marge Simpson").url
+    val url2 = endpoint3("Homer/Marge Simpson").endpointUrl
 
     assertNoDiff(url, url2)
     assertNoDiff(url, "/endpoint3?name=Homer%2FMarge%20Simpson")
