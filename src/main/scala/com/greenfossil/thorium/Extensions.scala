@@ -43,8 +43,6 @@ extension (bytes: Array[Byte])
 
 extension (inline action: AnyRef)
 
-  inline def endpointUrl: String = EndpointMcr(action).url
-
   inline def absoluteUrl(authority: String, secure: Boolean) =
     EndpointMcr(action).absoluteUrl(authority, secure)
 
