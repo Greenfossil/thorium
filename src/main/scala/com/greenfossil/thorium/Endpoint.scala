@@ -16,9 +16,11 @@
 
 package com.greenfossil.thorium
 
+import com.linecorp.armeria.server.ServiceConfig
+
 import java.nio.charset.StandardCharsets
 
-case class Endpoint(path: String, method: String, queryParams: List[(String, Any)]):
+case class Endpoint(path: String, method: String, queryParams: List[(String, Any)], pathPatternOpt: Option[String] = None):
 
   def url: String =
     //Query Param is expected to be UrlEncoded
@@ -35,6 +37,30 @@ case class Endpoint(path: String, method: String, queryParams: List[(String, Any
   
   def absoluteUrl(using request: Request): String =
     absoluteUrl(request.uriAuthority, request.secure)
+
+  def prefixedUrl(using request: Request): String =
+    import scala.jdk.CollectionConverters.*
+    prefixedUrl(request.path,  request.requestContext.config().server().serviceConfigs().asScala.toList)
+
+  def prefixedUrl(requestPath: String, serviceConfigs: List[ServiceConfig]): String =
+  //1. Compute Redirect Endpoint prefix that matches incoming Request
+    serviceConfigs
+      .find(serviceConfig =>
+        pathPatternOpt.exists { pathPattern => //This would be forwardEndpoint Annotated path pattern
+          val configRoutePattern = serviceConfig.route().patternString()
+          val configRoutePrefix = configRoutePattern.replaceAll(pathPattern, "")
+          val configRoutePatternEndsWithForwardEpPattern = configRoutePattern.endsWith(pathPattern)
+          val reqStartsWithConfigRoutePrefix = configRoutePrefix.nonEmpty && requestPath.startsWith(configRoutePrefix)
+          configRoutePatternEndsWithForwardEpPattern && reqStartsWithConfigRoutePrefix
+        }
+      )
+      .map(serviceConfig => {
+        //Convert the matched serviceConfig to the prefix
+        val prefix = serviceConfig.route().patternString().replaceAll(pathPatternOpt.get, "")
+        prefix + url
+      }).getOrElse(url)
+
+  override def toString: String = url
 
 object Endpoint:
 

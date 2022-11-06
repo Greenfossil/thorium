@@ -33,6 +33,9 @@ def Redirect(url: String): Result =
 
 def Redirect(url: String, status: HttpStatus): Result =
   toResult(status, url)
+  
+inline def Redirect[A <: EssentialAction](inline action: A, status: HttpStatus): Result =
+  toResult(status, EndpointMcr(action).url)
 
 def Redirect(url: String, queryString: Map[String, Seq[String]]): Result =
   Redirect(url, queryString, HttpStatus.SEE_OTHER)

@@ -49,6 +49,7 @@ class EndpointMacro1Suite extends munit.FunSuite {
 
     val ep2 = endpoint2("homer").endpoint
     assertNoDiff(ep2.url, "/endpoint2/homer")
+    assertEquals(ep2.pathPatternOpt, Some("/endpoint2/:name"))
     assertNoDiff(ep2.method, "Get")
 
     val ep3 = endpoint3("homer").endpoint

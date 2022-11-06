@@ -20,14 +20,20 @@ import com.greenfossil.thorium.{*, given}
 
 @main def main =
   val server = Server(8080)
-    .addHttpService("/simpleHttpService", Action{ request =>
-      Ok(s"Howdy! env:${request.env.mode}")
-    })
-    .addServices(BasicServices, FormServices, SimpleServices, ParameterizedServices)
-    .addServices(MultipartServices)
-    .addDocService()
+//    .addHttpService("/simpleHttpService", Action{ request =>
+//      Ok(s"Howdy! env:${request.env.mode}")
+//    })
+//    .addServices(BasicServices, FormServices, SimpleServices, ParameterizedServices)
+//    .addServices(MultipartServices)
+//    .addDocService()
     .serverBuilderSetup(sb => {
       sb.serviceUnder("/docs", new com.linecorp.armeria.server.docs.DocService())
+      sb.annotatedService(RedirectedServices)
+      sb.annotatedService("/api", RedirectedServices)
     })
     .start()
+
+  server.serviceConfigs foreach { c =>
+    println(s"c.route() = ${c.route()}")
+  }
   println(s"Server started... ${Thread.currentThread()}")

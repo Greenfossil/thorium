@@ -23,9 +23,12 @@ inline def EndpointMcr[A <: EssentialAction](inline action: A): Endpoint =
 
 import scala.quoted.*
 def EndpointMcrImpl[A <: EssentialAction : Type](actionExpr: Expr[A])(using Quotes): Expr[Endpoint] =
-  import AnnotatedPathMcr.*
+  import ExprimentalAnnotatedPathMcr.*
 
   computeActionAnnotatedPath(
     actionExpr,
-    (method, exprList) => '{ Endpoint(${exprList}.mkString("/")) }
+    (method, exprList, pathPattern) =>
+      println(s"method = ${method}")
+        println (s"pathPattern = ${pathPattern}")
+      '{ Endpoint(${exprList}.mkString("/"), ${Expr(method)}, Nil, Some(${Expr(pathPattern)})) }
   )

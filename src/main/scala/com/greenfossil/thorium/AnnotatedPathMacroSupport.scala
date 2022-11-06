@@ -31,7 +31,7 @@ object AnnotatedPathMacroSupport extends MacroSupport(globalDebug = false):
   import scala.quoted.*
 
   def computeActionAnnotatedPath[A : Type, R : Type](epExpr: Expr[A],
-                                                     onSuccessCallback: (Expr[String], Expr[List[Any]], Expr[List[String]], Expr[List[Any]]) =>  Expr[R],
+                                                     onSuccessCallback: (Expr[String], Expr[List[Any]], Expr[List[String]], Expr[List[Any]], Expr[String]) =>  Expr[R],
                                                      supportQueryStringPost: Boolean = true
                                                     )(using Quotes): Expr[R] =
     import quotes.reflect.*
@@ -104,7 +104,7 @@ object AnnotatedPathMacroSupport extends MacroSupport(globalDebug = false):
     epExpr: Expr[A],
     annList: List[quotes.reflect.Term],
     paramNameValueLookup: Map[String, quotes.reflect.Term],
-    successCallback: (Expr[String], Expr[List[Any]], Expr[List[String]], Expr[List[Any]]) =>  Expr[P],
+    successCallback: (Expr[String], Expr[List[Any]], Expr[List[String]], Expr[List[Any]], Expr[String]) =>  Expr[P],
     supportQueryStringPost: Boolean
   ): Expr[P] =
     import quotes.reflect.*
@@ -112,17 +112,17 @@ object AnnotatedPathMacroSupport extends MacroSupport(globalDebug = false):
       case None =>
         report.errorAndAbort(s"No annotated path found ${epExpr}", epExpr)
 
-      case Some((method: String, declaredPath: String)) =>
+      case Some((method: String, pathPattern: String)) =>
         /*
          * update the del
          */
         val (computedPath: List[Expr[Any]], queryParamKeys: List[String], queryParamValues: List[Expr[Any]]) =
-          getComputedPathExpr(epExpr, paramNameValueLookup, declaredPath)
+          getComputedPathExpr(epExpr, paramNameValueLookup, pathPattern)
         if  !supportQueryStringPost && method.equalsIgnoreCase("Post") && queryParamKeys.nonEmpty then {
           report.errorAndAbort("Query String for Post method is not supported")
         } else ()
 
-        successCallback(Expr(method), Expr.ofList(computedPath), Expr[List[String]](queryParamKeys), Expr.ofList(queryParamValues))
+        successCallback(Expr(method), Expr.ofList(computedPath), Expr[List[String]](queryParamKeys), Expr.ofList(queryParamValues), Expr(pathPattern))
 
   /**
    * Search for the inner most Term, skip all the outer Inlined
@@ -174,7 +174,7 @@ object AnnotatedPathMacroSupport extends MacroSupport(globalDebug = false):
   private def getComputedPathExpr[A : Type](using Quotes)(
     actionExpr: Expr[A],
     paramNameValueLookup: Map[String, quotes.reflect.Term],
-    declaredPath: String): (List[Expr[Any]], List[String], List[Expr[Any]])  = 
+    pathPattern: String): (List[Expr[Any]], List[String], List[Expr[Any]])  =
 
     import quotes.reflect.*
 
@@ -203,7 +203,7 @@ object AnnotatedPathMacroSupport extends MacroSupport(globalDebug = false):
               x.asExpr
           }
         case None =>
-          report.errorAndAbort(s"Path param [$name] of path [$declaredPath] cannot be found in method's param names [${paramNameValueLookup.keySet.mkString(",")}]  ", actionExpr)
+          report.errorAndAbort(s"Path param [$name] of pathPattern [$pathPattern] cannot be found in method's param names [${paramNameValueLookup.keySet.mkString(",")}]  ", actionExpr)
 
     def paramPathExtractor(path: String): List[Expr[Any]] =
       val parts = path.split("/:")
@@ -217,7 +217,7 @@ object AnnotatedPathMacroSupport extends MacroSupport(globalDebug = false):
 
     //compute Path
     val computedPath: List[Expr[Any]] =
-      declaredPath match 
+      pathPattern match
         case path if path.startsWith("prefix:/") =>
           List(Expr(path.replaceFirst("prefix:","")))
         case path if path.matches("regex:\\^?.+") =>

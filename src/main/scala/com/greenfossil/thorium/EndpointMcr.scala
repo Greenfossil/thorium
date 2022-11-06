@@ -25,12 +25,13 @@ def EndpointMcrImpl[A : Type](epExpr: Expr[A])(using Quotes): Expr[Endpoint] =
 
   computeActionAnnotatedPath(
     epExpr,
-    (exprMethod, exprPathPartList, exprQueryParamKeys, exprQueryParamValues) =>
+    (exprMethod, exprPathPartList, exprQueryParamKeys, exprQueryParamValues, exprPathPattern) =>
       '{
         Endpoint(
           ${exprPathPartList}.mkString("/"),
           ${exprMethod},
-          ${exprQueryParamKeys}.zip(${exprQueryParamValues})
+          ${exprQueryParamKeys}.zip(${exprQueryParamValues}),
+          Some(${exprPathPattern})
         )
       }
   )
