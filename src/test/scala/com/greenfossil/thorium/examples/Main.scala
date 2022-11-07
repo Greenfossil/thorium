@@ -26,10 +26,14 @@ import com.greenfossil.thorium.{*, given}
 //    .addServices(BasicServices, FormServices, SimpleServices, ParameterizedServices)
 //    .addServices(MultipartServices)
 //    .addDocService()
+    .addServices(RedirectedServices2)
     .serverBuilderSetup(sb => {
-      sb.serviceUnder("/docs", new com.linecorp.armeria.server.docs.DocService())
-      sb.annotatedService(RedirectedServices)
-      sb.annotatedService("/api", RedirectedServices)
+      sb
+        .serviceUnder("/docs", new com.linecorp.armeria.server.docs.DocService())
+//        .serviceUnder("/api", RedirectedServices2.s3)
+        .annotatedService("/ext", RedirectedServices2)
+        .annotatedService(RedirectedServices)
+        .annotatedService("/api", RedirectedServices)
     })
     .start()
 

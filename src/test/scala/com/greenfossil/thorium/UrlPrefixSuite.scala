@@ -14,22 +14,38 @@
  * limitations under the License.
  */
 
-package com.greenfossil.thorium.examples
+package com.greenfossil.thorium
 
-import com.linecorp.armeria.server.annotation.{Get, Param}
-import com.greenfossil.thorium.{*, given}
-import com.linecorp.armeria.common.{HttpRequest, HttpResponse, HttpStatus}
-import com.linecorp.armeria.server.{RoutingContext, ServiceConfig, ServiceRequestContext}
+import com.linecorp.armeria.server.annotation.Get
 
-object RedirectedServices:
-
-  @Get("/s0")
-  def s0 = Action { request =>
-    println(RedirectedServices2.s3.endpoint.prefixedUrl(using request))
-    Redirect( s1("howdy").endpoint.prefixedUrl(using request))
+object Service1:
+  @Get("/redirect1")
+  def redirect1 = Action{request =>
+    Redirect(foo)
   }
 
-  @Get("/s1/:name")
-  def s1(@Param name: String) = Action { request =>
-    s"Hello ${name}"
+  @Get("/foo")
+  def foo = Action{request =>
+    Ok("Foo")
   }
+
+object Service2:
+  @Get("/bar")
+  def bar = Action{request =>
+    Ok("Bar")
+  }
+
+class UrlPrefixSuite extends munit.FunSuite {
+
+  test("annotatedService with same path prefix"){
+    val server = Server()
+      .addServices(Service1)
+      .addServices(Service2)
+      .serverBuilderSetup(sb => {
+        sb
+          .annotatedService("/ext", Service2)
+      })
+    
+  }
+
+}

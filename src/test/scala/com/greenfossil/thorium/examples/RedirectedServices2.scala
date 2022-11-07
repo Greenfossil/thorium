@@ -16,20 +16,10 @@
 
 package com.greenfossil.thorium.examples
 
-import com.linecorp.armeria.server.annotation.{Get, Param}
-import com.greenfossil.thorium.{*, given}
-import com.linecorp.armeria.common.{HttpRequest, HttpResponse, HttpStatus}
-import com.linecorp.armeria.server.{RoutingContext, ServiceConfig, ServiceRequestContext}
+import com.linecorp.armeria.server.annotation.Get
+import com.greenfossil.thorium.*
 
-object RedirectedServices:
-
-  @Get("/s0")
-  def s0 = Action { request =>
-    println(RedirectedServices2.s3.endpoint.prefixedUrl(using request))
-    Redirect( s1("howdy").endpoint.prefixedUrl(using request))
-  }
-
-  @Get("/s1/:name")
-  def s1(@Param name: String) = Action { request =>
-    s"Hello ${name}"
-  }
+object RedirectedServices2 {
+  @Get("/s3")
+  def s3 = Action{request => "Hello World"}
+}
