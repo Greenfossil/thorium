@@ -21,5 +21,12 @@ import com.greenfossil.thorium.*
 
 object RedirectedServices2 {
   @Get("/s3")
-  def s3 = Action{request => "Hello World"}
+  def s3 = Action{request =>
+    import scala.jdk.CollectionConverters.*
+    request.requestContext.config().server().serviceConfigs().asScala foreach {sc =>
+      val pat = sc.route().patternString()
+      println(s"sc = ${sc} ${pat}")
+    }
+    "Hello World"
+  }
 }

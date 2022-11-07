@@ -30,10 +30,10 @@ import com.greenfossil.thorium.{*, given}
     .serverBuilderSetup(sb => {
       sb
         .serviceUnder("/docs", new com.linecorp.armeria.server.docs.DocService())
-//        .serviceUnder("/api", RedirectedServices2.s3)
-        .annotatedService("/ext", RedirectedServices2)
-        .annotatedService(RedirectedServices)
-        .annotatedService("/api", RedirectedServices)
+        .serviceUnder("/api", RedirectedServices2.s3)
+//        .annotatedService("/ext", RedirectedServices2)
+//        .annotatedService(RedirectedServices)
+//        .annotatedService("/api", RedirectedServices)
     })
     .start()
 

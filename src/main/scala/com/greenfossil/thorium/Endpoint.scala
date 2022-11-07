@@ -20,6 +20,7 @@ import com.greenfossil.thorium.Endpoint.getPrefix
 import com.linecorp.armeria.server.ServiceConfig
 
 import java.nio.charset.StandardCharsets
+import java.util.regex.Pattern
 
 case class Endpoint(path: String, method: String, queryParams: List[(String, Any)], pathPatternOpt: Option[String] = None):
 
@@ -44,7 +45,7 @@ case class Endpoint(path: String, method: String, queryParams: List[(String, Any
     prefixedUrl(request.requestContext.config().server().serviceConfigs().asScala.toList)
 
   def prefixedUrl(serviceConfigs: Seq[ServiceConfig]): String =
-    getPrefix(serviceConfigs, pathPatternOpt).map{prefix => prefix + url}.getOrElse(url)
+    getPrefix(serviceConfigs, pathPatternOpt).map{prefix => prefix + url }.getOrElse(url)
 
   override def toString: String = url
 
@@ -67,8 +68,13 @@ object Endpoint:
   def urlencode(value: String): String =
     java.net.URLEncoder.encode(value, StandardCharsets.UTF_8.toString)
 
-  def getPrefix(serviceConfigs: Seq[ServiceConfig], pathPatternOpt: Option[String]): Option[String] =
+  def getPrefix(serviceConfigs: Seq[ServiceConfig], rawPathPatternOpt: Option[String]): Option[String] =
   //1. Compute Redirect Endpoint prefix that matches incoming Request
+    val pathPatternOpt = rawPathPatternOpt.map{ pat =>
+      if pat.startsWith("prefix:")
+      then pat.replaceAll("prefix:", "") + "/*"
+      else pat.replaceAll("regex:|glob:", "")
+    }
     serviceConfigs
       .findLast(serviceConfig =>
         pathPatternOpt.exists { pathPattern => //This would be forwardEndpoint Annotated path pattern
@@ -79,6 +85,9 @@ object Endpoint:
       )
       .map(serviceConfig => {
         //Convert the matched serviceConfig to the prefix
-        serviceConfig.route().patternString().replaceAll(pathPatternOpt.get, "")
+        val configRoutePattern = serviceConfig.route().patternString()
+        val quotedPat = Pattern.quote(pathPatternOpt.get)
+        val prefix = configRoutePattern.replaceAll(Pattern.quote(pathPatternOpt.get), "")
+        if prefix.lastOption.contains('/') then prefix.init else prefix
       })
 

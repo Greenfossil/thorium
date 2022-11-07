@@ -52,6 +52,7 @@ object Service2:
 
   @Get("prefix:/test")
   def test = Action{request =>
+    request.requestContext.mappedPath()
     Ok(request.uri.toString)
   }
 
@@ -85,7 +86,7 @@ class UrlPrefixSuite extends munit.FunSuite {
   }
 
   test("annotatedService with path prefix"){
-    val server = Server(8080)
+    val server = Server()
       .addServices(Service1)
       .addServices(Service2)
       .serverBuilderSetup(sb => {
@@ -112,7 +113,7 @@ class UrlPrefixSuite extends munit.FunSuite {
   }
 
   test("serviceUnder with path prefix"){
-    val server = Server(8080)
+    val server = Server()
       .addServices(Service1)
       .addServices(Service2)
       .serverBuilderSetup(sb => {
