@@ -37,7 +37,7 @@ object Service2:
 
 class UrlPrefixSuite extends munit.FunSuite {
 
-  test("annotatedService with same path prefix"){
+  test("annotatedService with path prefix"){
     val server = Server()
       .addServices(Service1)
       .addServices(Service2)
@@ -45,7 +45,26 @@ class UrlPrefixSuite extends munit.FunSuite {
         sb
           .annotatedService("/ext", Service2)
       })
-    
+      .start()
+    assertEquals(Service2.bar.endpoint.url, "/bar")
+    assertEquals(Service2.bar.endpoint.prefixedUrl(server.serviceConfigs), "/ext/bar")
+    val routePatterns = server.serviceConfigs.map(_.route().patternString())
+    assertEquals(routePatterns, Seq("/foo", "/redirect1", "/bar", "/ext/bar"))
+  }
+
+  test("serviceUnder with path prefix"){
+    val server = Server()
+      .addServices(Service1)
+      .addServices(Service2)
+      .serverBuilderSetup(sb => {
+        sb
+          .serviceUnder("/ext", Service2.bar)
+      })
+      .start()
+    assertEquals(Service2.bar.endpoint.url, "/bar")
+    val routePatterns = server.serviceConfigs.map(_.route().patternString())
+    assertEquals(routePatterns, Seq("/foo", "/redirect1", "/bar", "/ext/*"))
+    assertEquals(Service2.bar.endpoint.prefixedUrl(server.serviceConfigs), "/ext/bar")
   }
 
 }

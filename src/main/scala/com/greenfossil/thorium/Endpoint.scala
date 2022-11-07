@@ -43,7 +43,7 @@ case class Endpoint(path: String, method: String, queryParams: List[(String, Any
     import scala.jdk.CollectionConverters.*
     prefixedUrl(request.requestContext.config().server().serviceConfigs().asScala.toList)
 
-  def prefixedUrl(serviceConfigs: List[ServiceConfig]): String =
+  def prefixedUrl(serviceConfigs: Seq[ServiceConfig]): String =
     getPrefix(serviceConfigs, pathPatternOpt).map{prefix => prefix + url}.getOrElse(url)
 
   override def toString: String = url
@@ -70,7 +70,7 @@ object Endpoint:
   def getPrefix(serviceConfigs: Seq[ServiceConfig], pathPatternOpt: Option[String]): Option[String] =
   //1. Compute Redirect Endpoint prefix that matches incoming Request
     serviceConfigs
-      .find(serviceConfig =>
+      .findLast(serviceConfig =>
         pathPatternOpt.exists { pathPattern => //This would be forwardEndpoint Annotated path pattern
           val configRoutePattern = serviceConfig.route().patternString()
           val configRoutePatternEndsWithForwardEpPattern = configRoutePattern.endsWith(pathPattern)
