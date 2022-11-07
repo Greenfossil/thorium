@@ -16,7 +16,7 @@
 
 package com.greenfossil.thorium
 
-import com.linecorp.armeria.server.annotation.Get
+import com.linecorp.armeria.server.annotation.{Get, Param}
 
 object Service1:
   @Get("/redirect1")
@@ -35,10 +35,57 @@ object Service2:
     Ok("Bar")
   }
 
+  @Get("/param/:str")
+  def param(@Param str: String) = Action{request =>
+    Ok(str)
+  }
+
+  @Get("/query")
+  def query(@Param str: String) = Action{request =>
+    Ok(str)
+  }
+
+  @Get("regex:^/(?<num>\\d+)$")
+  def number(@Param num: Int) = Action{ request =>
+    Ok(num.toString)
+  }
+
+  @Get("prefix:/test")
+  def test = Action{request =>
+    Ok(request.uri.toString)
+  }
+
 class UrlPrefixSuite extends munit.FunSuite {
+  test("route patterns"){
+    val server = Server()
+      .addServices(Service1)
+      .addServices(Service2)
+      .serverBuilderSetup(sb => {
+        sb
+          .annotatedService("/ext", Service2)
+          .serviceUnder("/ext2", Service1.foo)
+      })
+      .start()
+
+    server.server.stop()
+    val routePatterns = server.serviceConfigs.map(_.route().patternString())
+    assertEquals(routePatterns, List(
+      // direct routes
+      "/foo", "/redirect1", "/bar",
+      "^/(?<num>\\d+)$", "/query", "/test/*", "/param/:str",
+      //annotatedService routes
+      "/ext/bar",
+      "/ext/^/(?<num>\\d+)$",
+      "/ext/query",
+      "/ext/test/*",
+      "/ext/param/:str",
+      // serviceUnder routes
+      "/ext2/*"
+    ))
+  }
 
   test("annotatedService with path prefix"){
-    val server = Server()
+    val server = Server(8080)
       .addServices(Service1)
       .addServices(Service2)
       .serverBuilderSetup(sb => {
@@ -46,14 +93,26 @@ class UrlPrefixSuite extends munit.FunSuite {
           .annotatedService("/ext", Service2)
       })
       .start()
+    server.server.stop()
+
     assertEquals(Service2.bar.endpoint.url, "/bar")
     assertEquals(Service2.bar.endpoint.prefixedUrl(server.serviceConfigs), "/ext/bar")
-    val routePatterns = server.serviceConfigs.map(_.route().patternString())
-    assertEquals(routePatterns, Seq("/foo", "/redirect1", "/bar", "/ext/bar"))
+
+    assertEquals(Service2.param("hello").endpoint.url, "/param/hello")
+    assertEquals(Service2.param("hello").endpoint.prefixedUrl(server.serviceConfigs), "/ext/param/hello")
+
+    assertEquals(Service2.query("hello").endpoint.url, "/query?str=hello")
+    assertEquals(Service2.query("hello").endpoint.prefixedUrl(server.serviceConfigs), "/ext/query?str=hello")
+
+    assertEquals(Service2.number(1).endpoint.url, "/1")
+    assertEquals(Service2.number(1).endpoint.prefixedUrl(server.serviceConfigs), "/ext/1")
+
+    assertEquals(Service2.test.endpoint.url, "/test")
+    assertEquals(Service2.test.endpoint.prefixedUrl(server.serviceConfigs), "/ext/test")
   }
 
   test("serviceUnder with path prefix"){
-    val server = Server()
+    val server = Server(8080)
       .addServices(Service1)
       .addServices(Service2)
       .serverBuilderSetup(sb => {
@@ -61,9 +120,9 @@ class UrlPrefixSuite extends munit.FunSuite {
           .serviceUnder("/ext", Service2.bar)
       })
       .start()
+    server.server.stop()
+
     assertEquals(Service2.bar.endpoint.url, "/bar")
-    val routePatterns = server.serviceConfigs.map(_.route().patternString())
-    assertEquals(routePatterns, Seq("/foo", "/redirect1", "/bar", "/ext/*"))
     assertEquals(Service2.bar.endpoint.prefixedUrl(server.serviceConfigs), "/ext/bar")
   }
 
