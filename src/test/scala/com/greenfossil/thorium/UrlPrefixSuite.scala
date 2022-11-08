@@ -113,10 +113,11 @@ class UrlPrefixSuite extends munit.FunSuite {
 
     //Test non macro created Endpoint
     assertEquals(Endpoint("/test/path").url, "/test/path")
-    assertEquals(Endpoint("/test/path").prefixedUrl(server.serviceConfigs), "/ext/test/path")
+    assertEquals(Endpoint("/test/path", "prefix:/test").prefixedUrl(server.serviceConfigs), "/ext/test/path")
+    assertEquals(Endpoint("/test/path", Service2.test.endpoint.pathPatternOpt.get).prefixedUrl(server.serviceConfigs), "/ext/test/path")
   }
 
-  test("serviceUnder with path prefix"){
+  test("serviceUnder with path prefix".ignore){
     val server = Server()
       .addServices(Service1)
       .addServices(Service2)
@@ -130,7 +131,5 @@ class UrlPrefixSuite extends munit.FunSuite {
     assertEquals(Service2.bar.endpoint.url, "/bar")
     assertEquals(Service2.bar.endpoint.prefixedUrl(server.serviceConfigs), "/ext/bar")
   }
-
-
 
 }

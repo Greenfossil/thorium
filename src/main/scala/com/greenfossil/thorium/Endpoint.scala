@@ -52,6 +52,9 @@ case class Endpoint(path: String, method: String, queryParams: List[(String, Any
 object Endpoint:
 
   def apply(path: String): Endpoint = new Endpoint(path, "GET", Nil)
+  
+  def apply(path: String, pathPattern: String): Endpoint = 
+    new Endpoint(path, "GET", Nil, Option(pathPattern))
 
   def paramKeyValue(name: String, value: Any): String =
     (name, value) match
