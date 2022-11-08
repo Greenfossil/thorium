@@ -22,6 +22,7 @@ import com.linecorp.armeria.server.{Server as AServer, *}
 import com.linecorp.armeria.server.annotation.{ExceptionHandlerFunction, RequestConverterFunction, ResponseConverterFunction}
 import com.linecorp.armeria.server.docs.DocService
 import com.typesafe.config.Config
+import io.netty.util.AttributeKey
 import org.slf4j.LoggerFactory
 
 import java.lang.reflect.ParameterizedType
@@ -54,7 +55,12 @@ case class Server(server: AServer,
                   responseConverters: Seq[ResponseConverterFunction] = Nil,
                   exceptionHandlers: Seq[ExceptionHandlerFunction] = Nil,
                   serverBuilderSetupFn: Option[ServerBuilder => Unit] = None,
-                  docServiceNameOpt: Option[String] = None):
+                  defaultRequestConverterFnOpt: Option[ServiceRequestContext => Void] = None,
+                  defaultResponseConverterFnOpt: Option[ServiceRequestContext => Void] = None,
+                  requestConverterAttrs: Tuple = EmptyTuple,
+                  responseConverterAttrs: Tuple = EmptyTuple,
+                  docServiceNameOpt: Option[String] = None
+                 ):
 
   def mode: Mode = configuration.environment.mode
 
@@ -71,6 +77,11 @@ case class Server(server: AServer,
      expectedParameterizedResultType: ParameterizedType) =>
           //embed the env and http config
           svcRequestContext.setAttr(RequestAttrs.Config, configuration)
+          requestConverterAttrs.toList.foreach {
+            case (key: AttributeKey[Any] @unchecked, value) =>
+              svcRequestContext.setAttr[Any](key, value)
+          }
+          defaultRequestConverterFnOpt.foreach(_.apply(svcRequestContext))
           if expectedResultType == classOf[Request]
           then
             val request = new Request(svcRequestContext, aggHttpRequest) {}
@@ -83,6 +94,11 @@ case class Server(server: AServer,
     (svcRequestContext: ServiceRequestContext, headers: ResponseHeaders, result: Any, trailers: HttpHeaders) =>
       //embed the env and http config
       svcRequestContext.setAttr(RequestAttrs.Config, configuration)
+      responseConverterAttrs.toList.foreach {
+        case (key: AttributeKey[Any] @unchecked, value) =>
+          svcRequestContext.setAttr[Any](key, value)
+      }
+      defaultResponseConverterFnOpt.foreach(_.apply(svcRequestContext))
       result match
         case action: EssentialAction =>
           action.serve(svcRequestContext, svcRequestContext.request())
@@ -121,6 +137,15 @@ case class Server(server: AServer,
 
   def addExceptionHandlers(newExceptionHandlers: ExceptionHandlerFunction*): Server =
     copy(exceptionHandlers = newExceptionHandlers ++ this.exceptionHandlers)
+
+  def addRequestConverterRequestAttribute[A](attrKeyPair: (AttributeKey[A], A)): Server =
+    copy(requestConverterAttrs = attrKeyPair *: requestConverterAttrs)
+
+  def addResponseConverterRequestAttribute[A](attrKeyPair: (AttributeKey[A], A)): Server =
+    copy(responseConverterAttrs = attrKeyPair *: responseConverterAttrs)
+
+  def addRequestAttribute[A](attrKeyPair: (AttributeKey[A], A)): Server =
+    copy(requestConverterAttrs = attrKeyPair *: requestConverterAttrs, responseConverterAttrs = attrKeyPair *: responseConverterAttrs)
 
   import scala.jdk.CollectionConverters.*
 
