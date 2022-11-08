@@ -110,6 +110,10 @@ class UrlPrefixSuite extends munit.FunSuite {
 
     assertEquals(Service2.test.endpoint.url, "/test")
     assertEquals(Service2.test.endpoint.prefixedUrl(server.serviceConfigs), "/ext/test")
+
+    //Test non macro created Endpoint
+    assertEquals(Endpoint("/test/path").url, "/test/path")
+    assertEquals(Endpoint("/test/path").prefixedUrl(server.serviceConfigs), "/ext/test/path")
   }
 
   test("serviceUnder with path prefix"){
@@ -126,5 +130,7 @@ class UrlPrefixSuite extends munit.FunSuite {
     assertEquals(Service2.bar.endpoint.url, "/bar")
     assertEquals(Service2.bar.endpoint.prefixedUrl(server.serviceConfigs), "/ext/bar")
   }
+
+
 
 }
