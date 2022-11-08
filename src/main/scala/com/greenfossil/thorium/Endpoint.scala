@@ -45,7 +45,7 @@ case class Endpoint(path: String, method: String, queryParams: List[(String, Any
     prefixedUrl(request.requestContext.config().server().serviceConfigs().asScala.toList)
 
   def prefixedUrl(serviceConfigs: Seq[ServiceConfig]): String =
-    getPrefix(serviceConfigs, pathPatternOpt).map{prefix => prefix + url }.getOrElse(url)
+    getPrefix(serviceConfigs, pathPatternOpt.getOrElse(path)).map{prefix => prefix + url }.getOrElse(url)
 
   override def toString: String = url
 
@@ -68,26 +68,23 @@ object Endpoint:
   def urlencode(value: String): String =
     java.net.URLEncoder.encode(value, StandardCharsets.UTF_8.toString)
 
-  def getPrefix(serviceConfigs: Seq[ServiceConfig], rawPathPatternOpt: Option[String]): Option[String] =
+  def getPrefix(serviceConfigs: Seq[ServiceConfig], rawPathPattern: String): Option[String] =
   //1. Compute Redirect Endpoint prefix that matches incoming Request
-    val pathPatternOpt = rawPathPatternOpt.map{ pat =>
-      if pat.startsWith("prefix:")
-      then pat.replaceAll("prefix:", "") + "/*"
-      else pat.replaceAll("regex:|glob:", "")
-    }
+    val pathPattern = //This would be forwardEndpoint Annotated path pattern
+      if rawPathPattern.startsWith("prefix:")
+      then rawPathPattern.replaceAll("prefix:", "") + "/*"
+      else rawPathPattern.replaceAll("regex:|glob:", "")
+
     serviceConfigs
-      .findLast(serviceConfig =>
-        pathPatternOpt.exists { pathPattern => //This would be forwardEndpoint Annotated path pattern
-          val configRoutePattern = serviceConfig.route().patternString()
-          val configRoutePatternEndsWithForwardEpPattern = configRoutePattern.endsWith(pathPattern)
-          configRoutePatternEndsWithForwardEpPattern
-        }
-      )
+      .findLast { serviceConfig =>
+        val configRoutePattern = serviceConfig.route().patternString()
+        val configRoutePatternEndsWithForwardEpPattern = configRoutePattern.endsWith(pathPattern)
+        configRoutePatternEndsWithForwardEpPattern
+      }
       .map(serviceConfig => {
         //Convert the matched serviceConfig to the prefix
         val configRoutePattern = serviceConfig.route().patternString()
-        val quotedPat = Pattern.quote(pathPatternOpt.get)
-        val prefix = configRoutePattern.replaceAll(Pattern.quote(pathPatternOpt.get), "")
+        val prefix = configRoutePattern.replaceAll(Pattern.quote(pathPattern), "")
         if prefix.lastOption.contains('/') then prefix.init else prefix
       })
 
