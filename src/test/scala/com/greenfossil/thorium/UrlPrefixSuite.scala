@@ -80,11 +80,13 @@ class UrlPrefixSuite extends munit.FunSuite {
       "/foo", "/redirect1", "/bar",
       "^/(?<num>\\d+)$", "/query", "/test/*", "/param/:str",
       //annotatedService routes
+      "/site/favicon",
       "/ext/bar",
       "/ext/^/(?<num>\\d+)$",
       "/ext/query",
       "/ext/test/*",
       "/ext/param/:str",
+      "/ext/site/favicon",
       // serviceUnder routes
       "/ext2/*"
     ))

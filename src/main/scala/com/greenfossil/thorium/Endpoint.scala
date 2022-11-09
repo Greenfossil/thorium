@@ -98,7 +98,8 @@ object Endpoint:
           else pat.replaceAll("\\*", ".+")
         val matchedRequestPrefix =
           //if requestPath is empty  then matchedRequestPrefix is set as true
-          requestPath.isEmpty || configRoutePrefix.nonEmpty && requestPath.matches(configRoutePrefix)
+          requestPath.isEmpty || configRoutePrefix.nonEmpty &&
+            (if isPrefix then requestPath.matches(configRoutePrefix) else  requestPath.startsWith(configRoutePrefix))
 
         isConfigRoute && matchedRequestPrefix
       }
