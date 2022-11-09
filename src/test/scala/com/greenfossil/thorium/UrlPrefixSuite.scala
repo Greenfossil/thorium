@@ -155,6 +155,30 @@ class UrlPrefixSuite extends munit.FunSuite {
     assertEquals(Service2.favicon.endpoint.prefixedUrl2("/ext/bar", server.serviceConfigs), "/ext/site/favicon")
   }
 
+  test("prefixUrl2 - with parameters") {
+    val server = Server()
+      .addServices(Service2)
+      .serverBuilderSetup(sb => {
+        sb.annotatedService("/ext", Service2)
+        sb.annotatedService("/ext2", Service2)
+      })
+      .start()
+    server.server.stop()
+    
+    assertEquals(Service2.param("hello").endpoint.prefixedUrl2("/bar", server.serviceConfigs), "/param/hello")
+    assertEquals(Service2.param("hello").endpoint.prefixedUrl2("/ext/bar", server.serviceConfigs), "/ext/param/hello")
+    assertEquals(Service2.param("hello").endpoint.prefixedUrl2("/ext2/bar", server.serviceConfigs), "/ext2/param/hello")
+
+    assertEquals(Service2.query("hello").endpoint.prefixedUrl2("/bar", server.serviceConfigs), "/query?str=hello")
+    assertEquals(Service2.query("hello").endpoint.prefixedUrl2("/ext/bar", server.serviceConfigs), "/ext/query?str=hello")
+    assertEquals(Service2.query("hello").endpoint.prefixedUrl2("/ext2/bar", server.serviceConfigs), "/ext2/query?str=hello")
+
+    assertEquals(Service2.number(1).endpoint.prefixedUrl2("/bar", server.serviceConfigs), "/1")
+    assertEquals(Service2.number(1).endpoint.prefixedUrl2("/ext/bar", server.serviceConfigs), "/ext/1")
+    assertEquals(Service2.number(1).endpoint.prefixedUrl2("/ext2/bar", server.serviceConfigs), "/ext2/1")
+  }
+
+
   test("serviceUnder with path prefix".ignore){
     val server = Server()
       .addServices(Service1)
