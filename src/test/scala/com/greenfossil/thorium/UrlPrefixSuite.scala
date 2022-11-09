@@ -117,6 +117,24 @@ class UrlPrefixSuite extends munit.FunSuite {
     assertEquals(Endpoint("/test/path", Service2.test.endpoint.pathPatternOpt.get).prefixedUrl(server.serviceConfigs), "/ext/test/path")
   }
 
+  test("prefixUrl2"){
+    val server = Server()
+      .addServices(Service2)
+      .serverBuilderSetup(sb => {
+        sb.annotatedService("/ext", Service2)
+        sb.annotatedService("/ext2", Service2)
+      })
+      .start()
+    server.server.stop()
+    //Ensures the Endpoint path has prepended with prefix '/ext' depending request path
+    //1. without prefix
+    assertEquals(Endpoint("/test/foo", "prefix:/test").prefixedUrl2("/test/bar", server.serviceConfigs), "/test/foo")
+    //2. with prefix /ext
+    assertEquals(Endpoint("/test/foo", "prefix:/test").prefixedUrl2("/ext/test/bar", server.serviceConfigs), "/ext/test/foo")
+    //3. with prefix /ext2
+    assertEquals(Endpoint("/test/foo", "prefix:/test").prefixedUrl2("/ext2/test/bar", server.serviceConfigs), "/ext2/test/foo")
+  }
+
   test("serviceUnder with path prefix".ignore){
     val server = Server()
       .addServices(Service1)

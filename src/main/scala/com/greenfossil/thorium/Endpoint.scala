@@ -16,7 +16,6 @@
 
 package com.greenfossil.thorium
 
-import com.greenfossil.thorium.Endpoint.getPrefix
 import com.linecorp.armeria.server.ServiceConfig
 
 import java.nio.charset.StandardCharsets
@@ -36,7 +35,7 @@ case class Endpoint(path: String, method: String, queryParams: List[(String, Any
   def absoluteUrl(authority: String, secure: Boolean): String =
     val protocol = if secure then "https" else "http"
     s"$protocol://$authority$url"
-  
+
   def absoluteUrl(using request: Request): String =
     absoluteUrl(request.uriAuthority, request.secure)
 
@@ -45,15 +44,22 @@ case class Endpoint(path: String, method: String, queryParams: List[(String, Any
     prefixedUrl(request.requestContext.config().server().serviceConfigs().asScala.toList)
 
   def prefixedUrl(serviceConfigs: Seq[ServiceConfig]): String =
-    getPrefix(serviceConfigs, pathPatternOpt.getOrElse(path)).map{prefix => prefix + url }.getOrElse(url)
+    Endpoint.getPrefix(serviceConfigs, pathPatternOpt.getOrElse(path)).map{prefix => prefix + url }.getOrElse(url)
+
+  def prefixedUrl2(using request: Request): String =
+    import scala.jdk.CollectionConverters.*
+    prefixedUrl2(request.path, request.requestContext.config().server().serviceConfigs().asScala.toList)
+
+  def prefixedUrl2(requestPath: String, serviceConfigs: Seq[ServiceConfig]): String =
+    Endpoint.getPrefix2(requestPath, serviceConfigs, pathPatternOpt.getOrElse(requestPath)).map { prefix => prefix + url }.getOrElse(url)
 
   override def toString: String = url
 
 object Endpoint:
 
   def apply(path: String): Endpoint = new Endpoint(path, "GET", Nil)
-  
-  def apply(path: String, pathPattern: String): Endpoint = 
+
+  def apply(path: String, pathPattern: String): Endpoint =
     new Endpoint(path, "GET", Nil, Option(pathPattern))
 
   def paramKeyValue(name: String, value: Any): String =
@@ -73,21 +79,48 @@ object Endpoint:
 
   def getPrefix(serviceConfigs: Seq[ServiceConfig], rawPathPattern: String): Option[String] =
   //1. Compute Redirect Endpoint prefix that matches incoming Request
-    val pathPattern = //This would be forwardEndpoint Annotated path pattern
+    val epPathPattern = //This would be forwardEndpoint Annotated path pattern
       if rawPathPattern.startsWith("prefix:")
       then rawPathPattern.replaceAll("prefix:", "") + "/*"
       else rawPathPattern.replaceAll("regex:|glob:", "")
 
-    serviceConfigs
-      .findLast { serviceConfig =>
+    val matchedConfigs = serviceConfigs
+      .filter { serviceConfig =>
         val configRoutePattern = serviceConfig.route().patternString()
-        val configRoutePatternEndsWithForwardEpPattern = configRoutePattern.endsWith(pathPattern)
-        configRoutePatternEndsWithForwardEpPattern
+        val isConfigRoute = configRoutePattern.endsWith(epPathPattern)
+        isConfigRoute
       }
-      .map(serviceConfig => {
-        //Convert the matched serviceConfig to the prefix
+    matchedConfigs.lastOption.map(serviceConfig => {
+      //Convert the matched serviceConfig to the prefix
+      val configRoutePattern = serviceConfig.route().patternString()
+      val prefix = configRoutePattern.replaceAll(Pattern.quote(epPathPattern), "")
+      if prefix.lastOption.contains('/') then prefix.init else prefix
+    })
+
+  def getPrefix2(requestPath: String, serviceConfigs: Seq[ServiceConfig], rawPathPattern: String): Option[String] =
+    //1. Compute Redirect Endpoint prefix that matches incoming Request
+    val isPrefix = rawPathPattern.startsWith("prefix:")
+    val epPathPattern = //This would be forwardEndpoint Annotated path pattern
+      if isPrefix
+      then rawPathPattern.replaceAll("prefix:", "") + "/*"
+      else rawPathPattern.replaceAll("regex:|glob:", "")
+
+    val matchedConfigs = serviceConfigs
+      .filter { serviceConfig =>
         val configRoutePattern = serviceConfig.route().patternString()
-        val prefix = configRoutePattern.replaceAll(Pattern.quote(pathPattern), "")
-        if prefix.lastOption.contains('/') then prefix.init else prefix
-      })
+        val isConfigRoute = configRoutePattern.endsWith(epPathPattern)
+        val configRoutePrefix =
+          val pat = configRoutePattern.replaceAll(epPathPattern, "")
+          if !isPrefix then pat
+          else pat.replaceAll("\\*", ".+")
+
+        val matchedRequestPrefix = configRoutePrefix.nonEmpty && requestPath.matches(configRoutePrefix)
+        isConfigRoute && matchedRequestPrefix
+      }
+    matchedConfigs.lastOption.map(serviceConfig => {
+      //Convert the matched serviceConfig to the prefix
+      val configRoutePattern = serviceConfig.route().patternString()
+      val prefix = configRoutePattern.replaceAll(Pattern.quote(epPathPattern), "")
+      if prefix.lastOption.contains('/') then prefix.init else prefix
+    })
 
