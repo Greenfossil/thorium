@@ -93,13 +93,12 @@ object Endpoint:
         val configRoutePattern = serviceConfig.route().patternString()
         val isConfigRoute = configRoutePattern.endsWith(epPathPattern)
         val configRoutePrefix =
-          val pat = configRoutePattern.replaceAll(epPathPattern, "")
-          if !isPrefix then pat
-          else pat.replaceAll("\\*", ".+")
+          configRoutePattern.replaceAll(Pattern.quote(epPathPattern), "")
         val matchedRequestPrefix =
           //if requestPath is empty  then matchedRequestPrefix is set as true
-          requestPath.isEmpty || configRoutePrefix.nonEmpty &&
-            (if isPrefix then requestPath.matches(configRoutePrefix) else  requestPath.startsWith(configRoutePrefix))
+          val prefix = if isPrefix then configRoutePrefix + "/" else configRoutePrefix
+          requestPath.isEmpty ||
+            configRoutePrefix.nonEmpty && requestPath.startsWith(prefix)
 
         isConfigRoute && matchedRequestPrefix
       }
