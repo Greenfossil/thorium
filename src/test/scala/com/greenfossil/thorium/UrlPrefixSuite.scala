@@ -35,6 +35,11 @@ object Service2:
     Ok("Bar")
   }
 
+  @Get("/site/favicon")
+  def favicon = Action{request =>
+    Ok("favicon")
+  }
+
   @Get("/param/:str")
   def param(@Param str: String) = Action{request =>
     Ok(str)
@@ -117,7 +122,7 @@ class UrlPrefixSuite extends munit.FunSuite {
     assertEquals(Endpoint("/test/path", Service2.test.endpoint.pathPatternOpt.get).prefixedUrl(server.serviceConfigs), "/ext/test/path")
   }
 
-  test("prefixUrl2"){
+  test("prefixUrl2 - with prefix routes"){
     val server = Server()
       .addServices(Service2)
       .serverBuilderSetup(sb => {
@@ -133,6 +138,19 @@ class UrlPrefixSuite extends munit.FunSuite {
     assertEquals(Endpoint("/test/foo", "prefix:/test").prefixedUrl2("/ext/test/bar", server.serviceConfigs), "/ext/test/foo")
     //3. with prefix /ext2
     assertEquals(Endpoint("/test/foo", "prefix:/test").prefixedUrl2("/ext2/test/bar", server.serviceConfigs), "/ext2/test/foo")
+  }
+
+  test("prefixUrl2 - favicon route") {
+    val server = Server()
+      .addServices(Service2)
+      .serverBuilderSetup(sb => {
+        sb.annotatedService("/ext", Service2)
+        sb.annotatedService("/ext2", Service2)
+      })
+      .start()
+    server.server.stop()
+    assertEquals(Service2.favicon.endpoint.prefixedUrl2("/bar", server.serviceConfigs), "/site/favicon")
+    assertEquals(Service2.favicon.endpoint.prefixedUrl2("/ext/bar", server.serviceConfigs), "/ext/site/favicon")
   }
 
   test("serviceUnder with path prefix".ignore){
