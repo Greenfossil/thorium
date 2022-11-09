@@ -78,24 +78,7 @@ object Endpoint:
     java.net.URLEncoder.encode(value, StandardCharsets.UTF_8.toString)
 
   def getPrefix(serviceConfigs: Seq[ServiceConfig], rawPathPattern: String): Option[String] =
-  //1. Compute Redirect Endpoint prefix that matches incoming Request
-    val epPathPattern = //This would be forwardEndpoint Annotated path pattern
-      if rawPathPattern.startsWith("prefix:")
-      then rawPathPattern.replaceAll("prefix:", "") + "/*"
-      else rawPathPattern.replaceAll("regex:|glob:", "")
-
-    val matchedConfigs = serviceConfigs
-      .filter { serviceConfig =>
-        val configRoutePattern = serviceConfig.route().patternString()
-        val isConfigRoute = configRoutePattern.endsWith(epPathPattern)
-        isConfigRoute
-      }
-    matchedConfigs.lastOption.map(serviceConfig => {
-      //Convert the matched serviceConfig to the prefix
-      val configRoutePattern = serviceConfig.route().patternString()
-      val prefix = configRoutePattern.replaceAll(Pattern.quote(epPathPattern), "")
-      if prefix.lastOption.contains('/') then prefix.init else prefix
-    })
+    getPrefix2("", serviceConfigs, rawPathPattern)
 
   def getPrefix2(requestPath: String, serviceConfigs: Seq[ServiceConfig], rawPathPattern: String): Option[String] =
     //1. Compute Redirect Endpoint prefix that matches incoming Request
@@ -113,8 +96,10 @@ object Endpoint:
           val pat = configRoutePattern.replaceAll(epPathPattern, "")
           if !isPrefix then pat
           else pat.replaceAll("\\*", ".+")
+        val matchedRequestPrefix =
+          //if requestPath is empty  then matchedRequestPrefix is set as true
+          requestPath.isEmpty || configRoutePrefix.nonEmpty && requestPath.matches(configRoutePrefix)
 
-        val matchedRequestPrefix = configRoutePrefix.nonEmpty && requestPath.matches(configRoutePrefix)
         isConfigRoute && matchedRequestPrefix
       }
     matchedConfigs.lastOption.map(serviceConfig => {
