@@ -41,17 +41,13 @@ case class Endpoint(path: String, method: String, queryParams: List[(String, Any
 
   def prefixedUrl(using request: Request): String =
     import scala.jdk.CollectionConverters.*
-    prefixedUrl(request.requestContext.config().server().serviceConfigs().asScala.toList)
+    prefixedUrl(request.path, request.requestContext.config().server().serviceConfigs().asScala.toList)
 
-  def prefixedUrl(serviceConfigs: Seq[ServiceConfig]): String =
-    Endpoint.getPrefix(serviceConfigs, pathPatternOpt.getOrElse(path)).map{prefix => prefix + url }.getOrElse(url)
-
-  def prefixedUrl2(using request: Request): String =
-    import scala.jdk.CollectionConverters.*
-    prefixedUrl2(request.path, request.requestContext.config().server().serviceConfigs().asScala.toList)
-
-  def prefixedUrl2(requestPath: String, serviceConfigs: Seq[ServiceConfig]): String =
-    Endpoint.getPrefix2(requestPath, serviceConfigs, pathPatternOpt.getOrElse(requestPath)).map { prefix => prefix + url }.getOrElse(url)
+  def prefixedUrl(requestPath: String, serviceConfigs: Seq[ServiceConfig]): String =
+    Endpoint
+      .getPrefix(requestPath, serviceConfigs, pathPatternOpt.getOrElse(requestPath))
+      .map(prefix => prefix + url)
+      .getOrElse(url)
 
   override def toString: String = url
 
@@ -78,9 +74,9 @@ object Endpoint:
     java.net.URLEncoder.encode(value, StandardCharsets.UTF_8.toString)
 
   def getPrefix(serviceConfigs: Seq[ServiceConfig], rawPathPattern: String): Option[String] =
-    getPrefix2("", serviceConfigs, rawPathPattern)
+    getPrefix("", serviceConfigs, rawPathPattern)
 
-  def getPrefix2(requestPath: String, serviceConfigs: Seq[ServiceConfig], rawPathPattern: String): Option[String] =
+  def getPrefix(requestPath: String, serviceConfigs: Seq[ServiceConfig], rawPathPattern: String): Option[String] =
     //1. Compute Redirect Endpoint prefix that matches incoming Request
     val isPrefix = rawPathPattern.startsWith("prefix:")
     val epPathPattern = //This would be forwardEndpoint Annotated path pattern

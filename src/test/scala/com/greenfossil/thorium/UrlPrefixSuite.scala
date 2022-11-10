@@ -104,24 +104,24 @@ class UrlPrefixSuite extends munit.FunSuite {
     server.server.stop()
 
     assertEquals(Service2.bar.endpoint.url, "/bar")
-    assertEquals(Service2.bar.endpoint.prefixedUrl(server.serviceConfigs), "/ext/bar")
+    assertEquals(Service2.bar.endpoint.prefixedUrl("", server.serviceConfigs), "/ext/bar")
 
     assertEquals(Service2.param("hello").endpoint.url, "/param/hello")
-    assertEquals(Service2.param("hello").endpoint.prefixedUrl(server.serviceConfigs), "/ext/param/hello")
+    assertEquals(Service2.param("hello").endpoint.prefixedUrl("", server.serviceConfigs), "/ext/param/hello")
 
     assertEquals(Service2.query("hello").endpoint.url, "/query?str=hello")
-    assertEquals(Service2.query("hello").endpoint.prefixedUrl(server.serviceConfigs), "/ext/query?str=hello")
+    assertEquals(Service2.query("hello").endpoint.prefixedUrl("", server.serviceConfigs), "/ext/query?str=hello")
 
     assertEquals(Service2.number(1).endpoint.url, "/1")
-    assertEquals(Service2.number(1).endpoint.prefixedUrl(server.serviceConfigs), "/ext/1")
+    assertEquals(Service2.number(1).endpoint.prefixedUrl("", server.serviceConfigs), "/ext/1")
 
     assertEquals(Service2.test.endpoint.url, "/test")
-    assertEquals(Service2.test.endpoint.prefixedUrl(server.serviceConfigs), "/ext/test")
+    assertEquals(Service2.test.endpoint.prefixedUrl("", server.serviceConfigs), "/ext/test")
 
     //Test non macro created Endpoint
     assertEquals(Endpoint("/test/path").url, "/test/path")
-    assertEquals(Endpoint("/test/path", "prefix:/test").prefixedUrl(server.serviceConfigs), "/ext/test/path")
-    assertEquals(Endpoint("/test/path", Service2.test.endpoint.pathPatternOpt.get).prefixedUrl(server.serviceConfigs), "/ext/test/path")
+    assertEquals(Endpoint("/test/path", "prefix:/test").prefixedUrl("", server.serviceConfigs), "/ext/test/path")
+    assertEquals(Endpoint("/test/path", Service2.test.endpoint.pathPatternOpt.get).prefixedUrl("", server.serviceConfigs), "/ext/test/path")
   }
 
   test("prefixUrl2 - with prefix routes"){
@@ -135,11 +135,11 @@ class UrlPrefixSuite extends munit.FunSuite {
     server.server.stop()
     //Ensures the Endpoint path has prepended with prefix '/ext' depending request path
     //1. without prefix
-    assertEquals(Endpoint("/test/foo", "prefix:/test").prefixedUrl2("/test/bar", server.serviceConfigs), "/test/foo")
+    assertEquals(Endpoint("/test/foo", "prefix:/test").prefixedUrl("/test/bar", server.serviceConfigs), "/test/foo")
     //2. with prefix /ext
-    assertEquals(Endpoint("/test/foo", "prefix:/test").prefixedUrl2("/ext/test/bar", server.serviceConfigs), "/ext/test/foo")
+    assertEquals(Endpoint("/test/foo", "prefix:/test").prefixedUrl("/ext/test/bar", server.serviceConfigs), "/ext/test/foo")
     //3. with prefix /ext2
-    assertEquals(Endpoint("/test/foo", "prefix:/test").prefixedUrl2("/ext2/test/bar", server.serviceConfigs), "/ext2/test/foo")
+    assertEquals(Endpoint("/test/foo", "prefix:/test").prefixedUrl("/ext2/test/bar", server.serviceConfigs), "/ext2/test/foo")
   }
 
   test("prefixUrl2 - favicon route") {
@@ -151,8 +151,8 @@ class UrlPrefixSuite extends munit.FunSuite {
       })
       .start()
     server.server.stop()
-    assertEquals(Service2.favicon.endpoint.prefixedUrl2("/bar", server.serviceConfigs), "/site/favicon")
-    assertEquals(Service2.favicon.endpoint.prefixedUrl2("/ext/bar", server.serviceConfigs), "/ext/site/favicon")
+    assertEquals(Service2.favicon.endpoint.prefixedUrl("/bar", server.serviceConfigs), "/site/favicon")
+    assertEquals(Service2.favicon.endpoint.prefixedUrl("/ext/bar", server.serviceConfigs), "/ext/site/favicon")
   }
 
   test("prefixUrl2 - with parameters") {
@@ -165,17 +165,17 @@ class UrlPrefixSuite extends munit.FunSuite {
       .start()
     server.server.stop()
     
-    assertEquals(Service2.param("hello").endpoint.prefixedUrl2("/bar", server.serviceConfigs), "/param/hello")
-    assertEquals(Service2.param("hello").endpoint.prefixedUrl2("/ext/bar", server.serviceConfigs), "/ext/param/hello")
-    assertEquals(Service2.param("hello").endpoint.prefixedUrl2("/ext2/bar", server.serviceConfigs), "/ext2/param/hello")
+    assertEquals(Service2.param("hello").endpoint.prefixedUrl("/bar", server.serviceConfigs), "/param/hello")
+    assertEquals(Service2.param("hello").endpoint.prefixedUrl("/ext/bar", server.serviceConfigs), "/ext/param/hello")
+    assertEquals(Service2.param("hello").endpoint.prefixedUrl("/ext2/bar", server.serviceConfigs), "/ext2/param/hello")
 
-    assertEquals(Service2.query("hello").endpoint.prefixedUrl2("/bar", server.serviceConfigs), "/query?str=hello")
-    assertEquals(Service2.query("hello").endpoint.prefixedUrl2("/ext/bar", server.serviceConfigs), "/ext/query?str=hello")
-    assertEquals(Service2.query("hello").endpoint.prefixedUrl2("/ext2/bar", server.serviceConfigs), "/ext2/query?str=hello")
+    assertEquals(Service2.query("hello").endpoint.prefixedUrl("/bar", server.serviceConfigs), "/query?str=hello")
+    assertEquals(Service2.query("hello").endpoint.prefixedUrl("/ext/bar", server.serviceConfigs), "/ext/query?str=hello")
+    assertEquals(Service2.query("hello").endpoint.prefixedUrl("/ext2/bar", server.serviceConfigs), "/ext2/query?str=hello")
 
-    assertEquals(Service2.number(1).endpoint.prefixedUrl2("/bar", server.serviceConfigs), "/1")
-    assertEquals(Service2.number(1).endpoint.prefixedUrl2("/ext/bar", server.serviceConfigs), "/ext/1")
-    assertEquals(Service2.number(1).endpoint.prefixedUrl2("/ext2/bar", server.serviceConfigs), "/ext2/1")
+    assertEquals(Service2.number(1).endpoint.prefixedUrl("/bar", server.serviceConfigs), "/1")
+    assertEquals(Service2.number(1).endpoint.prefixedUrl("/ext/bar", server.serviceConfigs), "/ext/1")
+    assertEquals(Service2.number(1).endpoint.prefixedUrl("/ext2/bar", server.serviceConfigs), "/ext2/1")
   }
 
 
@@ -191,7 +191,7 @@ class UrlPrefixSuite extends munit.FunSuite {
     server.server.stop()
 
     assertEquals(Service2.bar.endpoint.url, "/bar")
-    assertEquals(Service2.bar.endpoint.prefixedUrl(server.serviceConfigs), "/ext/bar")
+    assertEquals(Service2.bar.endpoint.prefixedUrl("", server.serviceConfigs), "/ext/bar")
   }
 
 }
