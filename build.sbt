@@ -2,17 +2,17 @@ val scala3Version = "3.2.0"
 
 scalacOptions ++= Seq("-feature", "-deprecation")
 
-lazy val datamappingVersion="0.4.0"
-lazy val commonsJsonVersion = "0.4.0"
-lazy val commonsI18nVersion = "0.4.0"
-lazy val typesafeConfigExtVersion = "0.4.0"
+lazy val datamappingVersion="0.4.1"
+lazy val commonsJsonVersion = "0.4.1"
+lazy val commonsI18nVersion = "0.4.1"
+lazy val typesafeConfigExtVersion = "0.4.1"
 
 lazy val thorium = project
   .in(file("."))
   .settings(
     name := "thorium",
     organization := "com.greenfossil",
-    version := "0.4.0",
+    version := "0.4.1",
 
     scalaVersion := scala3Version,
 
