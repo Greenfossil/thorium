@@ -28,15 +28,6 @@ def Ok[C](body: C)(using w: Writeable[C]): Result =
 def BadRequest[C](body: C)(using w: Writeable[C]): Result =
   toResult(HttpStatus.BAD_REQUEST, body)
 
-def Redirect(url: String): Result =
-  toResult(HttpStatus.SEE_OTHER, url)
-
-def Redirect(url: String, status: HttpStatus): Result =
-  toResult(status, url)
-  
-inline def Redirect[A <: EssentialAction](inline action: A, status: HttpStatus): Result =
-  toResult(status, EndpointMcr(action).url)
-
 def Redirect(url: String, queryString: Map[String, Seq[String]]): Result =
   Redirect(url, queryString, HttpStatus.SEE_OTHER)
 
@@ -44,15 +35,32 @@ def Redirect(url: String, queryString: Map[String, Seq[String]], status: HttpSta
   val loc = s"${url}${ queryString.toList.map{case (k, v) => Endpoint.paramKeyValueUrlEncoded(k, v)}.mkString("?", "&", "")}"
   toResult(status,loc)
 
-/**
- * Inline redirect macro
- * @param action
- * @return
- */
-inline def Redirect[A <: EssentialAction](inline action: A): Result =
-  Redirect(EndpointMcr(action))
+import scala.compiletime.{erasedValue, error}
+inline def Redirect[A](inline location: A): Result =
+  inline erasedValue[A] match
+    case _: String =>
+      toResult(HttpStatus.SEE_OTHER, location.asInstanceOf[String])
+    case _: EssentialAction =>
+      Redirect(EndpointMcr(location))
+    case _: Endpoint =>
+      Redirect(location.asInstanceOf[Endpoint].url)
+    case x: AnyRef =>
+      Redirect(x.endpoint)
+    case _ =>
+      error("Unsupported redirect location type")
 
-def Redirect(endpoint: Endpoint): Result = Redirect(endpoint.url)
+inline def Redirect[A](inline location: A, status: HttpStatus): Result =
+  inline erasedValue[A] match
+    case _: String =>
+      toResult(status, location.asInstanceOf[String])
+    case _: EssentialAction =>
+      Redirect(EndpointMcr(location), status)
+    case _: Endpoint =>
+      Redirect(location.asInstanceOf[Endpoint].url, status)
+    case x: AnyRef =>
+      Redirect(x.endpoint, status)
+    case _ =>
+      error("Unsupported redirect location type")
 
 def NotFound[C](body: C)(using w: Writeable[C]): Result =
   toResult(HttpStatus.NOT_FOUND, body)
