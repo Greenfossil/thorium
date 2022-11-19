@@ -12,7 +12,7 @@ lazy val thorium = project
   .settings(
     name := "thorium",
     organization := "com.greenfossil",
-    version := "0.4.2",
+    version := "0.4.3",
 
     scalaVersion := scala3Version,
 
@@ -24,8 +24,8 @@ lazy val thorium = project
       "com.greenfossil" %% "typesafe-config-ext" % typesafeConfigExtVersion,
       "com.greenfossil" %% "data-mapping" % datamappingVersion,
       "io.projectreactor" % "reactor-core" % "3.4.24",
-      "com.linecorp.armeria" %% "armeria-scala" % "1.20.1",
-      "com.linecorp.armeria" % "armeria-logback" % "1.20.1",
+      "com.linecorp.armeria" %% "armeria-scala" % "1.20.3",
+      "com.linecorp.armeria" % "armeria-logback" % "1.20.3",
       "org.overviewproject" % "mime-types" % "1.0.4",
       "org.slf4j" % "slf4j-api" % "2.0.3",
       "ch.qos.logback" % "logback-classic" % "1.4.4" % Test,

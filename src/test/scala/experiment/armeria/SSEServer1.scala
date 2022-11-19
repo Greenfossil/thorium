@@ -16,8 +16,9 @@
 
 package experiment.armeria
 
+import com.linecorp.armeria.common.HttpRequest
 import com.linecorp.armeria.common.sse.ServerSentEvent
-import com.linecorp.armeria.server.Server
+import com.linecorp.armeria.server.{Server, ServiceRequestContext}
 import com.linecorp.armeria.server.annotation.{Get, Param, ProducesEventStream}
 import com.linecorp.armeria.server.streaming.ServerSentEvents
 import org.reactivestreams.{Subscriber, Subscription}
@@ -25,6 +26,8 @@ import reactor.core.Disposable
 import reactor.core.publisher.{ConnectableFlux, Flux, Mono}
 import reactor.core.scheduler.Scheduler
 import reactor.core.scheduler.Schedulers
+
+import java.time.Duration
 
 /**
  * https://www.baeldung.com/reactor-core
@@ -60,7 +63,8 @@ object SSEController1 {
 
   @Get("/sse")
   @ProducesEventStream
-  def sse/*: Publisher[ServerSentEvent]*/ =
+  def sse(ctx: ServiceRequestContext, req: HttpRequest)/*: Publisher[ServerSentEvent]*/ =
+    ctx.setRequestTimeout(Duration.ZERO)
     Flux.just("foo", "bar", ServerSentEvent.ofData)
 }
 
