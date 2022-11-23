@@ -17,25 +17,33 @@
 package com.greenfossil.thorium.examples
 
 import com.greenfossil.thorium.{*, given}
+import com.linecorp.armeria.common.{HttpHeaderNames, SessionProtocol}
+import com.linecorp.armeria.server.ClientAddressSource
 
 @main def main =
   val server = Server(8080)
-//    .addHttpService("/simpleHttpService", Action{ request =>
-//      Ok(s"Howdy! env:${request.env.mode}")
-//    })
-//    .addServices(BasicServices, FormServices, SimpleServices, ParameterizedServices)
-//    .addServices(MultipartServices)
-//    .addDocService()
+    .addHttpService("/simpleHttpService", Action{ request =>
+      Ok(s"Howdy! env:${request.env.mode}")
+    })
+    .addServices(BasicServices, FormServices, SimpleServices, ParameterizedServices)
+    .addServices(MultipartServices)
+    .addDocService()
     .addServices(RedirectedServices2)
     .serverBuilderSetup(sb => {
       sb
         .serviceUnder("/docs", new com.linecorp.armeria.server.docs.DocService())
         .serviceUnder("/api", RedirectedServices2.s3)
-//        .annotatedService("/ext", RedirectedServices2)
-//        .annotatedService(RedirectedServices)
-//        .annotatedService("/api", RedirectedServices)
+        .annotatedService("/ext", RedirectedServices2)
+        .annotatedService(RedirectedServices)
+        .annotatedService("/api", RedirectedServices)
+        .clientAddressSources(
+          ClientAddressSource.ofHeader("X-REAL-IP"),
+          ClientAddressSource.ofHeader(HttpHeaderNames.FORWARDED),
+          ClientAddressSource.ofHeader(HttpHeaderNames.X_FORWARDED_FOR),
+          ClientAddressSource.ofProxyProtocol()
+        )
     })
-    .start()
+    .start(SessionProtocol.PROXY)
 
   server.serviceConfigs foreach { c =>
     println(s"c.route() = ${c.route()}")
