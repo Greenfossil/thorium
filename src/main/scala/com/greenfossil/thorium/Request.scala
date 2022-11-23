@@ -148,8 +148,8 @@ trait Request(val requestContext: ServiceRequestContext,
     decryptCookieValue(c).map(Flash(_))
   }.getOrElse(Flash())
 
-  @deprecated("use remoteAddress instead")
-  def getRealIP: String = remoteAddress.toString
+  @deprecated("use clientAddress instead")
+  def getRealIP: String = requestContext.clientAddress().getHostAddress
 
   def refererOpt: Option[String] =
     getHeader("X-Alt-Referer")

@@ -17,7 +17,7 @@
 package com.greenfossil.thorium
 
 import com.greenfossil.commons.json.Json
-import com.linecorp.armeria.common.{AggregatedHttpRequest, HttpHeaders, HttpResponse, ResponseHeaders}
+import com.linecorp.armeria.common.{AggregatedHttpRequest, HttpHeaders, HttpResponse, ResponseHeaders, SessionProtocol}
 import com.linecorp.armeria.server.{Server as AServer, *}
 import com.linecorp.armeria.server.annotation.{ExceptionHandlerFunction, RequestConverterFunction, ResponseConverterFunction}
 import com.linecorp.armeria.server.docs.DocService
@@ -26,6 +26,7 @@ import io.netty.util.AttributeKey
 import org.slf4j.LoggerFactory
 
 import java.lang.reflect.ParameterizedType
+import java.net.InetSocketAddress
 import java.time.LocalDateTime
 import scala.util.Using
 import scala.language.implicitConversions
@@ -164,20 +165,17 @@ case class Server(server: AServer,
   lazy val allExceptionHandlers: java.util.List[ExceptionHandlerFunction] =
     exceptionHandlers.asJava
 
-  private def buildServer(): AServer =
-    buildServer(false)
+  private def buildServer(sessionProtocols: SessionProtocol*): AServer =
+    buildServer(configuration.httpPort, SessionProtocol.HTTP +: sessionProtocols)
 
-  private def buildSecureServer(): AServer =
-    buildServer(true)
+  private def buildSecureServer(sessionProtocols: SessionProtocol*): AServer =
+    buildServer(configuration.httpPort, SessionProtocol.HTTPS +: sessionProtocols)
 
-  private def buildServer(secure:Boolean): AServer =
+  def buildServer(port: Int, sessionProtocols: Seq[SessionProtocol]): AServer =
     val sb = AServer.builder()
-    if configuration.httpPort > 0 then {
-      if secure then
-        sb.https(configuration.httpPort)
-        sb.tlsSelfSigned()
-      else sb.http(configuration.httpPort)
-    }
+    //Setup Protocol and ensure at least one of it is either Https or Http
+    sb.port(port, sessionProtocols.asJava)
+
     sb.maxRequestLength(configuration.maxRequestLength)
     configuration.maxNumConnectionOpt.foreach(maxConn => sb.maxNumConnections(maxConn))
     sb.requestTimeout(configuration.requestTimeout)
@@ -199,7 +197,8 @@ case class Server(server: AServer,
         Json.obj(
           "timestamp" -> LocalDateTime.now.toString,
           "requestId" -> requestLog.context().id.text(),
-          "remoteIP" -> requestLog.context().asInstanceOf[ServiceRequestContext].clientAddress().getHostAddress,
+          "clientIP" -> requestLog.context().asInstanceOf[ServiceRequestContext].clientAddress().getHostAddress,
+          "remoteIP" -> requestLog.context().asInstanceOf[ServiceRequestContext].remoteAddress().asInstanceOf[InetSocketAddress].toString,
           "status" -> requestLog.responseHeaders().status().code(),
           "method" -> requestLog.context().method().toString,
           "path" -> requestLog.context().path(),
@@ -220,8 +219,8 @@ case class Server(server: AServer,
 
   def addDocService(prefix: String): Server = copy(docServiceNameOpt = Option(prefix))
 
-  def start(): Server =
-    val newServer = buildServer()
+  def start(sessionProtocols: SessionProtocol*): Server =
+    val newServer = buildServer(sessionProtocols*)
     Runtime.getRuntime.addShutdownHook(Thread(
       () => {
         newServer.stop().join
@@ -232,8 +231,8 @@ case class Server(server: AServer,
     newServer.start().join()
     copy(server = newServer)
 
-  def startSecure(): Server =
-    val newSecureServer = buildSecureServer()
+  def startSecure(sessionProtocols: SessionProtocol*): Server =
+    val newSecureServer = buildSecureServer(sessionProtocols*)
     Runtime.getRuntime.addShutdownHook(Thread(
       () => {
         newSecureServer.stop().join
