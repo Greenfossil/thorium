@@ -19,7 +19,7 @@ package com.greenfossil.thorium
 import com.greenfossil.commons.LocaleUtil
 import com.greenfossil.commons.json.{JsValue, Json}
 import com.linecorp.armeria.common.*
-import com.linecorp.armeria.server.ServiceRequestContext
+import com.linecorp.armeria.server.{ProxiedAddresses, ServiceRequestContext}
 import org.slf4j.LoggerFactory
 
 import java.net.{InetAddress, InetSocketAddress, SocketAddress}
@@ -148,8 +148,13 @@ trait Request(val requestContext: ServiceRequestContext,
     decryptCookieValue(c).map(Flash(_))
   }.getOrElse(Flash())
 
-  @deprecated("use clientAddress instead")
-  def getRealIP: String = requestContext.clientAddress().getHostAddress
+  def clientAddress: InetAddress = requestContext.clientAddress()
+
+  def proxiedAddresses: ProxiedAddresses = requestContext.proxiedAddresses()
+
+  def proxiedDestinationAddresses: Seq[InetSocketAddress] = proxiedAddresses.destinationAddresses().asScala.toSeq
+
+  def proxiedSourceAddress: InetSocketAddress = proxiedAddresses.sourceAddress()
 
   def refererOpt: Option[String] =
     getHeader("X-Alt-Referer")

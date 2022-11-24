@@ -36,12 +36,6 @@ import com.linecorp.armeria.server.ClientAddressSource
         .annotatedService("/ext", RedirectedServices2)
         .annotatedService(RedirectedServices)
         .annotatedService("/api", RedirectedServices)
-        .clientAddressSources(
-          ClientAddressSource.ofHeader("X-REAL-IP"),
-          ClientAddressSource.ofHeader(HttpHeaderNames.FORWARDED),
-          ClientAddressSource.ofHeader(HttpHeaderNames.X_FORWARDED_FOR),
-          ClientAddressSource.ofProxyProtocol()
-        )
     })
     .start(SessionProtocol.PROXY)
 
