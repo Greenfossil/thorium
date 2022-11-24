@@ -193,12 +193,15 @@ case class Server(server: AServer,
     docServiceNameOpt.foreach(name => sb.serviceUnder(name, new DocService()))
     //Setup request logging
     sb.accessLogWriter(requestLog => {
+      val serviceRequestContext = requestLog.context().asInstanceOf[ServiceRequestContext]
+      val proxiedAddresses = serviceRequestContext.proxiedAddresses()
       armeriaLogger.info(
         Json.obj(
           "timestamp" -> LocalDateTime.now.toString,
           "requestId" -> requestLog.context().id.text(),
-          "clientIP" -> requestLog.context().asInstanceOf[ServiceRequestContext].clientAddress().getHostAddress,
-          "remoteIP" -> requestLog.context().asInstanceOf[ServiceRequestContext].remoteAddress().asInstanceOf[InetSocketAddress].toString,
+          "clientIP" -> serviceRequestContext.clientAddress().getHostAddress,
+          "remoteIP" -> serviceRequestContext.remoteAddress().asInstanceOf[InetSocketAddress].toString,
+          "proxiedDestinationAddresses" -> proxiedAddresses.destinationAddresses().asScala.toSeq.mkString("[", ", ", "]"),
           "status" -> requestLog.responseHeaders().status().code(),
           "method" -> requestLog.context().method().toString,
           "path" -> requestLog.context().path(),
