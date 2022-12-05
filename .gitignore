@@ -1,0 +1,11 @@
+.idea/
+logs/
+target/
+.metals
+.vscode
+.bloop
+metals.sbt
+.bsp
+.lh/
+src/main/java
+src/test/scala/com/greenfossil/webserver/JWTSuite.scala

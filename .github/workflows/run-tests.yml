@@ -1,0 +1,13 @@
+name: Run tests
+
+on:
+  push:
+    branches: [ "master" ]
+  pull_request:
+    branches: [ "master" ]
+
+jobs:
+  build:
+    uses: Greenfossil/.github/.github/workflows/run-tests.yml@main
+    secrets: inherit
+      

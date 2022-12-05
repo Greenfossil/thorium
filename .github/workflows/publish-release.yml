@@ -1,0 +1,12 @@
+name: Publish to Maven repository 
+
+on:
+  push:
+    tags:
+      - v*
+
+jobs:
+  publish:
+    uses: Greenfossil/.github/.github/workflows/publish-release.yml@main
+    secrets: inherit
+      
