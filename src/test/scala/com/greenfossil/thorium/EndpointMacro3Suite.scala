@@ -1,6 +1,5 @@
 package com.greenfossil.thorium
 
-import com.linecorp.armeria.common.HttpStatus
 import com.linecorp.armeria.server.annotation.{Get, Param}
 
 object TestServices:
@@ -10,9 +9,9 @@ object TestServices:
 
   @Get("/redirect")
   def redirect(using request: Request): Result =
-    Redirect(sayHello("User"), HttpStatus.TEMPORARY_REDIRECT)
+    Redirect(sayHello("User"))
 
-class EndpointMacro3Suite extends munit.FunSuite {
+class EndpointMacro3Suite extends munit.FunSuite:
 
   test("redirect") {
     val server = Server()
@@ -28,5 +27,3 @@ class EndpointMacro3Suite extends munit.FunSuite {
     }.join()
     server.server.stop()
   }
-
-}

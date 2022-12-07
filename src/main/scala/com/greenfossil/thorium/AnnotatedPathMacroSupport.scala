@@ -69,6 +69,9 @@ object AnnotatedPathMacroSupport extends MacroSupport(globalDebug = false):
         val annList = methodTerm.symbol.annotations
         getAnnotatedPath(epExpr, annList, Map.empty[String, Term], onSuccessCallback, supportQueryStringPost)
 
+      case Literal(c) if c.value.toString.startsWith("/") =>
+        onSuccessCallback(Expr("Get"), Expr.ofList(List(Expr(c.value.toString))), Expr[List[String]](Nil), Expr.ofList(List.empty[Expr[Any]]), Expr(""))
+
       case otherTerm =>
         show("otherTerm", otherTerm)
         val ref = Ref(otherTerm.symbol)
@@ -110,7 +113,8 @@ object AnnotatedPathMacroSupport extends MacroSupport(globalDebug = false):
     import quotes.reflect.*
     extractAnnotations(annList) match
       case None =>
-        report.errorAndAbort(s"No annotated path found ${epExpr}", epExpr)
+        //Return epExpr
+        successCallback(Expr("Get"), Expr.ofList(List(epExpr)), Expr[List[String]](Nil), Expr.ofList(List.empty[Expr[Any]]), Expr(""))
 
       case Some((method: String, pathPattern: String)) =>
         /*
@@ -118,9 +122,9 @@ object AnnotatedPathMacroSupport extends MacroSupport(globalDebug = false):
          */
         val (computedPath: List[Expr[Any]], queryParamKeys: List[String], queryParamValues: List[Expr[Any]]) =
           getComputedPathExpr(epExpr, paramNameValueLookup, pathPattern)
-        if  !supportQueryStringPost && method.equalsIgnoreCase("Post") && queryParamKeys.nonEmpty then {
-          report.errorAndAbort("Query String for Post method is not supported")
-        } else ()
+        if !supportQueryStringPost && method.equalsIgnoreCase("Post") && queryParamKeys.nonEmpty
+        then report.errorAndAbort("Query String for Post method is not supported")
+        else ()
 
         successCallback(Expr(method), Expr.ofList(computedPath), Expr[List[String]](queryParamKeys), Expr.ofList(queryParamValues), Expr(pathPattern))
 

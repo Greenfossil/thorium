@@ -37,30 +37,20 @@ def Redirect(url: String, queryString: Map[String, Seq[String]], status: HttpSta
 
 import scala.compiletime.{erasedValue, error}
 inline def Redirect[A](inline location: A): Result =
-  inline erasedValue[A] match
-    case _: String =>
-      toResult(HttpStatus.SEE_OTHER, location.asInstanceOf[String])
-    case _: EssentialAction =>
-      Redirect(EndpointMcr(location))
-    case _: Endpoint =>
-      Redirect(location.asInstanceOf[Endpoint].url)
-    case x: AnyRef =>
-      Redirect(x.endpoint)
-    case _ =>
-      error("Unsupported redirect location type")
+  Redirect(location, HttpStatus.SEE_OTHER)
 
-inline def Redirect[A](inline location: A, status: HttpStatus): Result =
-  inline erasedValue[A] match
-    case _: String =>
-      toResult(status, location.asInstanceOf[String])
-    case _: EssentialAction =>
-      Redirect(EndpointMcr(location), status)
-    case _: Endpoint =>
-      Redirect(location.asInstanceOf[Endpoint].url, status)
-    case x: AnyRef =>
-      Redirect(x.endpoint, status)
-    case _ =>
-      error("Unsupported redirect location type")
+inline def Redirect[A](inline location: A, inline status: HttpStatus): Result =
+  ${RedirectImpl( '{location}, '{status}) }
+
+import scala.quoted.*
+def RedirectImpl[A: Type](locExpr: Expr[A], statusExpr: Expr[HttpStatus])(using quotes: Quotes): Expr[Result] =
+  locExpr match
+    case '{$ea: EssentialAction} =>
+      '{toResult($statusExpr, EndpointMcr($locExpr).url)}
+    case '{$ep: Endpoint} =>
+      '{toResult($statusExpr, $ep.url)}
+    case '{$ref: AnyRef} =>
+      '{toResult($statusExpr, EndpointMcr($ref).url)}
 
 def NotFound[C](body: C)(using w: Writeable[C]): Result =
   toResult(HttpStatus.NOT_FOUND, body)
