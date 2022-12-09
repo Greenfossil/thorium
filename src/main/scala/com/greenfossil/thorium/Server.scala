@@ -104,14 +104,21 @@ case class Server(server: AServer,
         case action: EssentialAction =>
           action.serve(svcRequestContext, svcRequestContext.request())
         case actionResp: ActionResponse  =>
-          actionLogger.trace(s"Req thread:${Thread.currentThread()}, reqCl:${Thread.currentThread().getContextClassLoader}")
           val f = svcRequestContext
             .request()
             .aggregate()
             .thenApplyAsync { aggregateRequest =>
-              actionLogger.trace(s"Async thread:${Thread.currentThread()}, asyncCl:${Thread.currentThread().getContextClassLoader}")
+              val ctxCl = Thread.currentThread().getContextClassLoader
+              actionLogger.trace(s"Async thread:${Thread.currentThread()}, asyncCl:${ctxCl}")
+              if ctxCl == null then {
+                val cl = this.getClass.getClassLoader
+                actionLogger.trace(s"Async setContextClassloader:${cl}")
+                Thread.currentThread().setContextClassLoader(cl)
+              }
               val req = new Request(svcRequestContext, aggregateRequest) {}
-              HttpResponseConverter.convertActionResponseToHttpResponse(req, actionResp)
+              val resp = HttpResponseConverter.convertActionResponseToHttpResponse(req, actionResp)
+              Thread.currentThread().setContextClassLoader(ctxCl)
+              resp
             }
           HttpResponse.from(f)
 
