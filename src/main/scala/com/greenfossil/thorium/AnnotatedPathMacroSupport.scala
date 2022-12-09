@@ -72,6 +72,9 @@ object AnnotatedPathMacroSupport extends MacroSupport(globalDebug = false):
       case Literal(c) if c.value.toString.startsWith("/") =>
         onSuccessCallback(Expr("Get"), Expr.ofList(List(Expr(c.value.toString))), Expr[List[String]](Nil), Expr.ofList(List.empty[Expr[Any]]), Expr(""))
 
+      case idTerm : Ident =>
+        onSuccessCallback(Expr("Get"), Expr.ofList(List(idTerm.asExpr)), Expr[List[String]](Nil), Expr.ofList(List.empty[Expr[Any]]), Expr(""))
+
       case otherTerm =>
         show("otherTerm", otherTerm)
         val ref = Ref(otherTerm.symbol)
