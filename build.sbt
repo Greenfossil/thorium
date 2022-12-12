@@ -2,27 +2,21 @@ val scala3Version = "3.2.0"
 
 scalacOptions ++= Seq("-feature", "-deprecation")
 
-lazy val datamappingVersion="1.0.0"
-lazy val commonsJsonVersion = "1.0.0"
-lazy val commonsI18nVersion = "1.0.0"
-lazy val typesafeConfigExtVersion = "1.0.0"
-
 lazy val thorium = project
   .in(file("."))
   .settings(
     name := "thorium",
     organization := "com.greenfossil",
-    version := "0.6.2",
+    version := "0.6.3",
 
     scalaVersion := scala3Version,
 
     Compile / javacOptions ++= Seq("-source", "17"),
 
     libraryDependencies ++= Seq(
-      "com.greenfossil" %% "commons-i18n" % commonsI18nVersion,
-      "com.greenfossil" %% "commons-json" % commonsJsonVersion,
-      "com.greenfossil" %% "typesafe-config-ext" % typesafeConfigExtVersion,
-      "com.greenfossil" %% "data-mapping" % datamappingVersion,
+      "com.greenfossil" %% "commons-i18n" % "1.0.0",
+      "com.greenfossil" %% "typesafe-config-ext" % "1.0.0",
+      "com.greenfossil" %% "data-mapping" % "1.0.0",
       "io.projectreactor" % "reactor-core" % "3.4.24",
       "com.linecorp.armeria" %% "armeria-scala" % "1.20.3",
       "com.linecorp.armeria" % "armeria-logback" % "1.20.3",
@@ -33,4 +27,3 @@ lazy val thorium = project
     )
   )
 
-parallelExecution := false
