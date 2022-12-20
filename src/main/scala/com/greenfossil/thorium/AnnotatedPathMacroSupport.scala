@@ -26,7 +26,7 @@ import java.nio.charset.{Charset, StandardCharsets}
 object AnnotatedPathMacroSupport extends MacroSupport(globalDebug = false):
 
   def urlEncode(str: String): String =
-    java.net.URLEncoder.encode(str, StandardCharsets.UTF_8).replaceAll("\\+", "%20")
+    java.net.URLEncoder.encode(Option(str).getOrElse(""), StandardCharsets.UTF_8).replaceAll("\\+", "%20")
 
   import scala.quoted.*
 
