@@ -3,6 +3,7 @@
 ![](https://img.shields.io/github/actions/workflow/status/Greenfossil/thorium/run-tests.yml?branch=master)
 ![](https://img.shields.io/github/license/Greenfossil/thorium)
 ![](https://img.shields.io/github/v/tag/Greenfossil/thorium)
+![Maven Central](https://img.shields.io/maven-central/v/com.greenfossil/thorium_3)
 [![javadoc](https://javadoc.io/badge2/com.greenfossil/thorium_3/javadoc.svg)](https://javadoc.io/doc/com.greenfossil/thorium_3) 
 
 Thorium Framework is a modern microservices framework built on top of Armeria, Scala 3 and Java 17.
