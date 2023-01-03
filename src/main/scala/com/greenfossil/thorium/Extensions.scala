@@ -77,3 +77,9 @@ extension(mpFile: MultipartFile)
   def contentType: MediaType = MediaType.parse(mimeTypeDetector.detectMimeType(mpFile.path()))
 
   def inputStream: InputStream = mpFile.path().toUri.toURL.openStream()
+
+extension (l: Long) def humanize: String =
+  if l < 1024 then s"$l B"
+  else
+    val z = (63 - java.lang.Long.numberOfLeadingZeros(l)) / 10
+    f"${(l * 1.0) / (1L << (z * 10))}%.1f ${" KMGTPE".charAt(z)}%sB"

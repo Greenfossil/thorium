@@ -18,8 +18,8 @@ lazy val thorium = project
       "com.greenfossil" %% "typesafe-config-ext" % "1.0.0",
       "com.greenfossil" %% "data-mapping" % "1.0.0",
       "io.projectreactor" % "reactor-core" % "3.4.24",
-      "com.linecorp.armeria" %% "armeria-scala" % "1.20.3",
-      "com.linecorp.armeria" % "armeria-logback" % "1.20.3",
+      "com.linecorp.armeria" %% "armeria-scala" % "1.21.0",
+      "com.linecorp.armeria" % "armeria-logback" % "1.21.0",
       "org.overviewproject" % "mime-types" % "1.0.4",
       "org.slf4j" % "slf4j-api" % "2.0.3",
       "ch.qos.logback" % "logback-classic" % "1.4.4" % Test,
@@ -27,3 +27,4 @@ lazy val thorium = project
     )
   )
 
+parallelExecution := false
