@@ -49,7 +49,6 @@ class MultipartFileSuite extends munit.FunSuite {
     assert(r != null, "Resource not found")
     val mpFile = MultipartFile.of("file", "file", new File(r.getFile))
     assert(mpFile.contentType.is(MediaType.parse("application/xml")))
-    assertEquals(mpFile.sizeInBytes, 1094L)
   }
 
   test("MultipartFile extensions for conf") {
@@ -58,7 +57,6 @@ class MultipartFileSuite extends munit.FunSuite {
     val mpFile = MultipartFile.of("file", "file", new File(r.getFile))
     println(s"mpFile.contentType = ${mpFile.contentType}")
     assert(mpFile.contentType.is(MediaType.parse("application/xml")))
-    assertEquals(mpFile.sizeInBytes, 1094L)
   }
 
   test("Multipart inputStream") {

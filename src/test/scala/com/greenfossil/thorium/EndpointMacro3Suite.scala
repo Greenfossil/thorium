@@ -46,7 +46,7 @@ class EndpointMacro3Suite extends munit.FunSuite:
       val locationHeader = aggResp.headers().get("location")
       assertEquals(locationHeader, "/sayHello/User")
     }.join()
-    server.server.stop()
+    server.stop()
   }
 
   test("path") {
@@ -61,5 +61,5 @@ class EndpointMacro3Suite extends munit.FunSuite:
       val locationHeader = aggResp.headers().get("location")
       assertEquals(locationHeader, "/redirect")
     }.join()
-    server.server.stop()
+    server.stop()
   }

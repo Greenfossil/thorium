@@ -28,6 +28,8 @@ import org.slf4j.LoggerFactory
 import java.lang.reflect.ParameterizedType
 import java.net.InetSocketAddress
 import java.time.LocalDateTime
+import java.util.concurrent.CompletableFuture
+import scala.concurrent.Future
 import scala.util.Using
 import scala.language.implicitConversions
 
@@ -69,7 +71,7 @@ case class Server(server: AServer,
   def isTest: Boolean = mode == Mode.Test
   def isProd: Boolean = mode == Mode.Prod
 
-  export server.{start as _, toString as _ , serviceConfigs => _,  *}
+  export server.{start as _, toString as _,  stop as _, serviceConfigs => _,  *}
 
   lazy val defaultRequestConverter: RequestConverterFunction =
     (svcRequestContext: ServiceRequestContext,
@@ -104,21 +106,24 @@ case class Server(server: AServer,
         case action: EssentialAction =>
           action.serve(svcRequestContext, svcRequestContext.request())
         case actionResp: ActionResponse  =>
-          val f = svcRequestContext
+          val f = new CompletableFuture[HttpResponse]()
+          svcRequestContext
             .request()
             .aggregate()
-            .thenApplyAsync { aggregateRequest =>
-              val ctxCl = Thread.currentThread().getContextClassLoader
-              actionLogger.trace(s"Async thread:${Thread.currentThread()}, asyncCl:${ctxCl}")
-              if ctxCl == null then {
-                val cl = this.getClass.getClassLoader
-                actionLogger.trace(s"Async setContextClassloader:${cl}")
-                Thread.currentThread().setContextClassLoader(cl)
-              }
-              val req = new Request(svcRequestContext, aggregateRequest) {}
-              val resp = HttpResponseConverter.convertActionResponseToHttpResponse(req, actionResp)
-              Thread.currentThread().setContextClassLoader(ctxCl)
-              resp
+            .thenApply { aggregateRequest =>
+              svcRequestContext.blockingTaskExecutor().execute(() => {
+                val ctxCl = Thread.currentThread().getContextClassLoader
+                actionLogger.trace(s"Async thread:${Thread.currentThread()}, asyncCl:${ctxCl}")
+                if ctxCl == null then {
+                  val cl = this.getClass.getClassLoader
+                  actionLogger.trace(s"Async setContextClassloader:${cl}")
+                  Thread.currentThread().setContextClassLoader(cl)
+                }
+                val req = new Request(svcRequestContext, aggregateRequest) {}
+                val resp = HttpResponseConverter.convertActionResponseToHttpResponse(req, actionResp)
+                Thread.currentThread().setContextClassLoader(ctxCl)
+                f.complete(resp)
+              })
             }
           HttpResponse.from(f)
 
@@ -231,6 +236,30 @@ case class Server(server: AServer,
 
   def addDocService(prefix: String): Server = copy(docServiceNameOpt = Option(prefix))
 
+  private val thoriumBanner  =
+    """
+      |████████ ██   ██  ██████  ██████  ██ ██    ██ ███    ███
+      |   ██    ██   ██ ██    ██ ██   ██ ██ ██    ██ ████  ████
+      |   ██    ███████ ██    ██ ██████  ██ ██    ██ ██ ████ ██
+      |   ██    ██   ██ ██    ██ ██   ██ ██ ██    ██ ██  ██  ██
+      |   ██    ██   ██  ██████  ██   ██ ██  ██████  ██      ██ by Greenfossil Pte Ltd
+     """.stripMargin
+
+
+  def banner =
+    thoriumBanner +
+    s"""
+         |  version: ${ThoriumBuildInfo.version}.
+         |  java.version: ${System.getProperty("java.version")}
+         |  java.home: ${System.getProperty("java.home")}
+         |  runtime version: ${Runtime.version()}
+         |  free memory : ${Runtime.getRuntime.freeMemory().humanize}
+         |  total memory : ${Runtime.getRuntime.totalMemory().humanize}
+         |  max memory : ${Runtime.getRuntime.maxMemory().humanize}
+         |  user.home: ${System.getProperty("user.home")}
+         |  mode: ${Configuration().mode}
+         |""".stripMargin
+
   def start(sessionProtocols: SessionProtocol*): Server =
     val newServer = buildServer(sessionProtocols*)
     Runtime.getRuntime.addShutdownHook(Thread(
@@ -239,6 +268,7 @@ case class Server(server: AServer,
         serverLogger.info("Server stopped.")
       }
     ))
+    println(banner)
     serverLogger.info(s"Starting Server.")
     newServer.start().join()
     copy(server = newServer)
@@ -251,7 +281,11 @@ case class Server(server: AServer,
         serverLogger.info("Server stopped.")
       }
     ))
+    println(banner)
     serverLogger.info(s"Starting Server.")
     newSecureServer.start().join()
     copy(server = newSecureServer)
 
+  def stop(): Future[Unit] =
+    import com.linecorp.armeria.scala.implicits._
+    server.stop().toScala

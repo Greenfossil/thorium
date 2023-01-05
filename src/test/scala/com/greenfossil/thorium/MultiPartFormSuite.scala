@@ -49,7 +49,7 @@ class MultiPartFormSuite extends FunSuite{
   }
 
   override def afterAll(): Unit = {
-    server.server.stop()
+    server.stop()
   }
 
   test("POST with file content") {

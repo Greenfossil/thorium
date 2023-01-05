@@ -49,7 +49,7 @@ class HeadersSuite extends munit.FunSuite {
       assertEquals(aggResp.status(), HttpStatus.OK)
       assertNoDiff(aggResp.contentUtf8(), "Headers sent")
     }.join()
-    server.server.stop()
+    server.stop()
   }
 
 }

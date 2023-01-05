@@ -28,6 +28,7 @@
 
     <logger name="com.linecorp.armeria" level="info"/>
     <logger name="com.linecorp.armeria.common.Flags" level="off"/>
+    <logger name="com.linecorp.armeria.logging" level="off"/>
 
 
 </configuration>

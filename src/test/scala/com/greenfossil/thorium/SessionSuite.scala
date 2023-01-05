@@ -66,7 +66,7 @@ class SessionSuite extends munit.FunSuite {
     resp.aggregate().thenAccept{ aggResp =>
       assert(aggResp.contentUtf8().startsWith("S3 reached"))
     }
-    server.server.stop()
+    server.stop()
   }
 
 }

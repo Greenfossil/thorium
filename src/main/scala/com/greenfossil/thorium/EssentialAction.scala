@@ -49,11 +49,12 @@ trait EssentialAction extends HttpService :
    * @return
    */
   override def serve(svcRequestContext: ServiceRequestContext, httpRequest: HttpRequest): HttpResponse =
-    val f: CompletableFuture[HttpResponse] =
-      svcRequestContext
-        .request()
-        .aggregate()
-        .thenApplyAsync { aggregateRequest =>
+    val f = new CompletableFuture[HttpResponse]()
+    svcRequestContext
+      .request()
+      .aggregate()
+      .thenApply { aggregateRequest =>
+        svcRequestContext.blockingTaskExecutor().execute(() => {
           //Invoke EssentialAction
           val ctxCl = Thread.currentThread().getContextClassLoader
           actionLogger.trace(s"Async thread:${Thread.currentThread()}, asyncCl:${ctxCl}")
@@ -65,8 +66,9 @@ trait EssentialAction extends HttpService :
           val req = new Request(svcRequestContext, aggregateRequest) {}
           val resp = HttpResponseConverter.convertActionResponseToHttpResponse(req, apply(req))
           Thread.currentThread().setContextClassLoader(ctxCl)
-          resp
-        }
+          f.complete(resp)
+        })
+      }
     HttpResponse.from(f)
 
 end EssentialAction
