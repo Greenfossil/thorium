@@ -76,10 +76,10 @@ object AnnotatedPathMacroSupport extends MacroSupport(globalDebug = false):
         onSuccessCallback(Expr("Get"), Expr.ofList(List(idTerm.asExpr)), Expr[List[String]](Nil), Expr.ofList(List.empty[Expr[Any]]), Expr(""))
 
       case otherTerm =>
-        show("otherTerm", otherTerm, true)
+        show("otherTerm", otherTerm)
         val ref = Ref(otherTerm.symbol)
         val term = searchForAnnotations(ref, 1)
-        show("search term", term, true)
+        show("search term", term)
         report.errorAndAbort("Unable to find any annotated path")
 
   /**
