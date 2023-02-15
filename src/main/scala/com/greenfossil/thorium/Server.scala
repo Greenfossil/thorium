@@ -258,6 +258,7 @@ case class Server(server: AServer,
          |  max memory : ${Runtime.getRuntime.maxMemory().humanize}
          |  user.home: ${System.getProperty("user.home")}
          |  mode: ${Configuration().mode}
+         |  maxNumConnection: ${Configuration().maxNumConnectionOpt}
          |""".stripMargin
 
   def start(sessionProtocols: SessionProtocol*): Server =

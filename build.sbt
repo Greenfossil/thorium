@@ -1,4 +1,4 @@
-val scala3Version = "3.2.0"
+val scala3Version = "3.2.2"
 
 scalacOptions ++= Seq("-feature", "-deprecation")
 
@@ -7,7 +7,7 @@ lazy val thorium = project
   .settings(
     name := "thorium",
     organization := "com.greenfossil",
-    version := "0.6.4",
+    version := "0.6.5-SNAPSHOT",
 
     scalaVersion := scala3Version,
 
@@ -16,13 +16,13 @@ lazy val thorium = project
     libraryDependencies ++= Seq(
       "com.greenfossil" %% "commons-i18n" % "1.0.0",
       "com.greenfossil" %% "typesafe-config-ext" % "1.0.0",
-      "com.greenfossil" %% "data-mapping" % "1.0.0",
-      "io.projectreactor" % "reactor-core" % "3.4.24",
-      "com.linecorp.armeria" %% "armeria-scala" % "1.21.0",
-      "com.linecorp.armeria" % "armeria-logback" % "1.21.0",
+      "com.greenfossil" %% "data-mapping" % "1.0.1-SNAPSHOT",
+      "io.projectreactor" % "reactor-core" % "3.5.2",
+      "com.linecorp.armeria" %% "armeria-scala" % "1.22.0",
+      "com.linecorp.armeria" % "armeria-logback" % "1.22.0",
       "org.overviewproject" % "mime-types" % "1.0.4",
-      "org.slf4j" % "slf4j-api" % "2.0.3",
-      "ch.qos.logback" % "logback-classic" % "1.4.4" % Test,
+      "org.slf4j" % "slf4j-api" % "2.0.5",
+      "ch.qos.logback" % "logback-classic" % "1.4.5" % Test,
       "org.scalameta" %% "munit" % "0.7.29" % Test
     )
   )

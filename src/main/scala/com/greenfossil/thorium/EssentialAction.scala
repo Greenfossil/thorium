@@ -64,9 +64,13 @@ trait EssentialAction extends HttpService :
             Thread.currentThread().setContextClassLoader(cl)
           }
           val req = new Request(svcRequestContext, aggregateRequest) {}
-          val resp = HttpResponseConverter.convertActionResponseToHttpResponse(req, apply(req))
+          Try(apply(req)).fold(
+            t =>
+              f.complete(HttpResponse.ofFailure(t)),
+            resp =>
+              f.complete(HttpResponseConverter.convertActionResponseToHttpResponse(req,resp))
+          )
           Thread.currentThread().setContextClassLoader(ctxCl)
-          f.complete(resp)
         })
       }
     HttpResponse.from(f)
