@@ -249,7 +249,7 @@ case class Server(server: AServer,
   def banner =
     thoriumBanner +
     s"""
-         |  version: ${ThoriumBuildInfo.version}.
+         |  version: ${ThoriumBuildInfo.version}
          |  java.version: ${System.getProperty("java.version")}
          |  java.home: ${System.getProperty("java.home")}
          |  runtime version: ${Runtime.version()}

@@ -9,6 +9,12 @@ ThisBuild / licenses := List(
   "Apache 2" -> new URL("https://www.apache.org/licenses/LICENSE-2.0.txt")
 )
 
+lazy val sonatypeStaging = "https://s01.oss.sonatype.org/content/groups/staging/"
+
+ThisBuild / resolvers ++= Seq(
+  "Sonatype Staging" at sonatypeStaging
+)
+
 // Remove all additional repository other than Maven Central from POM
 ThisBuild / pomIncludeRepository := { _ => false }
 
