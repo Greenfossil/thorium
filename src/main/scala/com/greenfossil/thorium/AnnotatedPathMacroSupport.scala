@@ -16,9 +16,7 @@
 
 package com.greenfossil.thorium
 
-import com.linecorp.armeria.internal.shaded.guava.net.UrlEscapers
-
-import java.nio.charset.{Charset, StandardCharsets}
+import java.nio.charset.StandardCharsets
 
 /**
  * Note: annotations for glob is not supported

@@ -22,7 +22,7 @@ import com.linecorp.armeria.common.*
 import com.linecorp.armeria.server.{ProxiedAddresses, ServiceRequestContext}
 import org.slf4j.LoggerFactory
 
-import java.net.{InetAddress, InetSocketAddress, SocketAddress}
+import java.net.{InetAddress, InetSocketAddress}
 import java.time.ZoneId
 import java.util.{Base64, Locale}
 import java.util.Locale.LanguageRange

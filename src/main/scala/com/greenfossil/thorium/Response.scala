@@ -35,7 +35,7 @@ def Redirect(url: String, queryString: Map[String, Seq[String]], status: HttpSta
   val loc = s"${url}${ queryString.toList.map{case (k, v) => Endpoint.paramKeyValueUrlEncoded(k, v)}.mkString("?", "&", "")}"
   toResult(status,loc)
 
-import scala.compiletime.{erasedValue, error}
+import scala.compiletime.error
 inline def Redirect[A](inline location: A): Result =
   Redirect(location, HttpStatus.SEE_OTHER)
 

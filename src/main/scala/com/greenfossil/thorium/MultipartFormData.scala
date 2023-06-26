@@ -19,10 +19,10 @@ package com.greenfossil.thorium
 import com.linecorp.armeria.common.MediaType
 import com.linecorp.armeria.common.multipart.{AggregatedBodyPart, AggregatedMultipart, MultipartFile}
 
-import java.io.{File, FileInputStream, InputStream}
+import java.io.{File, InputStream}
 import java.nio.charset.Charset
 import java.nio.file.*
-import scala.util.{Failure, Success, Try}
+import scala.util.Try
 
 case class MultipartFormData(aggMultipart: AggregatedMultipart, multipartUploadLocation: Path):
   import scala.jdk.CollectionConverters.*

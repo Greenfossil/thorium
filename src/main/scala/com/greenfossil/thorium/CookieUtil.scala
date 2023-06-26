@@ -20,7 +20,6 @@ import com.greenfossil.commons.json.Json
 import com.linecorp.armeria.common.{Cookie, CookieBuilder}
 
 import java.util.Base64
-import scala.concurrent.duration.*
 
 /*
  * source - https://developer.mozilla.org/en-US/docs/Web/HTTP/Cookies

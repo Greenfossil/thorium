@@ -23,7 +23,6 @@ import io.netty.util.AsciiString
 import org.overviewproject.mime_types.MimeTypeDetector
 
 import java.io.InputStream
-import scala.util.Try
 
 given Conversion[HttpResponse, Result] = Result(_)
 

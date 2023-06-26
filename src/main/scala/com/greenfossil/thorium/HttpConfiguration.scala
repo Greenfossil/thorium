@@ -24,7 +24,6 @@ import java.security.MessageDigest
 import java.time
 import java.time.Duration
 import java.util.Base64
-import scala.concurrent.duration.*
 import scala.util.*
 
 type SameSiteCookie = "Strict" | "Lax"

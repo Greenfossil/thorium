@@ -16,7 +16,6 @@
 
 package com.greenfossil.thorium
 
-import com.greenfossil.commons.json.Json
 import com.linecorp.armeria.common.{Cookie, HttpResponse, MediaType}
 import io.netty.util.AsciiString
 
@@ -24,7 +23,6 @@ import java.io.InputStream
 import java.time.format.DateTimeFormatter
 import java.time.{ZoneOffset, ZonedDateTime}
 import scala.collection.immutable.TreeMap
-import scala.util.Using
 
 private object CaseInsensitiveOrdered extends Ordering[String]:
   def compare(left: String, right: String): Int =

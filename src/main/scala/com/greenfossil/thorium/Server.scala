@@ -21,7 +21,6 @@ import com.linecorp.armeria.common.{AggregatedHttpRequest, HttpHeaders, HttpResp
 import com.linecorp.armeria.server.{Server as AServer, *}
 import com.linecorp.armeria.server.annotation.{ExceptionHandlerFunction, RequestConverterFunction, ResponseConverterFunction}
 import com.linecorp.armeria.server.docs.DocService
-import com.typesafe.config.Config
 import io.netty.util.AttributeKey
 import org.slf4j.LoggerFactory
 
@@ -30,7 +29,6 @@ import java.net.InetSocketAddress
 import java.time.LocalDateTime
 import java.util.concurrent.CompletableFuture
 import scala.concurrent.Future
-import scala.util.Using
 import scala.language.implicitConversions
 
 private[thorium] val serverLogger = LoggerFactory.getLogger("com.greenfossil.thorium.server")
@@ -167,8 +165,6 @@ case class Server(server: AServer,
   def serviceConfigs: Seq[ServiceConfig] = server.serviceConfigs().asScala.toList
 
   def serviceRoutes: Seq[Route] = serviceConfigs.map(_.route()).distinct
-
-  import scala.jdk.CollectionConverters.*
 
   lazy val allRequestConverters: java.util.List[RequestConverterFunction] =
     (defaultRequestConverter +: requestConverters).asJava
