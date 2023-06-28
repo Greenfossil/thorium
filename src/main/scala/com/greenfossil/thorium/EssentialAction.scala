@@ -24,7 +24,7 @@ import java.io.InputStream
 import java.util.concurrent.CompletableFuture
 import scala.util.Try
 
-type ActionResponse = HttpResponse | Result | String | Array[Byte] | InputStream
+type ActionResponse = HttpResponse | String | Array[Byte] | InputStream | Result
 
 private[thorium] val actionLogger = LoggerFactory.getLogger("com.greenfossil.thorium.action")
 

@@ -158,11 +158,11 @@ case class Result(header: ResponseHeader,
    * Redirect(routes.Application.index()).withSession("saidHello" -> "yes")
    * }}}
    *
-   * @param session the session to set with this result
+   * @param sessions the session to set with this result
    * @return the new result
    */
-  def withSession(session: (String, String)*): Result = 
-    withSession(Session(session.toMap))
+  def withSession(sessions: (String, String)*): Result = 
+    withSession(Session(sessions.toMap))
 
   /**
    * Discards the existing session for this result.
