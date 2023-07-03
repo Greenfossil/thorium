@@ -78,7 +78,7 @@ trait Request(val requestContext: ServiceRequestContext,
       .toList
 
   def remoteAddress: InetAddress =
-    requestContext.remoteAddress[InetSocketAddress]().getAddress
+    requestContext.remoteAddress().getAddress
 
   def secure: Boolean = "https".equalsIgnoreCase(uriScheme)
 
