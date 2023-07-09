@@ -19,7 +19,6 @@ package com.greenfossil.thorium
 import com.greenfossil.commons.json.Json
 import com.greenfossil.thorium.{*, given}
 
-import java.io.File
 import scala.language.implicitConversions
 
 class RequestSuite extends munit.FunSuite{

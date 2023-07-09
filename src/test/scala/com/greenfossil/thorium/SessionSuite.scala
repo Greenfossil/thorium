@@ -17,10 +17,8 @@
 package com.greenfossil.thorium
 
 import com.greenfossil.thorium.{*, given}
-import com.linecorp.armeria.client.RequestOptions
-import com.linecorp.armeria.client.cookie.CookieClient
 import com.linecorp.armeria.client.logging.LoggingClient
-import com.linecorp.armeria.common.{HttpMethod, HttpRequest, HttpStatus}
+import com.linecorp.armeria.common.HttpStatus
 import com.linecorp.armeria.server.annotation.Get
 
 object SessionServices {

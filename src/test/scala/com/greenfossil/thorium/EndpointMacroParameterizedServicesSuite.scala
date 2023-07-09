@@ -16,9 +16,7 @@
 
 package com.greenfossil.thorium
 
-import com.linecorp.armeria.server.annotation.{Get, Param, Path, Post}
-
-import java.time.LocalDateTime
+import com.linecorp.armeria.server.annotation.{Get, Param}
 
 /*
  *Test path with prefix, regex, glob

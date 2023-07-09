@@ -1,22 +1,22 @@
 val scala3Version = "3.3.0"
 
-scalacOptions ++= Seq("-feature", "-deprecation")
+scalacOptions ++= Seq("-feature", "-deprecation", "-Wunused:all" )
 
 lazy val thorium = project
   .in(file("."))
   .settings(
     name := "thorium",
     organization := "com.greenfossil",
-    version := "0.6.9-RC1",
+    version := "0.6.9-RC2",
 
     scalaVersion := scala3Version,
 
     Compile / javacOptions ++= Seq("-source", "17"),
 
     libraryDependencies ++= Seq(
+      "com.greenfossil" %% "data-mapping" % "1.0.5-RC1",
       "com.greenfossil" %% "commons-i18n" % "1.0.2",
       "com.greenfossil" %% "typesafe-config-ext" % "1.0.1",
-      "com.greenfossil" %% "data-mapping" % "1.0.4",
       "io.projectreactor" % "reactor-core" % "3.5.4",
       "com.linecorp.armeria" %% "armeria-scala" % "1.24.2",
       "com.linecorp.armeria" % "armeria-logback" % "1.24.2",

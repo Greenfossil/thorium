@@ -16,8 +16,6 @@
 
 package com.greenfossil.thorium
 
-import com.greenfossil.thorium.{*, given}
-
 class ResponseHeaderSuite extends munit.FunSuite {
 
   test("ResponseHeader case insenitivity"){

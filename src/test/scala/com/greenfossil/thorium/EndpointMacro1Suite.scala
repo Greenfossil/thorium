@@ -16,7 +16,7 @@
 
 package com.greenfossil.thorium
 
-import com.greenfossil.thorium.{*, given}
+import com.greenfossil.thorium.*
 import com.linecorp.armeria.server.annotation.{Get, Param, Path, Post}
 
 import java.time.LocalDateTime
