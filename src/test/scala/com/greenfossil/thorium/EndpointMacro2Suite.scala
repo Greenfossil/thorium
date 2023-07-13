@@ -44,14 +44,14 @@ class EndpointMacro2Suite extends munit.FunSuite {
     "Howdy2"
 
   test("multi-param-list") {
-    val epParams = endpointParams(1)("string").endpoint.url
-    assertNoDiff(epParams, "/endpoint-params/1/string")
+    val epParams = EndpointMcr(endpointParams(1)("string"))
+    assertNoDiff(epParams.url, "/endpoint-params/1/string")
   }
 
   test("using"){
     given Request = null
-    val epUsing = endpointUsing.endpoint.url
-    assertNoDiff(epUsing, "/endpoint-using")
+    val epUsing = EndpointMcr(endpointUsing)
+    assertNoDiff(epUsing.url, "/endpoint-using")
   }
 
 }

@@ -82,7 +82,7 @@ trait Request(val requestContext: ServiceRequestContext,
 
   def secure: Boolean = "https".equalsIgnoreCase(uriScheme)
 
-  def uri: java.net.URI = requestContext.request().uri()
+  def uri: java.net.URI = requestContext.uri()
 
   //TOOD - need to test
   def host: String =

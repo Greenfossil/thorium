@@ -9,3 +9,4 @@ metals.sbt
 .lh/
 src/main/java
 src/test/scala/com/greenfossil/webserver/JWTSuite.scala
+/src/test/scala/com/greenfossil/thorium/InheritedAnnotatedPath2Suite.scala
