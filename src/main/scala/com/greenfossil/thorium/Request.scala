@@ -180,7 +180,7 @@ trait Request(val requestContext: ServiceRequestContext,
   def asJson: JsValue = Json.parse(asText)
 
   //application/x-www-form-urlencoded
-  def asFormUrlEncoded: Map[String, Seq[String]] =
+  def asFormUrlEncoded: FormUrlEndcoded =
     FormUrlEncodedParser.parse(asText)
 
   //MultiPart

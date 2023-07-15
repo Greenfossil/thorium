@@ -31,13 +31,13 @@ object FormUrlEncodedParser:
    * @param encoding The character encoding of data
    * @return A ListMap of keys to the sequence of values for that key
    */
-  def parse(data: String, encoding: String = "utf-8"): Map[String, Seq[String]] =
+  def parse(data: String, encoding: String = "utf-8"): FormUrlEndcoded =
 
     // Generate the pairs of values from the string.
     val pairs: Seq[(String, String)] = parseToPairs(data, encoding)
 
     // Group the pairs by the key (first item of the pair) being sure to preserve insertion order
-    groupBy(pairs)(_._1)
+    FormUrlEndcoded(groupBy(pairs)(_._1))
 
   private val parameterDelimiter = "[&;]".r
 

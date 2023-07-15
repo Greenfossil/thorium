@@ -25,5 +25,5 @@ final class MultipartRequest(val multipartFormData: MultipartFormData,
   
   export multipartFormData.{asFormUrlEncoded as _,  *}
 
-  override def asFormUrlEncoded: Map[String, Seq[String]] = multipartFormData.asFormUrlEncoded
+  override def asFormUrlEncoded: FormUrlEndcoded = multipartFormData.asFormUrlEncoded
 

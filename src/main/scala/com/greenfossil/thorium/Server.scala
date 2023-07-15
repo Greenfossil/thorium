@@ -47,6 +47,63 @@ object Server:
   def apply(port: Int): Server =
     Server(null, Nil, Nil, None, Configuration.usingPort(port))
 
+  private def defaultRequestConverter(configuration: Configuration, requestConverterAttrs: Tuple, defaultRequestConverterFnOpt: Option[ServiceRequestContext => Void]): RequestConverterFunction =
+    (svcRequestContext: ServiceRequestContext,
+     aggHttpRequest: AggregatedHttpRequest,
+     expectedResultType: Class[_],
+     expectedParameterizedResultType: ParameterizedType) =>
+      //embed the env and http config
+      svcRequestContext.setAttr(RequestAttrs.Config, configuration)
+      requestConverterAttrs.toList.foreach {
+        case (key: AttributeKey[Any]@unchecked, value) =>
+          svcRequestContext.setAttr[Any](key, value)
+      }
+      defaultRequestConverterFnOpt.foreach(_.apply(svcRequestContext))
+      if expectedResultType == classOf[Request]
+      then
+        val request = new Request(svcRequestContext, aggHttpRequest) {}
+        //Create a request for use in ResponseConverter
+        svcRequestContext.setAttr(RequestAttrs.Request, request)
+        request
+      else RequestConverterFunction.fallthrough()
+
+  private def defaultResponseConverter(configuration: Configuration, responseConverterAttrs: Tuple,  defaultResponseConverterFnOpt: Option[ServiceRequestContext => Void]): ResponseConverterFunction =
+    (svcRequestContext: ServiceRequestContext, headers: ResponseHeaders, result: Any, trailers: HttpHeaders) =>
+      //embed the env and http config
+      svcRequestContext.setAttr(RequestAttrs.Config, configuration)
+      responseConverterAttrs.toList.foreach {
+        case (key: AttributeKey[Any]@unchecked, value) =>
+          svcRequestContext.setAttr[Any](key, value)
+      }
+      defaultResponseConverterFnOpt.foreach(_.apply(svcRequestContext))
+      result match
+        case action: EssentialAction =>
+          action.serve(svcRequestContext, svcRequestContext.request())
+        case actionResp: ActionResponse =>
+          val f = new CompletableFuture[HttpResponse]()
+          svcRequestContext
+            .request()
+            .aggregate()
+            .thenApply { aggregateRequest =>
+              svcRequestContext.blockingTaskExecutor().execute(() => {
+                val ctxCl = Thread.currentThread().getContextClassLoader
+                actionLogger.trace(s"Async thread:${Thread.currentThread()}, asyncCl:${ctxCl}")
+                if ctxCl == null then {
+                  val cl = this.getClass.getClassLoader
+                  actionLogger.trace(s"Async setContextClassloader:${cl}")
+                  Thread.currentThread().setContextClassLoader(cl)
+                }
+                val req = new Request(svcRequestContext, aggregateRequest) {}
+                val resp = HttpResponseConverter.convertActionResponseToHttpResponse(req, actionResp)
+                Thread.currentThread().setContextClassLoader(ctxCl)
+                f.complete(resp)
+              })
+            }
+          HttpResponse.from(f)
+
+        case _ =>
+          ResponseConverterFunction.fallthrough()
+
 case class Server(server: AServer,
                   httpServices: Seq[(String, HttpService)],
                   annotatedServices: Seq[AnyRef] = Nil,
@@ -71,62 +128,11 @@ case class Server(server: AServer,
 
   export server.{start as _, toString as _,  stop as _, serviceConfigs => _,  *}
 
-  lazy val defaultRequestConverter: RequestConverterFunction =
-    (svcRequestContext: ServiceRequestContext,
-     aggHttpRequest: AggregatedHttpRequest,
-     expectedResultType: Class[_],
-     expectedParameterizedResultType: ParameterizedType) =>
-          //embed the env and http config
-          svcRequestContext.setAttr(RequestAttrs.Config, configuration)
-          requestConverterAttrs.toList.foreach {
-            case (key: AttributeKey[Any] @unchecked, value) =>
-              svcRequestContext.setAttr[Any](key, value)
-          }
-          defaultRequestConverterFnOpt.foreach(_.apply(svcRequestContext))
-          if expectedResultType == classOf[Request]
-          then
-            val request = new Request(svcRequestContext, aggHttpRequest) {}
-            //Create a request for use in ResponseConverter
-            svcRequestContext.setAttr(RequestAttrs.Request, request)
-            request
-          else RequestConverterFunction.fallthrough()
+  val defaultRequestConverter =
+    Server.defaultRequestConverter(configuration, requestConverterAttrs, defaultRequestConverterFnOpt)
 
-  lazy val defaultResponseConverter: ResponseConverterFunction =
-    (svcRequestContext: ServiceRequestContext, headers: ResponseHeaders, result: Any, trailers: HttpHeaders) =>
-      //embed the env and http config
-      svcRequestContext.setAttr(RequestAttrs.Config, configuration)
-      responseConverterAttrs.toList.foreach {
-        case (key: AttributeKey[Any] @unchecked, value) =>
-          svcRequestContext.setAttr[Any](key, value)
-      }
-      defaultResponseConverterFnOpt.foreach(_.apply(svcRequestContext))
-      result match
-        case action: EssentialAction =>
-          action.serve(svcRequestContext, svcRequestContext.request())
-        case actionResp: ActionResponse  =>
-          val f = new CompletableFuture[HttpResponse]()
-          svcRequestContext
-            .request()
-            .aggregate()
-            .thenApply { aggregateRequest =>
-              svcRequestContext.blockingTaskExecutor().execute(() => {
-                val ctxCl = Thread.currentThread().getContextClassLoader
-                actionLogger.trace(s"Async thread:${Thread.currentThread()}, asyncCl:${ctxCl}")
-                if ctxCl == null then {
-                  val cl = this.getClass.getClassLoader
-                  actionLogger.trace(s"Async setContextClassloader:${cl}")
-                  Thread.currentThread().setContextClassLoader(cl)
-                }
-                val req = new Request(svcRequestContext, aggregateRequest) {}
-                val resp = HttpResponseConverter.convertActionResponseToHttpResponse(req, actionResp)
-                Thread.currentThread().setContextClassLoader(ctxCl)
-                f.complete(resp)
-              })
-            }
-          HttpResponse.from(f)
-
-        case _ =>
-          ResponseConverterFunction.fallthrough()
+  val defaultResponseConverter =
+    Server.defaultResponseConverter(configuration, responseConverterAttrs, defaultResponseConverterFnOpt)
 
   def port: Int = server.activeLocalPort()
 
@@ -167,7 +173,7 @@ case class Server(server: AServer,
   def serviceRoutes: Seq[Route] = serviceConfigs.map(_.route()).distinct
 
   lazy val allRequestConverters: java.util.List[RequestConverterFunction] =
-    (defaultRequestConverter +: requestConverters).asJava
+    (Seq(defaultRequestConverter, FormUrlEncodedConverter) ++ requestConverters).asJava
 
   lazy val allResponseConverters: java.util.List[ResponseConverterFunction] =
     (defaultResponseConverter +: responseConverters).asJava

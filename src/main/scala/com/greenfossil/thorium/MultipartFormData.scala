@@ -31,13 +31,13 @@ case class MultipartFormData(aggMultipart: AggregatedMultipart, multipartUploadL
 
   def names() = aggMultipart.names().asScala
 
-  lazy val asFormUrlEncoded: Map[String, Seq[String]] =
+  lazy val asFormUrlEncoded: FormUrlEndcoded =
     val xs = for {
       name <- names()
       part <- aggMultipart.fields(name).asScala
       if part.contentType().is(MediaType.PLAIN_TEXT)
     } yield (name, part.content(Option(part.contentType().charset()).getOrElse(Charset.forName("UTF-8"))))
-    xs.toList.groupMap(_._1)(_._2)
+    FormUrlEndcoded(xs.toList.groupMap(_._1)(_._2))
 
   private def saveFileTo( part: AggregatedBodyPart): Option[File] =
     Try {
