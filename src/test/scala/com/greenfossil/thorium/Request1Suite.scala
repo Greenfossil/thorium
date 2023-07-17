@@ -21,7 +21,7 @@ import com.greenfossil.thorium.{*, given}
 
 import scala.language.implicitConversions
 
-class RequestSuite extends munit.FunSuite{
+class Request1Suite extends munit.FunSuite{
   import com.linecorp.armeria.client.*
   import com.linecorp.armeria.common.*
 
@@ -78,7 +78,7 @@ class RequestSuite extends munit.FunSuite{
     client.execute(creq).aggregate().thenAccept(
       aggregate =>
         assertNoDiff(aggregate.contentUtf8(), "Received Text")
-    )
+    ).toScala
   }
 
   test("Json"){
@@ -94,7 +94,7 @@ class RequestSuite extends munit.FunSuite{
     val creq = HttpRequest.of(HttpMethod.POST, "/form", MediaType.FORM_DATA, "msg[]=Hello&msg[]=Armeria!")
     client.execute(creq).aggregate().thenAccept(aggregate =>
       assertNoDiff(aggregate.contentUtf8(), "Received Text")
-    )
+    ).toScala
   }
 
   test("Multipart Form"){
@@ -109,7 +109,7 @@ class RequestSuite extends munit.FunSuite{
     val client = WebClient.of(s"http://localhost:${server.port}")
     client.execute(mp.toHttpRequest("/multipart-form")).aggregate().thenAccept(aggregate =>
       assertNoDiff(aggregate.contentUtf8(), "Received Text")
-    )
+    ).toScala
   }
 
   test("Cookie"){
@@ -120,7 +120,7 @@ class RequestSuite extends munit.FunSuite{
       assertEquals(cookies.size, 2)
       assertNoDiff(aggregate.contentUtf8(), "Here is your cookie")
       }
-    )
+    ).toScala
   }
 
 }
