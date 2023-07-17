@@ -16,19 +16,20 @@
 
 package com.greenfossil.thorium
 
-import com.greenfossil.commons.json.Json
-import com.greenfossil.thorium.{*, given}
 import com.linecorp.armeria.server.annotation.{Get, Param, Post}
 
 import scala.language.implicitConversions
 
 private object Service:
+
   @Get("/foo")
   def foo(req: Request) =
     s"${req.path} content:${req.asText}"
+
   @Get("/bar")
   def bar(implicit req: Request) =
      s"${req.path} content:${req.asText}"
+
   @Get("/baz/:name")
   def baz(@Param name: String)(implicit req: Request) =
    s"${req.path} name:${name} content:${req.asText}"
@@ -36,7 +37,8 @@ private object Service:
   @Post("/foobaz/:name")
   def foobaz(form: FormUrlEndcoded)(implicit req: Request) =
     s"${req.path} form:${form} content:${req.asText}"
-class Request2Suite extends munit.FunSuite{
+
+class Request2Suite extends munit.FunSuite:
   import com.linecorp.armeria.client.*
   import com.linecorp.armeria.common.*
 
@@ -53,7 +55,7 @@ class Request2Suite extends munit.FunSuite{
     server.stop()
   }
 
-  import com.linecorp.armeria.scala.implicits._
+  import com.linecorp.armeria.scala.implicits.*
 
   test("foo") {
     val client = WebClient.of(s"http://localhost:${server.port}")
@@ -95,5 +97,13 @@ class Request2Suite extends munit.FunSuite{
     ).toScala
   }
 
+  test("foobaz - wrong media-type") {
+    val client = WebClient.of(s"http://localhost:${server.port}")
 
-}
+    val creq = HttpRequest.of(HttpMethod.POST, "/foobaz/homer", MediaType.JSON, "msg[]=Hello&msg[]=World!")
+    client.execute(creq).aggregate().thenAccept(
+      aggregate =>
+        assertEquals(aggregate.status(), HttpStatus.BAD_REQUEST)
+    ).toScala
+  }
+

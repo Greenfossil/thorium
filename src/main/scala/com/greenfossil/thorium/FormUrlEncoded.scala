@@ -1,6 +1,6 @@
 package com.greenfossil.thorium
 
-import com.linecorp.armeria.common.AggregatedHttpRequest
+import com.linecorp.armeria.common.{AggregatedHttpRequest, HttpMethod, MediaType}
 import com.linecorp.armeria.server.ServiceRequestContext
 import com.linecorp.armeria.server.annotation.RequestConverterFunction
 
@@ -14,6 +14,7 @@ object FormUrlEncodedRequestConverterFunction extends RequestConverterFunction:
                               request: AggregatedHttpRequest,
                               expectedResultType: Class[?],
                               expectedParameterizedResultType: ParameterizedType): AnyRef =
-    if expectedResultType == classOf[FormUrlEndcoded] then
+    if expectedResultType == classOf[FormUrlEndcoded]
+      &&  MediaType.FORM_DATA == request.contentType() && HttpMethod.POST == request.method() then
       FormUrlEncodedParser.parse(request.contentUtf8())
     else RequestConverterFunction.fallthrough()

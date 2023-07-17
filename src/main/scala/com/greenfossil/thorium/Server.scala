@@ -47,7 +47,9 @@ object Server:
   def apply(port: Int): Server =
     Server(null, Nil, Nil, None, Configuration.usingPort(port))
 
-  private def defaultRequestConverter(configuration: Configuration, requestConverterAttrs: Tuple, defaultRequestConverterFnOpt: Option[ServiceRequestContext => Void]): RequestConverterFunction =
+  private def defaultRequestConverter(configuration: Configuration, 
+                                      requestConverterAttrs: Tuple, 
+                                      defaultRequestConverterFnOpt: Option[ServiceRequestContext => Void]): RequestConverterFunction =
     (svcRequestContext: ServiceRequestContext,
      aggHttpRequest: AggregatedHttpRequest,
      expectedResultType: Class[_],
@@ -67,7 +69,9 @@ object Server:
         request
       else RequestConverterFunction.fallthrough()
 
-  private def defaultResponseConverter(configuration: Configuration, responseConverterAttrs: Tuple,  defaultResponseConverterFnOpt: Option[ServiceRequestContext => Void]): ResponseConverterFunction =
+  private def defaultResponseConverter(configuration: Configuration, 
+                                       responseConverterAttrs: Tuple, 
+                                       defaultResponseConverterFnOpt: Option[ServiceRequestContext => Void]): ResponseConverterFunction =
     (svcRequestContext: ServiceRequestContext, headers: ResponseHeaders, result: Any, trailers: HttpHeaders) =>
       //embed the env and http config
       svcRequestContext.setAttr(RequestAttrs.Config, configuration)
