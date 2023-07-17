@@ -173,7 +173,7 @@ case class Server(server: AServer,
   def serviceRoutes: Seq[Route] = serviceConfigs.map(_.route()).distinct
 
   lazy val allRequestConverters: java.util.List[RequestConverterFunction] =
-    (Seq(defaultRequestConverter, FormUrlEncodedConverter) ++ requestConverters).asJava
+    (Seq(defaultRequestConverter, FormUrlEncodedRequestConverterFunction) ++ requestConverters).asJava
 
   lazy val allResponseConverters: java.util.List[ResponseConverterFunction] =
     (defaultResponseConverter +: responseConverters).asJava

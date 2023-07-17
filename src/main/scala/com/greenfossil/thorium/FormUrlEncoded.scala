@@ -9,7 +9,7 @@ import java.lang.reflect.ParameterizedType
 case class FormUrlEndcoded(form: Map[String, Seq[String]]):
   export form.*
 
-object FormUrlEncodedConverter extends RequestConverterFunction:
+object FormUrlEncodedRequestConverterFunction extends RequestConverterFunction:
   override def convertRequest(ctx: ServiceRequestContext,
                               request: AggregatedHttpRequest,
                               expectedResultType: Class[?],
