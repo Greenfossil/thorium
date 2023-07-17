@@ -7,14 +7,14 @@ lazy val thorium = project
   .settings(
     name := "thorium",
     organization := "com.greenfossil",
-    version := "0.6.9-RC3",
+    version := "0.6.9",
 
     scalaVersion := scala3Version,
 
     Compile / javacOptions ++= Seq("-source", "17"),
 
     libraryDependencies ++= Seq(
-      "com.greenfossil" %% "data-mapping" % "1.0.5-RC2",
+      "com.greenfossil" %% "data-mapping" % "1.0.5",
       "com.greenfossil" %% "commons-i18n" % "1.0.2",
       "com.greenfossil" %% "typesafe-config-ext" % "1.0.1",
       "io.projectreactor" % "reactor-core" % "3.5.4",
