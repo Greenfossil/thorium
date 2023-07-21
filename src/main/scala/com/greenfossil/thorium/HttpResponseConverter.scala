@@ -16,7 +16,7 @@
 
 package com.greenfossil.thorium
 
-import com.linecorp.armeria.common.{Cookie, HttpData, HttpHeaderNames, HttpResponse, HttpStatus, MediaType, ResponseHeaders}
+import com.linecorp.armeria.common.{Cookie, HttpData, HttpHeaderNames, HttpMethod, HttpResponse, HttpStatus, MediaType, ResponseHeaders}
 import com.linecorp.armeria.common.stream.StreamMessage
 
 import java.io.InputStream
@@ -77,7 +77,15 @@ object HttpResponseConverter:
       }
 
   private def getNewFlashCookie(req: Request, newFlashOpt: Option[Flash]): Option[Cookie] =
-    newFlashOpt.flatMap { newFlash =>
+    /*
+     * Flash cookie could survive for 1 request.
+     * However, if there is X-THORIUM-FLASH:Again header, flash will survive 1 more request
+     */
+    val hasThoriumFlashHeader =
+      req.getHeader("X-THORIUM-FLASH").exists("AGAIN".equalsIgnoreCase)
+        && HttpMethod.GET == req.method
+    val flashOpt = if !hasThoriumFlashHeader then newFlashOpt else newFlashOpt.map(newFlash => req.flash ++ newFlash ).orElse(Option(req.flash))
+    flashOpt.flatMap { newFlash =>
       CookieUtil.bakeFlashCookie(newFlash)(using req) //Create a new flash cookie
     }.orElse {
       //Expire the current flash cookie

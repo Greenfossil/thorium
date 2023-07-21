@@ -182,7 +182,7 @@ case class Result(header: ResponseHeader,
    *
    * For example:
    * {{{
-   * Redirect(routes.Application.index()).flashing(flash + ("success" -> "Done!"))
+   * RedirectApplication.index()).flashing(flash + ("success" -> "Done!"))
    * }}}
    *
    * @param flash the flash scope to set with this result
