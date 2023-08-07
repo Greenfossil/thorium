@@ -75,7 +75,7 @@ class UrlPrefixSuite extends munit.FunSuite {
 
     server.stop()
     val routePatterns = server.serviceConfigs.map(_.route().patternString())
-    assertEquals(routePatterns, List(
+    assertEquals(routePatterns.sorted, List(
       // direct routes
       "/foo", "/redirect1", "/bar",
       "^/(?<num>\\d+)$", "/query", "/test/*", "/param/:str",
@@ -89,7 +89,7 @@ class UrlPrefixSuite extends munit.FunSuite {
       "/ext/site/favicon",
       // serviceUnder routes
       "/ext2/*"
-    ))
+    ).sorted)
   }
 
   test("annotatedService with path prefix"){

@@ -90,6 +90,8 @@ object AESUtil:
   def decryptWithEmbeddedIV(cipherText: String, key: String, decoder: Base64.Decoder): String =
     decryptWithEmbeddedIV(cipherText, key, AES_CTR_NOPADDING, decoder)
 
+  def encryptWithEmbeddedIV(plainText: String, key: String, algorithm: String, encoder: Base64.Encoder): String =
+    encryptWithEmbeddedIV(plainText, key, algorithm, bytes => encoder.encodeToString(bytes))
 
   /**
    * Encrypt plaintext with key
@@ -97,24 +99,26 @@ object AESUtil:
    * @param plainText
    * @return
    */
-  def encryptWithEmbeddedIV(plainText: String, key: String, algorithm: String, encoder: Base64.Encoder): String =
+  def encryptWithEmbeddedIV[A](plainText: String, key: String, algorithm: String, converter: Array[Byte] => A): A =
     val secretKey = generateDerivedSecretKey(key)
     val iv = generateIV
     val payload = iv.getIV ++ encrypt(plainText, secretKey, algorithm, iv)
-    encoder.encodeToString(payload)
+    converter(payload)
 
   /**
    * Decrypt cipherText with key
    * @param key
-   * @param cipherText
+   * @param base64CipherText
    * @return
    */
-  def decryptWithEmbeddedIV(cipherText: String, key: String, algorithm: String, decoder: Base64.Decoder): String =
-    val secretKey = generateDerivedSecretKey(key)
-    val cipherTextBytes = decoder.decode(cipherText)
+  def decryptWithEmbeddedIV(base64CipherText: String, key: String, algorithm: String, decoder: Base64.Decoder): String =
+    decryptWithEmbeddedIV(decoder.decode(base64CipherText), key, algorithm, bytes => new String(bytes))
+
+  def decryptWithEmbeddedIV[A](cipherTextBytes: Array[Byte], key: String, algorithm: String, converter: Array[Byte] => A): A =
     val iv = IvParameterSpec(cipherTextBytes.take(IV_LENGTH))
+    val secretKey = generateDerivedSecretKey(key)
     val bytes = decrypt(cipherTextBytes.drop(IV_LENGTH), secretKey, algorithm, iv)
-    new String(bytes)
+    converter(bytes)
 
   def encrypt(plainText: String, key: SecretKey, algorithm: String, iv: IvParameterSpec, encoder: Base64.Encoder): String =
     encoder.encodeToString(encrypt(plainText, key, algorithm, iv))
@@ -145,11 +149,11 @@ object AESUtil:
     cipher.init(Cipher.ENCRYPT_MODE, key, paramSpec)
     SealedObject(obj, cipher)
 
-  def decryptObject[T](sealedObject: SealedObject, key: SecretKey, algorithm: String, iv: IvParameterSpec): Any =
+  def decryptObject[A](sealedObject: SealedObject, key: SecretKey, algorithm: String, iv: IvParameterSpec): A =
     val cipher = Cipher.getInstance(algorithm)
     val paramSpec = getParamSpec(algorithm, iv)
     cipher.init(Cipher.DECRYPT_MODE, key, paramSpec)
-    sealedObject.getObject(cipher).asInstanceOf[T]
+    sealedObject.getObject(cipher).asInstanceOf[A]
 
   /**
    *

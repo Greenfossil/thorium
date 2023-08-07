@@ -20,6 +20,7 @@ import com.greenfossil.commons.json.Json
 import com.linecorp.armeria.common.{Cookie, CookieBuilder}
 
 import java.util.Base64
+import scala.util.{Try, Failure}
 
 /*
  * source - https://developer.mozilla.org/en-US/docs/Web/HTTP/Cookies
@@ -72,15 +73,15 @@ import java.util.Base64
  */
 object CookieUtil:
 
-  def cookieBuilder(config: CookieConfiguration, name: String, value: String): CookieBuilder =
+  def cookieBuilder(config: CookieConfigurationLike, name: String, value: String): CookieBuilder =
     val cb = Cookie.secureBuilder(name, value)
       .secure(config.secure)
       .path(config.path)
       .httpOnly(config.httpOnly)
-      .hostOnly(config.hostOnly)
+    config.hostOnly.foreach(cb.hostOnly)
     config.maxAge.foreach(dur => cb.maxAge(dur.getSeconds))
-    config.sameSite.foreach(ss => cb.sameSite(ss))
-    config.domain.foreach(d => cb.domain(d))
+    config.sameSite.foreach(cb.sameSite)
+    config.domain.foreach(cb.domain)
     cb
 
   /*
@@ -110,16 +111,17 @@ object CookieUtil:
     config.domain.foreach(d => cb.domain(d))
     cb
 
-  /**
-    *
-    * @param name
-    * @param value
-    * @return - A cookie builder, it will create secure cookie by default,
-    *         to finish creating cookie by invoking build() method
-    */
-  @deprecated("use cookieBuilder instead")
-  def builder(name: String, value: String): CookieBuilder =
-    cookieBuilder(name, value)
+  /*
+   * FlashCookie does not have hostOnly, maxAge attributes
+   */
+  def csrfCookieBuilder(config: CSRFConfiguration, token: String): CookieBuilder =
+    val cb = Cookie.secureBuilder(config.cookieName, token)
+      .secure(config.secure)
+      .path(config.path)
+      .httpOnly(config.httpOnly)
+    config.sameSite.foreach(ss => cb.sameSite(ss))
+    config.domain.foreach(d => cb.domain(d))
+    cb
 
   def cookieBuilder(name: String, value: String): CookieBuilder =
     cookieBuilder(Configuration.apply().httpConfiguration.cookieConfig, name, value)
@@ -134,8 +136,23 @@ object CookieUtil:
     cb.build()
 
   def bakeDiscardCookie(name: String)(using request: Request): Cookie =
-    cookieBuilder(request.httpConfiguration.cookieConfig, name, "")
+    bakeDiscardCookie(request.httpConfiguration.cookieConfig, name)
+    
+  def bakeDiscardCookies(cookieConfiguration: CookieConfigurationLike, cookieNames: Seq[String]): Seq[Cookie] =
+    cookieNames.map(bakeDiscardCookie(cookieConfiguration, _))
+
+  def bakeDiscardCookies(cookieConfiguration: CookieConfigurationLike, cookieNames: Seq[String], domain: String): Seq[Cookie] =
+    cookieNames.map(bakeDiscardCookie(cookieConfiguration, _, domain))
+
+  def bakeDiscardCookie(cookieConfig: CookieConfigurationLike, name: String): Cookie =
+    cookieBuilder(cookieConfig, name, "")
       .maxAge(0L)
+      .build()
+
+  def bakeDiscardCookie(cookieConfig: CookieConfigurationLike, name: String, domain: String): Cookie =
+    cookieBuilder(cookieConfig, name, "")
+      .maxAge(0L)
+      .domain(domain)
       .build()
 
   def bakeSessionCookie(session: Session)(using request: Request): Option[Cookie] =
@@ -149,3 +166,11 @@ object CookieUtil:
       flashCookieBuilder(request.httpConfiguration.flashConfig, request.httpConfiguration.secretConfig.secret, flash.data)
         .build()
     }
+
+  def decryptCookieValue(cookie: Cookie, appSecret: String): Option[Map[String, String]] = Try {
+    val cookieValue = AESUtil.decryptWithEmbeddedIV(cookie.value(), appSecret, Base64.getDecoder)
+    Json.parse(cookieValue).asOpt[Map[String, String]]
+  }.recoverWith { case e =>
+    requestLogger.trace(s"Failed to decrypt the retrieved cookie: [${cookie.name()}] -> [${cookie.value()}]", e)
+    Failure(e)
+  }.toOption.flatten  

@@ -18,7 +18,7 @@
 <configuration debug="false">
     <appender name="console" class="ch.qos.logback.core.ConsoleAppender">
         <encoder>
-            <pattern>%-5level %logger{36} - %msg%n</pattern>
+            <pattern>%-5level %logger{36} - [%thread]  - %msg%n</pattern>
         </encoder>
     </appender>
 
@@ -29,6 +29,8 @@
     <logger name="com.linecorp.armeria" level="info"/>
     <logger name="com.linecorp.armeria.common.Flags" level="off"/>
     <logger name="com.linecorp.armeria.logging" level="off"/>
+    <logger name="com.greenfossil.thorium.csrf" level="debug"/>
+    <logger name="com.greenfossil.thorium.action" level="debug"/>
 
 
 </configuration>

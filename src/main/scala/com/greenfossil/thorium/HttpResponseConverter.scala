@@ -16,6 +16,7 @@
 
 package com.greenfossil.thorium
 
+import com.greenfossil.thorium.decorators.CSRFProtectionDecoratingFunction
 import com.linecorp.armeria.common.{Cookie, HttpData, HttpHeaderNames, HttpMethod, HttpResponse, HttpStatus, MediaType, ResponseHeaders}
 import com.linecorp.armeria.common.stream.StreamMessage
 
@@ -44,12 +45,23 @@ object HttpResponseConverter:
         })
       case None => resp
 
+  private def getCSRFCookie(req: Request): Option[Cookie] =
+    val token = req.requestContext.attr(RequestAttrs.CSRFToken)
+    if token == null then None
+    else
+      val config = req.requestContext.attr(RequestAttrs.Config)
+      actionLogger.debug(s"CSRFToken added to header:${token}")
+      Option(CookieUtil
+        .csrfCookieBuilder(config.httpConfiguration.csrfConfig, token)
+        .build())
+
+
   private def getAllCookies(req: Request, actionResp: ActionResponse): Seq[Cookie] =
     val (newCookies, newSessionOpt, newFlashOpt) =
       actionResp match
         case result: Result => (result.newCookies, result.newSessionOpt, result.newFlashOpt)
         case _ => (Nil, None, None)
-    (getNewSessionCookie(req, newSessionOpt) ++ getNewFlashCookie(req, newFlashOpt)).toList ++ newCookies
+    (getNewSessionCookie(req, newSessionOpt) ++ getNewFlashCookie(req, newFlashOpt) ++  getCSRFCookie(req)).toList ++ newCookies
 
   private def responseHeader(req: Request, actionResp: ActionResponse): ResponseHeader =
     actionResp match
@@ -118,7 +130,9 @@ object HttpResponseConverter:
         case result: Result => _toHttpResponse(req, result.body).get
 
   def convertActionResponseToHttpResponse(req: com.greenfossil.thorium.Request, actionResp: ActionResponse): HttpResponse =
+    serverLogger.debug(s"Convert ActionResponse to HttpResponse. Thread:${Thread.currentThread()}")
     (for {
+      
       httpResp <- _toHttpResponse(req, actionResp)
       httpRespWithHeaders <- _addHttpResponseHeaders(req, actionResp, httpResp)
     } yield httpRespWithHeaders)
