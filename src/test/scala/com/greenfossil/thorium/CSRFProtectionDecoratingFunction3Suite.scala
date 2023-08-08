@@ -12,36 +12,53 @@ import java.time.Duration
 
 class CSRFProtectionDecoratingFunction3Suite extends munit.FunSuite:
 
-  private val postEpPath = "/csrf/multipart-file"
-  private val csrfCookieTokenName = Configuration().httpConfiguration.csrfConfig.cookieName
+  test("SameOrigin POST"):
+    doPost(origin => origin)
 
-  test("SameOrigin POST with file content") {
+  test("null Origin POST"):
+    doPost(origin => null)
+
+  test("Cross Origin POST"):
+    doPost(origin => "http://another-site")
+
+  def doPost(originFn: String => String)(using loc: munit.Location) =
     val server = Server(0)
       .addServices(CSRFServices)
       .addCSRFProtection()
-      .serverBuilderSetup(_.requestTimeout(Duration.ofHours(1)))
       .start()
     val port = server.port
+
+    val postEpPath = "/csrf/multipart-file"
+    val csrfCookieTokenName = Configuration().httpConfiguration.csrfConfig.cookieName
     val target = s"http://localhost:${port}"
     val client = WebClient.of(target)
+
     //Get the CSRFToken cookie
     val csrfCookie = CSRFProtectionDecoratingFunction.generateCSRFTokenCookie(Configuration(), Some("ABC"))
+
+    //Create 3 parts, formPart, csrfPart and filePart
     val formPart = BodyPart.of(ContentDisposition.of("form-data", "name"), "Homer")
     val csrfPart = BodyPart.of(ContentDisposition.of("form-data", csrfCookieTokenName), csrfCookie.value())
     val filePath = Files.write(Paths.get("/tmp/file.txt"), "Hello world".getBytes(StandardCharsets.UTF_8))
     val filePart = BodyPart.of(ContentDisposition.of("form-data", "file", "file.txt"), StreamMessage.of(filePath))
+
+    //Create multipart request
     val multipart = Multipart.of(csrfPart, formPart, filePart)
     val multipartRequest = multipart.toHttpRequest(postEpPath)
 
-    val csrfMultipartRequest = multipartRequest.mapHeaders( headers => headers.toBuilder.cookies(csrfCookie).set("Origin", target).build())
-    val reqOpts = RequestOptions.builder()
-      .responseTimeout(Duration.ofHours(1))
-      .build()
+    //Set Origin
+    val csrfMultipartRequest =
+      multipartRequest.mapHeaders{headers =>
+        val headersBuilder = headers.toBuilder
+        headersBuilder.cookies(csrfCookie)
+        Option(originFn(target)).map(target => headersBuilder.set("Origin", target))
+        headersBuilder.build()
+      }
+
+    //Set response time
+    val reqOpts = RequestOptions.builder().responseTimeout(Duration.ofHours(1)).build()
     val postResp = client.execute(csrfMultipartRequest, reqOpts).aggregate().join()
-    println(s"postResp.status() = ${postResp.status()}")
-    println(s"postResp.contentUtf8() = ${postResp.contentUtf8()}")
     assertNoDiff(postResp.status().codeAsText(), "200")
     assertNoDiff(postResp.contentUtf8(), s"Received multipart request with files: 1, form:FormUrlEndcoded(Map(name -> List(Homer), APP_CSRF_TOKEN -> List(${csrfCookie.value()})))")
-    server.stop()
-  }
 
+    server.stop()

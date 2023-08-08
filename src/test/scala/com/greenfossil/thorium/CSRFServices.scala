@@ -54,7 +54,6 @@ object CSRFServices:
   @Post("/csrf/email/change")
   @RequestTimeout(1, TimeUnit.HOURS)
   def changePassword = Action { request =>
-        val form = request.asFormUrlEncoded
         "Password Changed"
   }
 

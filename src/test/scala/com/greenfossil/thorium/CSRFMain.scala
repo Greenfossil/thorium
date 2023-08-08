@@ -16,14 +16,12 @@
 
 package com.greenfossil.thorium
 
-import com.greenfossil.thorium.decorators.CSRFProtectionDecoratingFunction
-
 import java.time.Duration
 
 object CSRFMain:
 
   @main
-  def csrfMain =
+  def main =
     val server = Server(8080)
       .addServices(CSRFServices)
       .addCSRFProtection()

@@ -53,7 +53,7 @@ trait EssentialAction extends HttpService :
     svcRequestContext
       .request()
       .aggregate()
-      .thenApply { aggregateRequest =>
+      .thenAccept { aggregateRequest =>
         actionLogger.debug("Setting up blockingTaskExecutor()")
         svcRequestContext.blockingTaskExecutor().execute(() => {
           //Invoke EssentialAction

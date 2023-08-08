@@ -9,88 +9,54 @@ import java.time.Duration
 
 class CSRFProtectionDecoratingFunction2Suite extends munit.FunSuite:
 
-  private val postEpPath = "/csrf/email/change"
-  private val csrfCookieTokenName = Configuration().httpConfiguration.csrfConfig.cookieName
+  test("SameOrigin POST /csrf/email/change"):
+    doPost(target => target)
 
-  test("SameOrigin POST /csrf/email/change") {
+
+  test("Null Origin POST /csrf/email/change"):
+    doPost(target => null)
+
+
+  test("CrossOrigin POST /csrf/email/change"):
+    doPost(target => "http://another-site")
+
+  private def doPost(originFn: String => String)(using loc:munit.Location) =
     val server = Server(0)
       .addServices(CSRFServices)
-      .addCSRFProtection()
+      .serverBuilderSetup(sb => {
+        sb.routeDecorator()
+          .pathPrefix("/")
+          .build(CSRFProtectionDecoratingFunction())
+      })
       .start()
+    
+    val postEpPath = "/csrf/email/change"
+    val csrfCookieTokenName = Configuration().httpConfiguration.csrfConfig.cookieName
     val target = s"http://localhost:${server.port}"
     val client = WebClient.of(target)
     val csrfCookie = CSRFProtectionDecoratingFunction.generateCSRFTokenCookie(Configuration(), Some("ABC"))
     val content = s"email=password&${csrfCookieTokenName}=${URLEncoder.encode(csrfCookie.value(), "UTF-8")}"
-    println(s"content = ${content}")
-    val headers = RequestHeaders.builder(HttpMethod.POST, postEpPath)
+    
+    //Set up headers
+    val headersBuilder = RequestHeaders.builder(HttpMethod.POST, postEpPath)
       .contentType(MediaType.FORM_DATA)
       .contentLength(content.length)
       .cookies(csrfCookie)
-      .set("Origin", target)
-      .build()
+    
+    //Set origin
+    Option(originFn(target)).map(target => headersBuilder.set("Origin", target))
+    
+    //Build headers
+    val headers = headersBuilder.build()
+    
+    //Build request
     val request = HttpRequest.of(headers, HttpData.ofUtf8(content))
-    val reqOpts = RequestOptions.builder()
-      .responseTimeout(Duration.ofHours(1))
-      .build()
+    
+    //Set response timeout
+    val reqOpts = RequestOptions.builder().responseTimeout(Duration.ofHours(1)).build()
+    
     val postResp = client.execute(request, reqOpts).aggregate().join()
     assertNoDiff(postResp.status().codeAsText(), "200")
     assertNoDiff(postResp.contentUtf8(), "Password Changed")
+    
     server.stop()
-  }
-
-  test("Null Origin POST /csrf/email/change") {
-    val server = Server(0)
-      .addServices(CSRFServices)
-      .serverBuilderSetup(sb => {
-        sb.routeDecorator()
-          .pathPrefix("/")
-          .build(CSRFProtectionDecoratingFunction())
-      })
-      .start()
-
-    val client = WebClient.of(s"http://localhost:${server.port}")
-    val csrfCookie = CSRFProtectionDecoratingFunction.generateCSRFTokenCookie(Configuration(), Some("ABC"))
-    val content = s"email=password&${csrfCookieTokenName}=${URLEncoder.encode(csrfCookie.value(), "UTF-8")}"
-    val headers = RequestHeaders.builder(HttpMethod.POST, postEpPath)
-      .contentType(MediaType.FORM_DATA)
-      .contentLength(content.length)
-      .cookies(csrfCookie)
-      .build()
-    val request = HttpRequest.of(headers, HttpData.ofUtf8(content))
-    val reqOpts = RequestOptions.builder()
-      .responseTimeout(Duration.ofHours(1))
-      .build()
-    val postResp = client.execute(request, reqOpts).aggregate().join()
-    assertNoDiff(postResp.status().codeAsText(), "200")
-    assertNoDiff(postResp.contentUtf8(), "Password Changed")
-    server.stop()
-  }
-
-  test("CrossOrigin POST /csrf/email/change") {
-    val server = Server(0)
-      .addServices(CSRFServices)
-      .serverBuilderSetup(sb => {
-        sb.routeDecorator()
-          .pathPrefix("/")
-          .build(CSRFProtectionDecoratingFunction())
-      })
-      .start()
-    val client = WebClient.of(s"http://localhost:${server.port}")
-    val csrfCookie = CSRFProtectionDecoratingFunction.generateCSRFTokenCookie(Configuration(), Some("ABC"))
-    val content = s"email=password&${csrfCookieTokenName}=${URLEncoder.encode(csrfCookie.value(), "UTF-8")}"
-    println(s"content = ${content}")
-    val headers = RequestHeaders.builder(HttpMethod.POST, postEpPath)
-      .contentType(MediaType.FORM_DATA)
-      .contentLength(content.length)
-      .cookies(csrfCookie)
-      .set("Origin", "http://another-site")
-      .build()
-    val request = HttpRequest.of(headers, HttpData.ofUtf8(content))
-    val reqOpts = RequestOptions.builder()
-      .responseTimeout(Duration.ofHours(1))
-      .build()
-    val postResp = client.execute(request, reqOpts).aggregate().join()
-    assertNoDiff(postResp.status().codeAsText(), "200")
-    assertNoDiff(postResp.contentUtf8(), "Password Changed")
-    server.stop()
-  }

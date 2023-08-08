@@ -16,7 +16,6 @@
 
 package com.greenfossil.thorium
 
-import com.greenfossil.thorium.decorators.CSRFProtectionDecoratingFunction
 import com.linecorp.armeria.common.{Cookie, HttpData, HttpHeaderNames, HttpMethod, HttpResponse, HttpStatus, MediaType, ResponseHeaders}
 import com.linecorp.armeria.common.stream.StreamMessage
 

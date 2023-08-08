@@ -3,11 +3,10 @@ package com.greenfossil.thorium.decorators
 import com.greenfossil.thorium
 import com.greenfossil.thorium.HMACUtil.*
 import com.greenfossil.thorium.{CookieUtil, *}
-import com.linecorp.armeria.common.multipart.{BodyPart, Multipart}
+import com.linecorp.armeria.common.multipart.Multipart
 import com.linecorp.armeria.common.{Request as _, *}
 import com.linecorp.armeria.server.{DecoratingHttpServiceFunction, HttpService, ServiceRequestContext}
 import org.slf4j.LoggerFactory
-import reactor.core.publisher.{Flux, Mono}
 
 import java.util.Base64
 import java.util.concurrent.CompletableFuture
@@ -38,11 +37,11 @@ object CSRFProtectionDecoratingFunction:
       (MediaType.HTML_UTF_8, csrfResponseHtml(ctx, origin))
 
   //Methods that does not need a token, HEAD, OPTIONS, TRACE
-  private val VerificationRequiredMethods = List("OPTIONS", "POST", "PUT", "DELETE", "PATCH")
+  private val verificationRequiredMethods = List("POST", "PUT", "DELETE", "PATCH")
 
-  val defaultToVerifyMethodFn = (method: String) => VerificationRequiredMethods.contains(method)
+  val defaultToVerifyMethodFn = (method: String) => verificationRequiredMethods.contains(method)
 
-  val defaultIgnoreRequestFn: ServiceRequestContext => Boolean =
+  val defaultIgnoreRequestFn: ServiceRequestContext => Boolean = //TODO - to externalize to config
     _.request().path().startsWith("/assets")
 
   def apply(): CSRFProtectionDecoratingFunction =
@@ -51,7 +50,7 @@ object CSRFProtectionDecoratingFunction:
   def apply(allowOriginFn: (String, ServiceRequestContext) => Boolean): CSRFProtectionDecoratingFunction =
     new CSRFProtectionDecoratingFunction(
       allowOriginFn = allowOriginFn,
-      verifyMethodFn = defaultToVerifyMethodFn,
+      verifyModMethodFn = defaultToVerifyMethodFn,
       blockCSRFResponseFn = defaultUnauthorizedResponse,
       ignoreLocalRequestFn =  defaultIgnoreRequestFn
     )
@@ -113,11 +112,11 @@ end CSRFProtectionDecoratingFunction
 /**
  *
  * @param allowOriginFn - (Origin, ServiceRequestContext) => Boolean
- * @param verifyMethodFn - Method that will be subjected to CSRF verification
+ * @param verifyModMethodFn - Method that will be subjected to CSRF verification
  * @param blockCSRFResponseFn - (ServiceRequestContext, Origin, isTokenMatched, isHMACVerified)
  */
 class CSRFProtectionDecoratingFunction(allowOriginFn: (String, ServiceRequestContext) => Boolean,
-                                       verifyMethodFn: String => Boolean,
+                                       verifyModMethodFn: String => Boolean,
                                        blockCSRFResponseFn: (ServiceRequestContext, String, Boolean, Boolean) => (MediaType, String),
                                        ignoreLocalRequestFn: ServiceRequestContext => Boolean
                             ) extends DecoratingHttpServiceFunction:
@@ -126,7 +125,9 @@ class CSRFProtectionDecoratingFunction(allowOriginFn: (String, ServiceRequestCon
 
   private def unauthorizedResponse(config: Configuration, contentType: MediaType, content: String): HttpResponse =
     //Remove session and assume it is a CSRF attack
-    val discardCookieNames = List(config.httpConfiguration.sessionConfig.cookieName, config.httpConfiguration.csrfConfig.cookieName)
+    import config.httpConfiguration.*
+
+    val discardCookieNames = List(sessionConfig.cookieName, csrfConfig.cookieName, flashConfig.cookieName, "tz")
     csrfLogger.debug(s"""Discard cookies:${discardCookieNames.mkString("[",",","]")}""")
     val headers =
       ResponseHeaders.builder(HttpStatus.UNAUTHORIZED)
@@ -150,10 +151,13 @@ class CSRFProtectionDecoratingFunction(allowOriginFn: (String, ServiceRequestCon
     val mediaType = ctx.request().contentType()
     val futureResp = new CompletableFuture[String]()
     csrfLogger.debug(s"Find CSRFToken from request - content-type:${ctx.request().contentType()}")
-    if mediaType.is(MediaType.FORM_DATA) then {
+    if mediaType == null then
+      csrfLogger.warn("Null media type assume not token")
+      futureResp.complete(null)
+    else if mediaType.is(MediaType.FORM_DATA) then
       ctx.request()
         .aggregate()
-        .thenApply: aggReq =>
+        .thenAccept: aggReq =>
           ctx.blockingTaskExecutor().execute(() => {
             aggReq.contentUtf8()
             val form = FormUrlEncodedParser.parse(aggReq.contentUtf8())
@@ -161,62 +165,68 @@ class CSRFProtectionDecoratingFunction(allowOriginFn: (String, ServiceRequestCon
             csrfLogger.debug(s"Found CSRFToken:${csrfToken} for contentType:${mediaType}.")
             futureResp.complete(csrfToken)
           })
-    } else if mediaType.isMultipart then {
-      Multipart.from(ctx.request())
+    else if mediaType.isMultipart then
+      ctx.request()
         .aggregate()
-        .thenApplyAsync: multipart =>
-          val partOpt = multipart.bodyParts().parallelStream().filter(part => part.name() == csrfCookieName).findFirst()
-          futureResp.complete(partOpt.map(_.contentUtf8()).orElse(null))
-    } else {
+        .thenAccept: aggReg =>
+          Multipart.from(aggReg.toHttpRequest.toDuplicator.duplicate())
+            .aggregate()
+            .thenAccept: multipart =>
+              val part = multipart.field(csrfCookieName)
+              futureResp.complete(part.contentUtf8())
+    else {
       csrfLogger.debug(s"Find CSRFToken found unsupported for contentType:${mediaType}.")
       futureResp.complete(null)
     }
     futureResp
 
   override def serve(delegate: HttpService, ctx: ServiceRequestContext, req: HttpRequest): HttpResponse =
+    csrfLogger.debug("CSRF Protection enabled.")
     val headers = req.headers()
-    val target = req.uri().getScheme + "://" + req.uri().getAuthority
     val origin = headers.get(HttpHeaderNames.ORIGIN)
     val referer = headers.get(HttpHeaderNames.REFERER)
+    val target = req.uri().getScheme + "://" + req.uri().getAuthority
     val isSameOrigin = target == origin
     val allowOrigin = allowOriginFn(origin, ctx)
-    if ignoreLocalRequestFn(ctx) then
-      csrfLogger.debug(s"CSRF Protection: request ignored - method:${req.method()}, uri:${req.uri()}, Origin: $origin, isSameOrigin:$isSameOrigin, allowOrigin:$allowOrigin, referer:$referer")
+    val nonModMethods = !verifyModMethodFn(ctx.method().name()) //Methods POST, PUT,PATCH and DELETE are mod methods
+    if ignoreLocalRequestFn(ctx) || nonModMethods then
+      csrfLogger.debug(s"Request ignored - method:${req.method()}, uri:${req.uri()}, Origin: $origin, isSameOrigin:$isSameOrigin, allowOrigin:$allowOrigin, referer:$referer")
       delegate.serve(ctx, req)
     else
       val config = ctx.attr(RequestAttrs.Config)
-      csrfLogger.debug(s"CSRF Protection: method:${req.method()}, uri:${req.uri()}, Origin: $origin, isSameOrigin:$isSameOrigin, allowOrigin:$allowOrigin")
+      csrfLogger.debug(s"Request to verify - method:${req.method()}, uri:${req.uri()}, Origin: $origin, isSameOrigin:$isSameOrigin, allowOrigin:$allowOrigin, referer:$referer")
 
-      //CrossOrgin validation
-      if !verifyMethodFn(ctx.method().name())
-      then forwardRequest(delegate, ctx, req)
-      else
-        val futureResp = new CompletableFuture[HttpResponse]()
-        findCSRFToken(ctx)
-          .thenApply: formCSRFToken =>
-            ctx.blockingTaskExecutor().execute(() => {
-              val cookieCSRFToken: String = headers.cookies().stream().filter(config.httpConfiguration.csrfConfig.cookieName == _.name()).findFirst()
-                .map(_.value()).orElse(null)
-              val isTokenMatched = formCSRFToken != null && formCSRFToken == cookieCSRFToken
-              csrfLogger.debug(s"CSRFToken match status: ${isTokenMatched}\nFormCSRFToken  :$formCSRFToken\nCookieCSRFToken:$cookieCSRFToken")
-              //HMAC is verified only when  isTokenMatched is true
-              val appSecret = config.httpConfiguration.secretConfig.secret
-              val isHMACVerified = isTokenMatched && verifyHmac(cookieCSRFToken, appSecret, config.httpConfiguration.csrfConfig.jwt.signatureAlgorithm)
-              csrfLogger.debug(s"isTokenMatched:$isTokenMatched, isHhmacVerified:$isHMACVerified")
-              val resp = if isHMACVerified
-              then
-                csrfLogger.debug(s"CSRFToken is verified, forward request to delegate.")
-                forwardRequest(delegate, ctx, req, true)
-              else if isSameOrigin || allowOrigin
-              then
-                //Do not enforce CSRF protection sameOrigin
-                csrfLogger.warn(s"CSRF verification fails but request will be forwarded since either conditions is true, SameOrigin:${isSameOrigin}, allowOrigin:${allowOrigin}.\nFormToken:${formCSRFToken}\nCookieToken:${cookieCSRFToken}")
-                forwardRequest(delegate, ctx, req)
-              else
-                csrfLogger.warn(s"Cross Origin request blocked, Origin: $origin, isSameOrigin:$isSameOrigin, allowOrigin:$allowOrigin, method:${req.method()}, uri:${req.uri()}")
-                val (mediaType, content) = blockCSRFResponseFn(ctx, origin, isTokenMatched, isHMACVerified)
-                unauthorizedResponse(config, mediaType, content)
-              futureResp.complete(resp)
-            })
-        HttpResponse.from(futureResp)
+      val cookies = headers.cookies()
+      csrfLogger.debug(s"Cookies found:${cookies.size()}")
+      if csrfLogger.isDebugEnabled then cookies.forEach(cookie => csrfLogger.debug(s"Cookie ${cookie}"))
+
+      //CrossOrigin validation
+      val futureResp = new CompletableFuture[HttpResponse]()
+      findCSRFToken(ctx)
+        .thenAccept: formCSRFToken =>
+          ctx.blockingTaskExecutor().execute(() => {
+            val cookieCSRFToken: String = headers.cookies().stream().filter(config.httpConfiguration.csrfConfig.cookieName == _.name()).findFirst()
+              .map(_.value()).orElse(null)
+            val isTokenMatched = formCSRFToken != null && formCSRFToken == cookieCSRFToken
+            csrfLogger.debug(s"CSRFToken match status: ${isTokenMatched}\nFormCSRFToken  :$formCSRFToken\nCookieCSRFToken:$cookieCSRFToken")
+            //HMAC is verified only when isTokenMatched is true
+            val appSecret = config.httpConfiguration.secretConfig.secret
+            val isHMACVerified = isTokenMatched && verifyHmac(cookieCSRFToken, appSecret, config.httpConfiguration.csrfConfig.jwt.signatureAlgorithm)
+            csrfLogger.debug(s"isTokenMatched:$isTokenMatched, isHhmacVerified:$isHMACVerified")
+            val resp = if isHMACVerified
+            then
+              csrfLogger.debug(s"CSRFToken is verified, forward request to delegate.")
+              forwardRequest(delegate, ctx, req, true)
+            else if isSameOrigin || allowOrigin
+            then
+              //Do not enforce CSRF protection sameOrigin
+              csrfLogger.warn(s"CSRF verification fails but request will be forwarded since either conditions is true, SameOrigin:${isSameOrigin}, allowOrigin:${allowOrigin}.\nFormToken:${formCSRFToken}\nCookieToken:${cookieCSRFToken}")
+              forwardRequest(delegate, ctx, req)
+            else
+              csrfLogger.warn(s"Cross Origin request blocked, Origin: $origin, isSameOrigin:$isSameOrigin, allowOrigin:$allowOrigin, method:${req.method()}, uri:${req.uri()}")
+              val (mediaType, content) = blockCSRFResponseFn(ctx, origin, isTokenMatched, isHMACVerified)
+              unauthorizedResponse(config, mediaType, content)
+            futureResp.complete(resp)
+          })
+      HttpResponse.from(futureResp)
 

@@ -49,10 +49,8 @@ class Request1Suite extends munit.FunSuite{
         else BadRequest("Did not receive the right text")
       })
       .addHttpService("/multipart-form", Action { req =>
-        val method = req.method
         req.asMultipartFormData(mpForm => {
           val form = mpForm.asFormUrlEncoded
-          val files = mpForm.files
           if form.nonEmpty then Ok("Received Text")
           else BadRequest("Did not receive the right text")
         })
