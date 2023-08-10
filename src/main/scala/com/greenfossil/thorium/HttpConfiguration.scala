@@ -25,6 +25,7 @@ import java.time
 import java.time.Duration
 import java.util.Base64
 import scala.util.*
+import scala.jdk.CollectionConverters.*
 
 type SameSiteCookie = "Strict" | "Lax" | "None"
 
@@ -71,6 +72,7 @@ val APP_HTTP_CSRF__DOMAIN = "app.http.csrf.domain"
 val APP_HTTP_CSRF__PATH = "app.http.csrf.path"
 val APP_HTTP_CSRF__SAME_SITE = "app.http.csrf.sameSite"
 val APP_HTTP_CSRF__JWT = "app.http.csrf.jwt"
+val APP_HTTP_CSRF__ALLOW_PATH_PREFIXES = "app.http.csrf.allowPathPrefixes"
 
 object HttpConfiguration:
   def from(config: Config, environment: Environment): HttpConfiguration = 
@@ -116,7 +118,8 @@ object HttpConfiguration:
         domain = config.getStringOpt(APP_HTTP_CSRF__DOMAIN),
         path = config.getString(APP_HTTP_CSRF__PATH),
         sameSite = config.getStringOpt(APP_HTTP_CSRF__SAME_SITE).map(_.asInstanceOf[SameSiteCookie]),
-        jwt = JWTConfigurationParser(config, APP_HTTP_CSRF__JWT)
+        jwt = JWTConfigurationParser(config, APP_HTTP_CSRF__JWT),
+        allowPathPrefixes = config.getStringList(APP_HTTP_CSRF__ALLOW_PATH_PREFIXES).asScala.toSeq
       ),
       secretConfig = getSecretConfiguration(config, environment),
       environment = environment
@@ -242,15 +245,16 @@ case class FlashConfiguration(
  * @param jwt        The JWT specific information
  */
 case class CSRFConfiguration(
-  cookieName: String = "APP_CSRF_TOKEN",
-  secure: Boolean = false,
-  maxAge: Option[Duration] = None,
-  httpOnly: Boolean = true,
-  domain: Option[String] = None,
-  path: String = "/",
-  sameSite: Option[SameSiteCookie] = Some("Strict"),
-  hostOnly: Option[Boolean] = None,
-  jwt: JWTConfiguration = JWTConfiguration()
+                              cookieName: String = "APP_CSRF_TOKEN",
+                              secure: Boolean = false,
+                              maxAge: Option[Duration] = None,
+                              httpOnly: Boolean = true,
+                              domain: Option[String] = None,
+                              path: String = "/",
+                              sameSite: Option[SameSiteCookie] = Some("Strict"),
+                              hostOnly: Option[Boolean] = None,
+                              jwt: JWTConfiguration = JWTConfiguration(),
+                              allowPathPrefixes: Seq[String] = Nil
 ) extends CookieConfigurationLike
 
 /**

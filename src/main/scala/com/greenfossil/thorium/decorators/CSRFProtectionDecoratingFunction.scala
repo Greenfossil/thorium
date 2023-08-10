@@ -41,18 +41,14 @@ object CSRFProtectionDecoratingFunction:
 
   val defaultToVerifyMethodFn = (method: String) => verificationRequiredMethods.contains(method)
 
-  val defaultIgnoreRequestFn: ServiceRequestContext => Boolean = //TODO - to externalize to config
-    _.request().path().startsWith("/assets")
-
   def apply(): CSRFProtectionDecoratingFunction =
-    new CSRFProtectionDecoratingFunction((_, _) => false, defaultToVerifyMethodFn, defaultUnauthorizedResponse,  defaultIgnoreRequestFn)
+    new CSRFProtectionDecoratingFunction((_, _) => false, defaultToVerifyMethodFn, defaultUnauthorizedResponse)
 
   def apply(allowOriginFn: (String, ServiceRequestContext) => Boolean): CSRFProtectionDecoratingFunction =
     new CSRFProtectionDecoratingFunction(
       allowOriginFn = allowOriginFn,
       verifyModMethodFn = defaultToVerifyMethodFn,
       blockCSRFResponseFn = defaultUnauthorizedResponse,
-      ignoreLocalRequestFn =  defaultIgnoreRequestFn
     )
 
   def generateCSRFTokenCookie(configuration: Configuration, sessionIdOpt: Option[String]): Cookie =
@@ -118,7 +114,6 @@ end CSRFProtectionDecoratingFunction
 class CSRFProtectionDecoratingFunction(allowOriginFn: (String, ServiceRequestContext) => Boolean,
                                        verifyModMethodFn: String => Boolean,
                                        blockCSRFResponseFn: (ServiceRequestContext, String, Boolean, Boolean) => (MediaType, String),
-                                       ignoreLocalRequestFn: ServiceRequestContext => Boolean
                             ) extends DecoratingHttpServiceFunction:
 
   import CSRFProtectionDecoratingFunction.*
@@ -180,21 +175,30 @@ class CSRFProtectionDecoratingFunction(allowOriginFn: (String, ServiceRequestCon
     }
     futureResp
 
+  private def allPathPrefixes(ctx: ServiceRequestContext): Boolean =
+    val requestPath = ctx.request().path()
+    val allowPathPrefixes = ctx.attr(RequestAttrs.Config).httpConfiguration.csrfConfig.allowPathPrefixes
+    allowPathPrefixes.exists(prefix => requestPath.startsWith(prefix))
+
   override def serve(delegate: HttpService, ctx: ServiceRequestContext, req: HttpRequest): HttpResponse =
     csrfLogger.debug("CSRF Protection enabled.")
     val headers = req.headers()
     val origin = headers.get(HttpHeaderNames.ORIGIN)
     val referer = headers.get(HttpHeaderNames.REFERER)
-    val target = req.uri().getScheme + "://" + req.uri().getAuthority
-    val isSameOrigin = target == origin
+    val isSameTarget = origin != null && origin.startsWith(req.uri().getScheme) && origin.endsWith(req.uri().getAuthority)
+    val isSameOrigin =  "same-origin" == headers.get(HttpHeaderNames.SEC_FETCH_SITE) || isSameTarget
     val allowOrigin = allowOriginFn(origin, ctx)
     val nonModMethods = !verifyModMethodFn(ctx.method().name()) //Methods POST, PUT,PATCH and DELETE are mod methods
-    if ignoreLocalRequestFn(ctx) || nonModMethods then
+    val isAssetPath = ctx.request().path().startsWith("/assets") && HttpMethod.GET == ctx.method()
+    if  isAssetPath || nonModMethods || (allPathPrefixes(ctx)  && isSameOrigin) then
       csrfLogger.debug(s"Request ignored - method:${req.method()}, uri:${req.uri()}, Origin: $origin, isSameOrigin:$isSameOrigin, allowOrigin:$allowOrigin, referer:$referer")
       delegate.serve(ctx, req)
     else
       val config = ctx.attr(RequestAttrs.Config)
       csrfLogger.debug(s"Request to verify - method:${req.method()}, uri:${req.uri()}, Origin: $origin, isSameOrigin:$isSameOrigin, allowOrigin:$allowOrigin, referer:$referer")
+
+      if csrfLogger.isTraceEnabled then
+        headers.forEach((key, value) => csrfLogger.trace(s"Header:$key - value:$value"))
 
       val cookies = headers.cookies()
       csrfLogger.debug(s"Cookies found:${cookies.size()}")

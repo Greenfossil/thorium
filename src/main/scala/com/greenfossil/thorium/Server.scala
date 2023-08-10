@@ -152,9 +152,8 @@ case class Server(server: AServer,
     
   def addCSRFProtection(allowOriginFn: (String, ServiceRequestContext) => Boolean,
                         verifyMethodFn: String => Boolean,
-                        blockCSRFResponseFn: (ServiceRequestContext, String, Boolean, Boolean) => (MediaType, String),
-                        ignoreLocalRequestFn: ServiceRequestContext => Boolean): Server =
-    val csrfProtectionDecoratingFunction = new CSRFProtectionDecoratingFunction(allowOriginFn, verifyMethodFn, blockCSRFResponseFn, ignoreLocalRequestFn)
+                        blockCSRFResponseFn: (ServiceRequestContext, String, Boolean, Boolean) => (MediaType, String)): Server =
+    val csrfProtectionDecoratingFunction = new CSRFProtectionDecoratingFunction(allowOriginFn, verifyMethodFn, blockCSRFResponseFn)
     addCSRFProtection(csrfProtectionDecoratingFunction)
 
   def addCSRFProtection(CSRFProtectionDecoratingFunction: CSRFProtectionDecoratingFunction): Server =

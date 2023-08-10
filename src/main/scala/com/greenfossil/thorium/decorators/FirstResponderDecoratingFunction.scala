@@ -18,13 +18,12 @@ class FirstResponderDecoratingFunction(val configuration: Configuration,
                                        val ignoreRequestFn: ServiceRequestContext => Boolean = _.request().uri().getPath.startsWith("/assets")
                                       ) extends DecoratingHttpServiceFunction:
   override def serve(delegate: HttpService, ctx: ServiceRequestContext, req: HttpRequest): HttpResponse =
+    //Setup Session
+    ctx.setAttr(RequestAttrs.Config, configuration)
     if ignoreRequestFn(ctx) then
       serverLogger.trace(s"FirstResponder, ignore request, method:${req.method()} request.uri:${req.uri()}. Thread:${Thread.currentThread()}")
       delegate.serve(ctx, req)
     else
-      //Setup Session
-      ctx.setAttr(RequestAttrs.Config, configuration)
-
       val cookies: Set[Cookie] =
         import scala.jdk.CollectionConverters.*
         ctx.request().headers().cookies().asScala.toSet
