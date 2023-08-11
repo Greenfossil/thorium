@@ -21,7 +21,7 @@ class FirstResponderDecoratingFunction(val configuration: Configuration,
     //Setup Session
     ctx.setAttr(RequestAttrs.Config, configuration)
     if ignoreRequestFn(ctx) then
-      serverLogger.trace(s"FirstResponder, ignore request, method:${req.method()} request.uri:${req.uri()}. Thread:${Thread.currentThread()}")
+      serverLogger.trace(s"FirstResponder: ignore request and injected Configuration - method:${req.method()} request.uri:${req.uri()}.")
       delegate.serve(ctx, req)
     else
       val cookies: Set[Cookie] =
@@ -46,10 +46,7 @@ class FirstResponderDecoratingFunction(val configuration: Configuration,
       }.getOrElse(Flash())
       ctx.setAttr(RequestAttrs.Flash, flash)
 
-      serverLogger.debug(s"FirstResponder, inject Configuration and extracted Cookies, \nTZ: $tz, \nCookie Session: $session, \nFlash: $flash.\nInvoking delegate.serve method: ${req.method()} request.uri:${req.uri()}. Thread:${Thread.currentThread()}")
+      serverLogger.debug(s"FirstResponder: injected Configuration and extracted Cookies - method:${req.method()} request.uri:${req.uri()}\nTZ: $tz\nSession:$session\nFlash:$flash")
 
       //Invoke delegate
       delegate.serve(ctx, req)
-
-
-

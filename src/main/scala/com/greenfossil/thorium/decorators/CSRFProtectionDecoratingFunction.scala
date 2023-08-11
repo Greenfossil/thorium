@@ -228,6 +228,7 @@ class CSRFProtectionDecoratingFunction(allowOriginFn: (String, ServiceRequestCon
               forwardRequest(delegate, ctx, req)
             else
               csrfLogger.warn(s"Cross Origin request blocked, Origin: $origin, isSameOrigin:$isSameOrigin, allowOrigin:$allowOrigin, method:${req.method()}, uri:${req.uri()}")
+              req.headers().forEach((key, value) => csrfLogger.warn(s"Header:$key value:$value"))
               val (mediaType, content) = blockCSRFResponseFn(ctx, origin, isTokenMatched, isHMACVerified)
               unauthorizedResponse(config, mediaType, content)
             futureResp.complete(resp)

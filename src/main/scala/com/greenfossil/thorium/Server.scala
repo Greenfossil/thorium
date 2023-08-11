@@ -293,13 +293,15 @@ case class Server(server: AServer,
     val newServer = buildServer(sessionProtocols*)
     Runtime.getRuntime.addShutdownHook(Thread(
       () => {
+        serverLogger.info("Stopping server...")
         newServer.stop().join
         serverLogger.info("Server stopped.")
       }
     ))
     println(banner)
-    serverLogger.info(s"Starting Server.")
+    serverLogger.info(s"Starting Server...")
     newServer.start().join()
+    serverLogger.info("Server started.")
     copy(server = newServer)
 
   def startSecure(sessionProtocols: SessionProtocol*): Server =
@@ -311,8 +313,9 @@ case class Server(server: AServer,
       }
     ))
     println(banner)
-    serverLogger.info(s"Starting Server.")
+    serverLogger.info(s"Starting Server...")
     newSecureServer.start().join()
+    serverLogger.info("Server started.")
     copy(server = newSecureServer)
 
   def stop(): Future[Unit] =
