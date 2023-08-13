@@ -168,16 +168,16 @@ trait Request(val requestContext: ServiceRequestContext,
   //MultiPart
   import com.linecorp.armeria.common.multipart.Multipart
   private def asMultipartFormData: CompletableFuture[MultipartFormData] =
-    actionLogger.debug(s"Processing private asMultipartFormData, ${Thread.currentThread()}")
+    actionLogger.debug(s"Processing private asMultipartFormData.")
     Multipart.from(aggregatedHttpRequest.toHttpRequest)
       .aggregate()
       .thenApply(mp =>
-        actionLogger.debug(s"Getting Multipart Response. Thread:${Thread.currentThread()}")
+        actionLogger.debug(s"Getting Multipart Response.")
         MultipartFormData(mp, requestContext.config().multipartUploadsLocation())
       )
     
   def asMultipartFormData(fn: MultipartFormData => ActionResponse): ActionResponse =
-    actionLogger.debug(s"Processing asMultipartFormData, ${Thread.currentThread()}")
+    actionLogger.debug(s"Processing asMultipartFormData.")
     val resp = asMultipartFormData.thenApply(fn(_)).get
     actionLogger.debug(s"Return action response:$resp")
     resp

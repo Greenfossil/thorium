@@ -191,11 +191,11 @@ class CSRFProtectionDecoratingFunction(allowOriginFn: (String, ServiceRequestCon
     val nonModMethods = !verifyModMethodFn(ctx.method().name()) //Methods POST, PUT,PATCH and DELETE are mod methods
     val isAssetPath = ctx.request().path().startsWith("/assets") && HttpMethod.GET == ctx.method()
     if  isAssetPath || nonModMethods || (allPathPrefixes(ctx)  && isSameOrigin) then
-      csrfLogger.debug(s"Request ignored - method:${req.method()}, uri:${req.uri()}, Origin: $origin, isSameOrigin:$isSameOrigin, allowOrigin:$allowOrigin, referer:$referer")
+      csrfLogger.debug(s"Request ignored - isSameOrigin:$isSameOrigin, allowOrigin:$allowOrigin, method:${req.method()}, uri:${req.uri()}, Origin: $origin, referer:$referer")
       delegate.serve(ctx, req)
     else
       val config = ctx.attr(RequestAttrs.Config)
-      csrfLogger.debug(s"Request to verify - method:${req.method()}, uri:${req.uri()}, Origin: $origin, isSameOrigin:$isSameOrigin, allowOrigin:$allowOrigin, referer:$referer")
+      csrfLogger.debug(s"Request to verify - isSameOrigin:$isSameOrigin, allowOrigin:$allowOrigin, method:${req.method()}, uri:${req.uri()}, Origin: $origin, referer:$referer")
 
       if csrfLogger.isTraceEnabled then
         headers.forEach((key, value) => csrfLogger.trace(s"Header:$key - value:$value"))

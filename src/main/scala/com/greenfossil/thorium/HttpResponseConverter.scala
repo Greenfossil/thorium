@@ -49,7 +49,7 @@ object HttpResponseConverter:
     if token == null then None
     else
       val config = req.requestContext.attr(RequestAttrs.Config)
-      actionLogger.debug(s"CSRFToken added to header:${token}")
+      serverLogger.debug(s"CSRFToken added to header:${token}")
       Option(CookieUtil
         .csrfCookieBuilder(config.httpConfiguration.csrfConfig, token)
         .build())
@@ -129,7 +129,7 @@ object HttpResponseConverter:
         case result: Result => _toHttpResponse(req, result.body).get
 
   def convertActionResponseToHttpResponse(req: com.greenfossil.thorium.Request, actionResp: ActionResponse): HttpResponse =
-    serverLogger.debug(s"Convert ActionResponse to HttpResponse. Thread:${Thread.currentThread()}")
+    serverLogger.debug(s"Convert ActionResponse to HttpResponse.")
     (for {
       
       httpResp <- _toHttpResponse(req, actionResp)
@@ -137,7 +137,7 @@ object HttpResponseConverter:
     } yield httpRespWithHeaders)
       .fold(
         ex => {
-          actionLogger.error("Invoke Action error", ex)
+          serverLogger.error("Invoke Action error", ex)
           HttpResponse.ofFailure(ex) // allow exceptionHandlerFunctions and serverErrorHandler to kick in
         },
         identity

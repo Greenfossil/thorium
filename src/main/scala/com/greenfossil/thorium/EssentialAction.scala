@@ -57,31 +57,27 @@ trait EssentialAction extends HttpService :
         actionLogger.debug("Setting up blockingTaskExecutor()")
         svcRequestContext.blockingTaskExecutor().execute(() => {
           //Invoke EssentialAction
-          val ctxCl = Thread.currentThread().getContextClassLoader
-          actionLogger.debug(s"Init classloader:${ctxCl}, and creating thorium.Request")
+          var ctxCl = Thread.currentThread().getContextClassLoader
           if ctxCl == null then {
-            val cl = this.getClass.getClassLoader
-            actionLogger.debug(s"Async setContextClassloader:${cl}")
-            Thread.currentThread().setContextClassLoader(cl)
+            val ctxCl = this.getClass.getClassLoader
+            actionLogger.debug(s"Async setContextClassloader:${ctxCl}")
+            Thread.currentThread().setContextClassLoader(ctxCl)
           }
           val httpResp =
             try
               val req = new Request(svcRequestContext, aggregateRequest) {}
-              actionLogger.debug(s"Invoking EssentialAction.apply.")
+              actionLogger.debug(s"Invoke EssentialAction.apply. cl:${ctxCl}, req:${req.hashCode()}")
               val resp = apply(req)
               actionLogger.debug("Response from EssentialAction.apply")
               HttpResponseConverter.convertActionResponseToHttpResponse(req, resp)
             catch
               case t =>
-                actionLogger.debug(s"EssentialAction exception raised.", t)
+                actionLogger.debug(s"Exception raised in EssentialAction.apply.", t)
                 HttpResponse.ofFailure(t)
           futureResp.complete(httpResp)
         })
       }
-    HttpResponse.from{
-      actionLogger.debug("Waiting for future HttpResponse")
-      futureResp
-    }
+    HttpResponse.from(futureResp)
 
 end EssentialAction
 

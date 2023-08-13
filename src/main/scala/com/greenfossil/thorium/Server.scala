@@ -87,7 +87,7 @@ object Server:
             .thenApply: aggregateRequest =>
               svcRequestContext.blockingTaskExecutor().execute(() => {
                 val ctxCl = Thread.currentThread().getContextClassLoader
-                actionLogger.trace(s"Async thread:${Thread.currentThread()}, asyncCl:${ctxCl}")
+                actionLogger.trace(s"Async Cl:${ctxCl}")
                 if ctxCl == null then {
                   val cl = this.getClass.getClassLoader
                   actionLogger.trace(s"Async setContextClassloader:${cl}")
