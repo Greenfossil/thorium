@@ -18,14 +18,12 @@ package com.greenfossil.thorium
 
 import com.greenfossil.data.mapping.Mapping
 import com.linecorp.armeria.common.multipart.MultipartFile
-import com.linecorp.armeria.common.{Cookie, HttpMethod, HttpResponse, MediaType}
+import com.linecorp.armeria.common.{Cookie, HttpMethod, MediaType}
 import io.netty.util.AsciiString
 import org.overviewproject.mime_types.MimeTypeDetector
 
 import java.io.InputStream
 import java.time.ZonedDateTime
-
-given Conversion[HttpResponse, Result] = Result(_)
 
 extension (s: String)
   def withHeaders(headers: (String | AsciiString, String)*): Result =

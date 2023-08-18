@@ -16,13 +16,12 @@
 
 package com.greenfossil.thorium
 
-import com.linecorp.armeria.common.{Request as _, *}
+import com.linecorp.armeria.common.{HttpRequest, HttpResponse}
 import com.linecorp.armeria.server.{HttpService, ServiceRequestContext}
 import org.slf4j.LoggerFactory
 
 import java.io.InputStream
 import java.util.concurrent.CompletableFuture
-import scala.util.Try
 
 type ActionResponse = HttpResponse | String | Array[Byte] | InputStream | Result
 
@@ -49,31 +48,36 @@ trait EssentialAction extends HttpService :
    * @return
    */
   override def serve(svcRequestContext: ServiceRequestContext, httpRequest: HttpRequest): HttpResponse =
-    val f = new CompletableFuture[HttpResponse]()
+    actionLogger.debug(s"Processing EssentialAction.serve - method:${svcRequestContext.method()}, content-type:${httpRequest.contentType()}, uri:${svcRequestContext.uri()}")
+    val futureResp = new CompletableFuture[HttpResponse]()
     svcRequestContext
       .request()
       .aggregate()
-      .thenApply { aggregateRequest =>
+      .thenAccept { aggregateRequest =>
+        actionLogger.debug("Setting up blockingTaskExecutor()")
         svcRequestContext.blockingTaskExecutor().execute(() => {
           //Invoke EssentialAction
-          val ctxCl = Thread.currentThread().getContextClassLoader
-          actionLogger.trace(s"Async thread:${Thread.currentThread()}, asyncCl:${ctxCl}")
+          var ctxCl = Thread.currentThread().getContextClassLoader
           if ctxCl == null then {
-            val cl = this.getClass.getClassLoader
-            actionLogger.trace(s"Async setContextClassloader:${cl}")
-            Thread.currentThread().setContextClassLoader(cl)
+            val ctxCl = this.getClass.getClassLoader
+            actionLogger.debug(s"Async setContextClassloader:${ctxCl}")
+            Thread.currentThread().setContextClassLoader(ctxCl)
           }
-          val req = new Request(svcRequestContext, aggregateRequest) {}
-          Try(apply(req)).fold(
-            t =>
-              f.complete(HttpResponse.ofFailure(t)),
-            resp =>
-              f.complete(HttpResponseConverter.convertActionResponseToHttpResponse(req,resp))
-          )
-          Thread.currentThread().setContextClassLoader(ctxCl)
+          val httpResp =
+            try
+              val req = new Request(svcRequestContext, aggregateRequest) {}
+              actionLogger.debug(s"Invoke EssentialAction.apply. cl:${ctxCl}, req:${req.hashCode()}")
+              val resp = apply(req)
+              actionLogger.debug("Response from EssentialAction.apply")
+              HttpResponseConverter.convertActionResponseToHttpResponse(req, resp)
+            catch
+              case t =>
+                actionLogger.debug(s"Exception raised in EssentialAction.apply.", t)
+                HttpResponse.ofFailure(t)
+          futureResp.complete(httpResp)
         })
       }
-    HttpResponse.from(f)
+    HttpResponse.from(futureResp)
 
 end EssentialAction
 
@@ -88,6 +92,7 @@ object Action:
    * @return
    */
   def apply(fn: Request => ActionResponse): Action =
+    actionLogger.debug(s"Processing Action...")
     (request: Request) => fn(request)
 
   /**
@@ -97,6 +102,7 @@ object Action:
    * @return
    */
   def multipart(fn: MultipartRequest => ActionResponse): Action =
+    actionLogger.debug("Processing Multipart Action...")
     (request: Request) => request.asMultipartFormData { form =>
       fn(MultipartRequest(form, request.requestContext, request.aggregatedHttpRequest))
     }

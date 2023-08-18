@@ -16,7 +16,18 @@
 
 package com.greenfossil.thorium
 
+import java.time.Instant
 import scala.annotation.targetName
+
+inline val SessionID = "sessionID"
+
+object Session:
+  def apply(): Session =
+    Session(Map.empty.withDefaultValue(""), Instant.now)
+
+  def apply(data: Map[String, String]): Session =
+    Session(data.withDefaultValue(""), Instant.now)
+
 
 /**
  * 
@@ -24,8 +35,10 @@ import scala.annotation.targetName
  * Session data are encoded into an HTTP cookie, and can only contain simple String values.
  * @param data
  */
-case class Session(data: Map[String, String] = Map.empty.withDefaultValue("")):
+case class Session(data: Map[String, String], created: Instant):
   export data.{- as _, apply as  _, *}
+
+  def idOpt: Option[String] = data.get(SessionID)
 
   def apply(key: String): String = data(key)
 

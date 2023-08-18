@@ -36,7 +36,8 @@ case class MultipartFormData(aggMultipart: AggregatedMultipart, multipartUploadL
       name <- names()
       part <- aggMultipart.fields(name).asScala
       if part.contentType().is(MediaType.PLAIN_TEXT)
-    } yield (name, part.content(Option(part.contentType().charset()).getOrElse(Charset.forName("UTF-8"))))
+      content = part.content(Option(part.contentType().charset()).getOrElse(Charset.forName("UTF-8")))
+    } yield (name, content)
     FormUrlEndcoded(xs.toList.groupMap(_._1)(_._2))
 
   private def saveFileTo( part: AggregatedBodyPart): Option[File] =

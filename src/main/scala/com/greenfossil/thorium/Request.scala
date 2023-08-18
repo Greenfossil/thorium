@@ -18,27 +18,19 @@ package com.greenfossil.thorium
 
 import com.greenfossil.commons.LocaleUtil
 import com.greenfossil.commons.json.{JsValue, Json}
+import com.greenfossil.thorium.decorators.CSRFProtectionDecoratingFunction
 import com.linecorp.armeria.common.*
 import com.linecorp.armeria.server.{ProxiedAddresses, ServiceRequestContext}
 import org.slf4j.LoggerFactory
 
 import java.net.{InetAddress, InetSocketAddress}
-import java.time.ZoneId
-import java.util.{Base64, Locale}
+import java.util.Locale
 import java.util.Locale.LanguageRange
 import java.util.concurrent.CompletableFuture
 import java.util.stream.Collectors
-import scala.util.{Failure, Try}
+import scala.util.Try
 
 private[thorium] val requestLogger = LoggerFactory.getLogger("http.request")
-
-object RequestAttrs:
-  import io.netty.util.AttributeKey
-  val TZ = AttributeKey.valueOf[ZoneId]("tz")
-  val Session = AttributeKey.valueOf[Session]("session")
-  val Flash = AttributeKey.valueOf[Flash]("flash")
-  val Config = AttributeKey.valueOf[Configuration]("config")
-  val Request = AttributeKey.valueOf[Request]("request")
 
 object Request:
   
@@ -51,6 +43,23 @@ trait Request(val requestContext: ServiceRequestContext,
   import scala.jdk.CollectionConverters.*
 
   def config: Configuration = requestContext.attr(RequestAttrs.Config)
+
+  def requestTZ = requestContext.attr(RequestAttrs.TZ)
+
+  def session: Session = requestContext.attr(RequestAttrs.Session)
+
+  def flash: Flash = requestContext.attr(RequestAttrs.Flash)
+
+  def csrfTokenName: String = config.httpConfiguration.csrfConfig.cookieName
+
+  /*
+   * Create a CSRFToken, and and set attr RequestAttrs.CSRFToken
+   * Every request can have only 1 csrf-token
+   */
+  lazy val csrfToken: String =
+    val token = CSRFProtectionDecoratingFunction.generateCSRFToken(using this)
+    requestContext.setAttr(RequestAttrs.CSRFToken, token)
+    token
 
   def env: Environment = config.environment
 
@@ -121,33 +130,6 @@ trait Request(val requestContext: ServiceRequestContext,
   def findCookie(name: String): Option[Cookie] =
     cookies.find(c => c.name() == name)
 
-  /*
-   * Setup attrs
-   */
-  cookies.find(c => c.name() == RequestAttrs.TZ.name()).foreach{c =>
-    val tz = Try(ZoneId.of(c.value())).fold(
-      ex => ZoneId.systemDefault(),
-      tz => tz
-    )
-    requestContext.setAttr(RequestAttrs.TZ, tz)
-  }
-
-  private def decryptCookieValue(cookie: Cookie): Option[Map[String, String]] = Try{
-    val cookieValue = AESUtil.decryptWithEmbeddedIV(cookie.value(), httpConfiguration.secretConfig.secret, Base64.getDecoder)
-    Json.parse(cookieValue).asOpt[Map[String, String]]
-  }.recoverWith{case e =>
-    requestLogger.trace(s"Failed to decrypt the retrieved cookie: [${cookie.name()}] -> [${cookie.value()}]", e)
-    Failure(e)
-  }.toOption.flatten
-
-  lazy val session: Session = cookies.find(c => c.name() == httpConfiguration.sessionConfig.cookieName).flatMap{c =>
-    decryptCookieValue(c).map(Session(_))
-  }.getOrElse(Session())
-
-  lazy val flash: Flash = cookies.find(c => c.name() == httpConfiguration.flashConfig.cookieName).flatMap{c =>
-    decryptCookieValue(c).map(Flash(_))
-  }.getOrElse(Flash())
-
   def clientAddress: InetAddress = requestContext.clientAddress()
 
   def proxiedAddresses: ProxiedAddresses = requestContext.proxiedAddresses()
@@ -185,13 +167,20 @@ trait Request(val requestContext: ServiceRequestContext,
 
   //MultiPart
   import com.linecorp.armeria.common.multipart.Multipart
-  def asMultipartFormData: CompletableFuture[MultipartFormData] =
+  private def asMultipartFormData: CompletableFuture[MultipartFormData] =
+    actionLogger.debug(s"Processing private asMultipartFormData.")
     Multipart.from(aggregatedHttpRequest.toHttpRequest)
       .aggregate()
-      .thenApply(mp => MultipartFormData(mp, requestContext.config().multipartUploadsLocation()))
+      .thenApply(mp =>
+        actionLogger.debug(s"Getting Multipart Response.")
+        MultipartFormData(mp, requestContext.config().multipartUploadsLocation())
+      )
     
   def asMultipartFormData(fn: MultipartFormData => ActionResponse): ActionResponse =
-    asMultipartFormData.thenApply(fn(_)).get
+    actionLogger.debug(s"Processing asMultipartFormData.")
+    val resp = asMultipartFormData.thenApply(fn(_)).get
+    actionLogger.debug(s"Return action response:$resp")
+    resp
 
   //Raw Buffer - TODO - testcase needed and check for conformance
   def asRaw: HttpData = aggregatedHttpRequest.content()

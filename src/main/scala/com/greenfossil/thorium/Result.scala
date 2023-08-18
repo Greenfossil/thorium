@@ -222,7 +222,7 @@ case class Result(header: ResponseHeader,
    * @return A copy of this result with `values` added to its session scope.
    */
   def addingToSession(values: (String, String)*)(using request: Request): Result =
-    withSession(new Session(request.session.data ++ values.toMap))
+    withSession(Session(request.session.data ++ values.toMap))
 
   /**
    * Example:
@@ -234,7 +234,7 @@ case class Result(header: ResponseHeader,
    * @return A copy of this result with `keys` removed from its session scope.
    */
   def removingFromSession(keys: String*)(using request: Request): Result =
-    withSession(new Session(request.session.data -- keys))
+    withSession(Session(request.session.data -- keys))
 
   override def toString = s"Result($header)"
 

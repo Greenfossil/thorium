@@ -17,10 +17,11 @@
 package com.greenfossil.thorium
 
 import com.greenfossil.commons.json.Json
-import com.linecorp.armeria.common.{AggregatedHttpRequest, HttpHeaders, HttpResponse, ResponseHeaders, SessionProtocol}
-import com.linecorp.armeria.server.{Server as AServer, *}
+import com.greenfossil.thorium.decorators.{CSRFProtectionDecoratingFunction, FirstResponderDecoratingFunction}
+import com.linecorp.armeria.common.*
 import com.linecorp.armeria.server.annotation.{ExceptionHandlerFunction, RequestConverterFunction, ResponseConverterFunction}
 import com.linecorp.armeria.server.docs.DocService
+import com.linecorp.armeria.server.{Server as AServer, *}
 import io.netty.util.AttributeKey
 import org.slf4j.LoggerFactory
 
@@ -31,7 +32,7 @@ import java.util.concurrent.CompletableFuture
 import scala.concurrent.Future
 import scala.language.implicitConversions
 
-private[thorium] val serverLogger = LoggerFactory.getLogger("com.greenfossil.thorium.server")
+private [thorium] val serverLogger = LoggerFactory.getLogger("com.greenfossil.thorium.server")
 private [thorium] val armeriaLogger = LoggerFactory.getLogger("com.linecorp.armeria.logging.access")
 
 object Server:
@@ -47,34 +48,28 @@ object Server:
   def apply(port: Int): Server =
     Server(null, Nil, Nil, None, Configuration.usingPort(port))
 
-  private def defaultRequestConverter(configuration: Configuration, 
-                                      requestConverterAttrs: Tuple, 
+  private def defaultRequestConverter(requestConverterAttrs: Tuple,
                                       defaultRequestConverterFnOpt: Option[ServiceRequestContext => Void]): RequestConverterFunction =
     (svcRequestContext: ServiceRequestContext,
      aggHttpRequest: AggregatedHttpRequest,
      expectedResultType: Class[_],
      expectedParameterizedResultType: ParameterizedType) =>
-      //embed the env and http config
-      svcRequestContext.setAttr(RequestAttrs.Config, configuration)
       requestConverterAttrs.toList.foreach {
         case (key: AttributeKey[Any]@unchecked, value) =>
           svcRequestContext.setAttr[Any](key, value)
       }
       defaultRequestConverterFnOpt.foreach(_.apply(svcRequestContext))
-      if expectedResultType == classOf[Request]
+      if expectedResultType == classOf[com.greenfossil.thorium.Request]
       then
-        val request = new Request(svcRequestContext, aggHttpRequest) {}
+        val request = new com.greenfossil.thorium.Request(svcRequestContext, aggHttpRequest) {}
         //Create a request for use in ResponseConverter
         svcRequestContext.setAttr(RequestAttrs.Request, request)
         request
       else RequestConverterFunction.fallthrough()
 
-  private def defaultResponseConverter(configuration: Configuration, 
-                                       responseConverterAttrs: Tuple, 
+  private def defaultResponseConverter(responseConverterAttrs: Tuple,
                                        defaultResponseConverterFnOpt: Option[ServiceRequestContext => Void]): ResponseConverterFunction =
     (svcRequestContext: ServiceRequestContext, headers: ResponseHeaders, result: Any, trailers: HttpHeaders) =>
-      //embed the env and http config
-      svcRequestContext.setAttr(RequestAttrs.Config, configuration)
       responseConverterAttrs.toList.foreach {
         case (key: AttributeKey[Any]@unchecked, value) =>
           svcRequestContext.setAttr[Any](key, value)
@@ -83,27 +78,26 @@ object Server:
       result match
         case action: EssentialAction =>
           action.serve(svcRequestContext, svcRequestContext.request())
+
         case actionResp: ActionResponse =>
-          val f = new CompletableFuture[HttpResponse]()
+          val futureResp = new CompletableFuture[HttpResponse]()
           svcRequestContext
             .request()
             .aggregate()
-            .thenApply { aggregateRequest =>
+            .thenApply: aggregateRequest =>
               svcRequestContext.blockingTaskExecutor().execute(() => {
                 val ctxCl = Thread.currentThread().getContextClassLoader
-                actionLogger.trace(s"Async thread:${Thread.currentThread()}, asyncCl:${ctxCl}")
+                actionLogger.trace(s"Async Cl:${ctxCl}")
                 if ctxCl == null then {
                   val cl = this.getClass.getClassLoader
                   actionLogger.trace(s"Async setContextClassloader:${cl}")
                   Thread.currentThread().setContextClassLoader(cl)
                 }
-                val req = new Request(svcRequestContext, aggregateRequest) {}
-                val resp = HttpResponseConverter.convertActionResponseToHttpResponse(req, actionResp)
-                Thread.currentThread().setContextClassLoader(ctxCl)
-                f.complete(resp)
+                val req = new com.greenfossil.thorium.Request(svcRequestContext, aggregateRequest) {}
+                val httpResp = HttpResponseConverter.convertActionResponseToHttpResponse(req, actionResp)
+                futureResp.complete(httpResp)
               })
-            }
-          HttpResponse.from(f)
+          HttpResponse.from(futureResp)
 
         case _ =>
           ResponseConverterFunction.fallthrough()
@@ -121,6 +115,7 @@ case class Server(server: AServer,
                   defaultResponseConverterFnOpt: Option[ServiceRequestContext => Void] = None,
                   requestConverterAttrs: Tuple = EmptyTuple,
                   responseConverterAttrs: Tuple = EmptyTuple,
+                  csrfProtectionDecoratingFunctionOpt: Option[CSRFProtectionDecoratingFunction] = None,
                   docServiceNameOpt: Option[String] = None
                  ):
 
@@ -133,10 +128,10 @@ case class Server(server: AServer,
   export server.{start as _, toString as _,  stop as _, serviceConfigs => _,  *}
 
   val defaultRequestConverter =
-    Server.defaultRequestConverter(configuration, requestConverterAttrs, defaultRequestConverterFnOpt)
+    Server.defaultRequestConverter(requestConverterAttrs, defaultRequestConverterFnOpt)
 
   val defaultResponseConverter =
-    Server.defaultResponseConverter(configuration, responseConverterAttrs, defaultResponseConverterFnOpt)
+    Server.defaultResponseConverter(responseConverterAttrs, defaultResponseConverterFnOpt)
 
   def port: Int = server.activeLocalPort()
 
@@ -148,6 +143,22 @@ case class Server(server: AServer,
 
   def addServices(newServices: AnyRef*): Server  =
     copy(annotatedServices = annotatedServices ++ newServices)
+    
+  def addCSRFProtection(): Server =
+    addCSRFProtection(CSRFProtectionDecoratingFunction()) 
+  
+  def addCSRFProtectcion(allowOriginFn: (String, ServiceRequestContext) => Boolean): Server =
+    addCSRFProtection(CSRFProtectionDecoratingFunction(allowOriginFn))
+    
+  def addCSRFProtection(allowOriginFn: (String, ServiceRequestContext) => Boolean,
+                        verifyMethodFn: String => Boolean,
+                        blockCSRFResponseFn: (ServiceRequestContext, String, Boolean, Boolean) => (MediaType, String)): Server =
+    val csrfProtectionDecoratingFunction = new CSRFProtectionDecoratingFunction(allowOriginFn, verifyMethodFn, blockCSRFResponseFn)
+    addCSRFProtection(csrfProtectionDecoratingFunction)
+
+  def addCSRFProtection(CSRFProtectionDecoratingFunction: CSRFProtectionDecoratingFunction): Server =
+    this.copy(csrfProtectionDecoratingFunctionOpt = Option(CSRFProtectionDecoratingFunction))
+
 
   def setErrorHandler(h: ServerErrorHandler): Server =
     copy(errorHandlerOpt = Some(h))
@@ -233,6 +244,17 @@ case class Server(server: AServer,
         ).toString
       )
     }, true)
+
+    /*
+     * Setup Decorator, Request First Initializer
+     */
+    
+    csrfProtectionDecoratingFunctionOpt.foreach{csrfFn =>
+      sb.routeDecorator().pathPrefix("/").build(csrfFn)
+    }
+    
+    sb.routeDecorator().pathPrefix("/").build(FirstResponderDecoratingFunction(configuration))
+
     sb.build
 
   def serverBuilderSetup(setupFn: ServerBuilder => Unit): Server =
@@ -271,13 +293,15 @@ case class Server(server: AServer,
     val newServer = buildServer(sessionProtocols*)
     Runtime.getRuntime.addShutdownHook(Thread(
       () => {
+        serverLogger.info("Stopping server...")
         newServer.stop().join
         serverLogger.info("Server stopped.")
       }
     ))
     println(banner)
-    serverLogger.info(s"Starting Server.")
+    serverLogger.info(s"Starting Server...")
     newServer.start().join()
+    serverLogger.info("Server started.")
     copy(server = newServer)
 
   def startSecure(sessionProtocols: SessionProtocol*): Server =
@@ -289,10 +313,11 @@ case class Server(server: AServer,
       }
     ))
     println(banner)
-    serverLogger.info(s"Starting Server.")
+    serverLogger.info(s"Starting Server...")
     newSecureServer.start().join()
+    serverLogger.info("Server started.")
     copy(server = newSecureServer)
 
   def stop(): Future[Unit] =
-    import com.linecorp.armeria.scala.implicits._
+    import com.linecorp.armeria.scala.implicits.*
     server.stop().toScala

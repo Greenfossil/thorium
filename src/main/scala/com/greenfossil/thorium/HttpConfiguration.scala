@@ -25,48 +25,101 @@ import java.time
 import java.time.Duration
 import java.util.Base64
 import scala.util.*
+import scala.jdk.CollectionConverters.*
 
-type SameSiteCookie = "Strict" | "Lax"
+type SameSiteCookie = "Strict" | "Lax" | "None"
 
 private[thorium] val configurationLogger: Logger = LoggerFactory.getLogger("com.greenfossil.thorium.configuration")
 
-object HttpConfiguration:
+val APP_HTTP__CONTEXT = "app.http.context"
+val APP_HTTP__PORT = "app.http.port"
+val APP_HTTP__MAX_NUM_CONNECTION = "app.http.maxNumConnection"
+val APP_HTTP__MAX_REQUEST_LENGHT = "app.http.maxRequestLength"
+val APP_HTTP__REQUEST_TIMEOUT = "app.http.requestTimeout"
+val APP_HTTP__SECRET_KEY = "app.http.secret.key"
+val APP_HTTP__SECRET_PROVIDER = "app.http.secret.provider"
 
-  def from(config: Config, environment: Environment): HttpConfiguration =
+val APP_HTTP_COOKIES__SECURE = "app.http.cookies.secure"
+val APP_HTTP_COOKIES__MAX_AGE = "app.http.cookies.maxAge"
+val APP_HTTP_COOKIES__HTTP_ONLY = "app.http.cookies.httpOnly"
+val APP_HTTP_COOKIES__DOMAIN = "app.http.cookies.domain"
+val APP_HTTP_COOKIES__PATH = "app.http.cookies.path"
+val APP_HTTP_COOKIES__SAMESITE = "app.http.cookies.sameSite"
+val APP_HTTP_COOKIES__HOST_ONLY = "app.http.cookies.hostOnly"
+val APP_HTTP_COOKIES__JWT = "app.http.cookies.jwt"
+
+val APP_HTTP_SESSION__COOKIE_NAME = "app.http.session.cookieName"
+val APP_HTTP_SESSION__SECURE = "app.http.session.secure"
+val APP_HTTP_SESSION__MAX_AGE = "app.http.session.maxAge"
+val APP_HTTP_SESSION__HTTP_ONLY = "app.http.session.httpOnly"
+val APP_HTTP_SESSION__DOMAIN = "app.http.session.domain"
+val APP_HTTP_SESSION__PATH = "app.http.session.path"
+val APP_HTTP_SESSION__SAME_SITE = "app.http.session.sameSite"
+val APP_HTTP_SESSION__JWT = "app.http.session.jwt"
+
+val APP_HTTP_FLASH__COOKIE_NAME = "app.http.flash.cookieName"
+val APP_HTTP_FLASH__SECURE = "app.http.flash.secure"
+val APP_HTTP_FLASH__HTTP_ONLY = "app.http.flash.httpOnly"
+val APP_HTTP_FLASH__DOMAIN = "app.http.flash.domain"
+val APP_HTTP_FLASH__PATH = "app.http.flash.path"
+val APP_HTTP_FLASH__SAME_SITE = "app.http.flash.sameSite"
+val APP_HTTP_FLASH__JWT = "app.http.flash.jwt"
+
+val APP_HTTP_CSRF__COOKIE_NAME = "app.http.csrf.cookieName"
+val APP_HTTP_CSRF__SECURE = "app.http.csrf.secure"
+val APP_HTTP_CSRF__HTTP_ONLY = "app.http.csrf.httpOnly"
+val APP_HTTP_CSRF__DOMAIN = "app.http.csrf.domain"
+val APP_HTTP_CSRF__PATH = "app.http.csrf.path"
+val APP_HTTP_CSRF__SAME_SITE = "app.http.csrf.sameSite"
+val APP_HTTP_CSRF__JWT = "app.http.csrf.jwt"
+val APP_HTTP_CSRF__ALLOW_PATH_PREFIXES = "app.http.csrf.allowPathPrefixes"
+
+object HttpConfiguration:
+  def from(config: Config, environment: Environment): HttpConfiguration = 
     HttpConfiguration(
-      context = config.getString("app.http.context"),
-      httpPort = config.getInt("app.http.port"),
-      maxNumConnectionOpt = config.getIntOpt("app.http.maxNumConnection"),
-      maxRequestLength = config.getInt("app.http.maxRequestLength"),
-      requestTimeout = config.getDuration("app.http.requestTimeout"),
+      context = config.getString(APP_HTTP__CONTEXT),
+      httpPort = config.getInt(APP_HTTP__PORT),
+      maxNumConnectionOpt = config.getIntOpt(APP_HTTP__MAX_NUM_CONNECTION),
+      maxRequestLength = config.getInt(APP_HTTP__MAX_REQUEST_LENGHT),
+      requestTimeout = config.getDuration(APP_HTTP__REQUEST_TIMEOUT),
       cookieConfig = CookieConfiguration(
-        secure = config.getBoolean("app.http.cookies.secure"),
-        maxAge = config.getDurationOpt("app.http.cookies.maxAge"),
-        httpOnly = config.getBoolean("app.http.cookies.httpOnly"),
-        domain = config.getStringOpt("app.http.cookies.domain"),
-        path = config.getString("app.http.cookies.path"),
-        sameSite = config.getStringOpt("app.http.cookies.sameSite").map(_.asInstanceOf[SameSiteCookie]),
-        hostOnly = config.getBoolean("app.http.cookies.hostOnly"),
-        jwt = JWTConfigurationParser(config, "app.http.cookies.jwt")
+        secure = config.getBoolean(APP_HTTP_COOKIES__SECURE),
+        maxAge = config.getDurationOpt(APP_HTTP_COOKIES__MAX_AGE),
+        httpOnly = config.getBoolean(APP_HTTP_COOKIES__HTTP_ONLY),
+        domain = config.getStringOpt(APP_HTTP_COOKIES__DOMAIN),
+        path = config.getString(APP_HTTP_COOKIES__PATH),
+        sameSite = config.getStringOpt(APP_HTTP_COOKIES__SAMESITE).map(_.asInstanceOf[SameSiteCookie]),
+        hostOnly = config.getBooleanOpt(APP_HTTP_COOKIES__HOST_ONLY),
+        jwt = JWTConfigurationParser(config, APP_HTTP_COOKIES__JWT)
       ),
       sessionConfig = SessionConfiguration(
-        cookieName = config.getString("app.http.session.cookieName"),
-        secure = config.getBoolean("app.http.session.secure"),
-        maxAge = config.getDurationOpt("app.http.session.maxAge"),
-        httpOnly = config.getBoolean("app.http.session.httpOnly"),
-        domain = config.getStringOpt("app.http.session.domain"),
-        path = config.getString("app.http.session.path"),
-        sameSite = config.getStringOpt("app.http.session.sameSite").map(_.asInstanceOf[SameSiteCookie]),
-        jwt = JWTConfigurationParser(config, "app.http.session.jwt")
+        cookieName = config.getString(APP_HTTP_SESSION__COOKIE_NAME),
+        secure = config.getBoolean(APP_HTTP_SESSION__SECURE),
+        maxAge = config.getDurationOpt(APP_HTTP_SESSION__MAX_AGE),
+        httpOnly = config.getBoolean(APP_HTTP_SESSION__HTTP_ONLY),
+        domain = config.getStringOpt(APP_HTTP_SESSION__DOMAIN),
+        path = config.getString(APP_HTTP_SESSION__PATH),
+        sameSite = config.getStringOpt(APP_HTTP_SESSION__SAME_SITE).map(_.asInstanceOf[SameSiteCookie]),
+        jwt = JWTConfigurationParser(config, APP_HTTP_SESSION__JWT)
       ),
       flashConfig = FlashConfiguration(
-        cookieName = config.getString("app.http.flash.cookieName"),
-        secure = config.getBoolean("app.http.flash.secure"),
-        httpOnly = config.getBoolean("app.http.flash.httpOnly"),
-        domain = config.getStringOpt("app.http.flash.domain"),
-        path = config.getString("app.http.flash.path"),
-        sameSite = config.getStringOpt("app.http.flash.sameSite").map(_.asInstanceOf[SameSiteCookie]),
-        jwt = JWTConfigurationParser(config, "app.http.flash.jwt")
+        cookieName = config.getString(APP_HTTP_FLASH__COOKIE_NAME),
+        secure = config.getBoolean(APP_HTTP_FLASH__SECURE),
+        httpOnly = config.getBoolean(APP_HTTP_FLASH__HTTP_ONLY),
+        domain = config.getStringOpt(APP_HTTP_FLASH__DOMAIN),
+        path = config.getString(APP_HTTP_FLASH__PATH),
+        sameSite = config.getStringOpt(APP_HTTP_FLASH__SAME_SITE).map(_.asInstanceOf[SameSiteCookie]),
+        jwt = JWTConfigurationParser(config, APP_HTTP_FLASH__JWT)
+      ),
+      csrfConfig = CSRFConfiguration(
+        cookieName = config.getString(APP_HTTP_CSRF__COOKIE_NAME),
+        secure = config.getBoolean(APP_HTTP_CSRF__SECURE),
+        httpOnly = config.getBoolean(APP_HTTP_CSRF__HTTP_ONLY),
+        domain = config.getStringOpt(APP_HTTP_CSRF__DOMAIN),
+        path = config.getString(APP_HTTP_CSRF__PATH),
+        sameSite = config.getStringOpt(APP_HTTP_CSRF__SAME_SITE).map(_.asInstanceOf[SameSiteCookie]),
+        jwt = JWTConfigurationParser(config, APP_HTTP_CSRF__JWT),
+        allowPathPrefixes = config.getStringList(APP_HTTP_CSRF__ALLOW_PATH_PREFIXES).asScala.toSeq
       ),
       secretConfig = getSecretConfiguration(config, environment),
       environment = environment
@@ -94,9 +147,21 @@ case class HttpConfiguration(
    cookieConfig: CookieConfiguration = CookieConfiguration(),
    sessionConfig: SessionConfiguration = SessionConfiguration(),
    flashConfig: FlashConfiguration = FlashConfiguration(),
+   csrfConfig: CSRFConfiguration = CSRFConfiguration(),
    secretConfig: SecretConfiguration = SecretConfiguration(),
    environment: Environment
 )
+
+trait CookieConfigurationLike:
+  val secure: Boolean
+  val maxAge: Option[Duration]
+  val httpOnly: Boolean
+  val domain: Option[String]
+  val path: String
+  val sameSite: Option[SameSiteCookie]
+  val hostOnly: Option[Boolean]
+  val jwt: JWTConfiguration
+
 
 /**
  * The cookie configuration
@@ -117,9 +182,9 @@ case class CookieConfiguration(
    domain: Option[String] = None,
    path: String = "/",
    sameSite: Option[SameSiteCookie] = Some("Lax"),
-   hostOnly: Boolean = false,
+   hostOnly: Option[Boolean] = Some(false),
    jwt: JWTConfiguration = JWTConfiguration()
-)
+)  extends CookieConfigurationLike
 
 /**
  * The session configuration
@@ -141,8 +206,9 @@ case class SessionConfiguration(
    domain: Option[String] = None,
    path: String = "/",
    sameSite: Option[SameSiteCookie] = Some("Lax"),
+   hostOnly: Option[Boolean] = None,
    jwt: JWTConfiguration = JWTConfiguration()
-)
+) extends CookieConfigurationLike
 
 /**
  * The flash configuration
@@ -158,12 +224,38 @@ case class SessionConfiguration(
 case class FlashConfiguration(
    cookieName: String = "APP_FLASH",
    secure: Boolean = false,
+   maxAge: Option[Duration] = None,
    httpOnly: Boolean = true,
    domain: Option[String] = None,
    path: String = "/",
    sameSite: Option[SameSiteCookie] = Some("Lax"),
+   hostOnly: Option[Boolean] = None,
    jwt: JWTConfiguration = JWTConfiguration()
-)
+) extends CookieConfigurationLike
+
+/**
+ * The csrf configuration
+ *
+ * @param cookieName The name of the cookie used to store the session
+ * @param secure     Whether the csrf cookie should set the secure flag or not
+ * @param httpOnly   Whether the HTTP only attribute of the cookie should be set
+ * @param domain     The domain to set for the session cookie, if defined
+ * @param path       The path for which this cookie is valid
+ * @param sameSite   The cookie's SameSite attribute
+ * @param jwt        The JWT specific information
+ */
+case class CSRFConfiguration(
+                              cookieName: String = "APP_CSRF_TOKEN",
+                              secure: Boolean = false,
+                              maxAge: Option[Duration] = None,
+                              httpOnly: Boolean = true,
+                              domain: Option[String] = None,
+                              path: String = "/",
+                              sameSite: Option[SameSiteCookie] = Some("Strict"),
+                              hostOnly: Option[Boolean] = None,
+                              jwt: JWTConfiguration = JWTConfiguration(),
+                              allowPathPrefixes: Seq[String] = Nil
+) extends CookieConfigurationLike
 
 /**
  * The application secret. Must be set. A value of "changeme" will cause the application to fail to start in
@@ -305,7 +397,7 @@ private def getSecretConfiguration(config: Config, environment: Environment): Se
   val Blank = """\s*""".r
 
   val secret =
-    Option(config.getString("app.http.secret.key")) match {
+    Option(config.getString(APP_HTTP__SECRET_KEY)) match {
       case Some("changeme") | Some(Blank()) | None if environment.isProd =>
         val message =
           """
@@ -364,5 +456,6 @@ private def getSecretConfiguration(config: Config, environment: Environment): Se
         md5Secret
       case Some(s) => s
     }
-  val provider = config.getStringOpt("app.http.secret.provider")
+
+  val provider = config.getStringOpt(APP_HTTP__SECRET_PROVIDER)
   SecretConfiguration(String.valueOf(secret), provider)
