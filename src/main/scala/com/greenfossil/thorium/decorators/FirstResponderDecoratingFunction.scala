@@ -23,8 +23,8 @@ class FirstResponderDecoratingFunction(val configuration: Configuration,
   override def serve(delegate: HttpService, ctx: ServiceRequestContext, req: HttpRequest): HttpResponse =
     firstResponderLogger.debug(s"FirstResponder - method:${req.method()} request.uri:${req.uri()}")
     if firstResponderLogger.isTraceEnabled() then
-      firstResponderLogger.debug(s"Headers:${req.headers().size()}")
-      req.headers().forEach((key, value) => firstResponderLogger.debug(s"key:$key value:$value"))
+      firstResponderLogger.trace(s"Headers:${req.headers().size()}")
+      req.headers().forEach((key, value) => firstResponderLogger.trace(s"key:$key value:$value"))
 
     //Setup Session
     ctx.setAttr(RequestAttrs.Config, configuration)

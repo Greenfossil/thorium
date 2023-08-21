@@ -168,7 +168,7 @@ class CSRFProtectionDecoratingFunction(allowOriginFn: (String, ServiceRequestCon
             .aggregate()
             .thenAccept: multipart =>
               val part = multipart.field(csrfCookieName)
-              futureResp.complete(part.contentUtf8())
+              futureResp.complete(if part == null then null else part.contentUtf8())
     else {
       csrfLogger.debug(s"Find CSRFToken found unsupported for contentType:${mediaType}.")
       futureResp.complete(null)
