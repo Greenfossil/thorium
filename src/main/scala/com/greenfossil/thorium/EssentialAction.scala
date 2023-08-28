@@ -25,7 +25,7 @@ import org.slf4j.LoggerFactory
 import java.io.InputStream
 import java.util.concurrent.CompletableFuture
 
-type SimpleResponse = String | Array[Byte] | JsValue | Tag | InputStream
+type SimpleResponse = String | Array[Byte] | JsValue | Tag | InputStream | HttpResponse
 
 type ActionResponse = SimpleResponse | Result
 
