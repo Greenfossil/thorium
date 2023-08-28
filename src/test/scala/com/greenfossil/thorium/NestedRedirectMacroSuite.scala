@@ -16,7 +16,6 @@
 
 package com.greenfossil.thorium
 
-import com.greenfossil.thorium.{*, given}
 import com.linecorp.armeria.server.annotation.Get
 
 object NestedRedirectServices {

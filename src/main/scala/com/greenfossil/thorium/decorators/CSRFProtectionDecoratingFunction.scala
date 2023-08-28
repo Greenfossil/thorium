@@ -233,5 +233,5 @@ class CSRFProtectionDecoratingFunction(allowOriginFn: (String, ServiceRequestCon
               unauthorizedResponse(config, mediaType, content)
             futureResp.complete(resp)
           })
-      HttpResponse.from(futureResp)
+      HttpResponse.of(futureResp)
 

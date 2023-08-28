@@ -16,7 +16,7 @@
 
 package com.greenfossil.thorium
 
-import com.linecorp.armeria.common.{HttpResponse, MediaType}
+import com.linecorp.armeria.common.MediaType
 import com.linecorp.armeria.server.annotation.*
 import com.linecorp.armeria.server.annotation.decorator.{CorsDecorator, RequestTimeout}
 import java.util.concurrent.TimeUnit
@@ -29,25 +29,23 @@ object CSRFServices:
   @Get("/csrf/do-change-email")
   @RequestTimeout(1, TimeUnit.HOURS)
   def startChange = Action { implicit request =>
-    val html =
-      s"""<!DOCTYPE html>
-        |<html lang="en">
-        |<head>
-        |    <meta charset="UTF-8">
-        |    <title>Change Email</title>
-        |    <link rel="shortcut icon" href="data:;" type="image/x-icon">
-        |</head>
-        |<body>
-        |    <h1>Change Email</h1>
-        |    <form action="http://localhost:8080/csrf/email/change" method="POST">
-        |        <input type="hidden" name="CSRF-TOKEN" value="${request.csrfToken}" />
-        |        <input name="email" value="HelloWorld!" />
-        |        <input type="submit" value="Confirm">
-        |    </form>
-        |</body>
-        |</html>
-        |""".stripMargin
-    HttpResponse.of(MediaType.HTML_UTF_8, html)
+    s"""<!DOCTYPE html>
+       |<html lang="en">
+       |<head>
+       |    <meta charset="UTF-8">
+       |    <title>Change Email</title>
+       |    <link rel="shortcut icon" href="data:;" type="image/x-icon">
+       |</head>
+       |<body>
+       |    <h1>Change Email</h1>
+       |    <form action="http://localhost:8080/csrf/email/change" method="POST">
+       |        <input type="hidden" name="CSRF-TOKEN" value="${request.csrfToken}" />
+       |        <input name="email" value="HelloWorld!" />
+       |        <input type="submit" value="Confirm">
+       |    </form>
+       |</body>
+       |</html>
+       |""".stripMargin.as(MediaType.HTML_UTF_8)
   }
 
 
@@ -60,34 +58,32 @@ object CSRFServices:
   @Get("/csrf/do-delete")
   @RequestTimeout(1, TimeUnit.HOURS)
   def startDelete = Action { implicit request =>
-    val html =
-      s"""<!DOCTYPE html>
-         |<html lang="en">
-         |<head>
-         |    <meta charset="UTF-8">
-         |    <title>SameOrigin</title>
-         |    <link rel="shortcut icon" href="data:;" type="image/x-icon">
-         |</head>
-         |<body>
-         |   <h1>Delete Action</h1>
-         |   <input type="submit" value="Confirm" onclick="doDelete()">
-         |
-         |</body>
-         |<script>
-         |  function doDelete(){
-         |    const url = 'http://localhost:8080/csrf/delete/123';
-         |    fetch(url, {
-         |      method: 'DELETE',
-         |    }).then(()=> {
-         |      console.log('delete');
-         |    }).catch(err => {
-         |      console.error(err);
-         |    });
-         |  }
-         |</script>
-         |</html>
-         |""".stripMargin
-    HttpResponse.of(MediaType.HTML_UTF_8, html)
+    s"""<!DOCTYPE html>
+       |<html lang="en">
+       |<head>
+       |    <meta charset="UTF-8">
+       |    <title>SameOrigin</title>
+       |    <link rel="shortcut icon" href="data:;" type="image/x-icon">
+       |</head>
+       |<body>
+       |   <h1>Delete Action</h1>
+       |   <input type="submit" value="Confirm" onclick="doDelete()">
+       |
+       |</body>
+       |<script>
+       |  function doDelete(){
+       |    const url = 'http://localhost:8080/csrf/delete/123';
+       |    fetch(url, {
+       |      method: 'DELETE',
+       |    }).then(()=> {
+       |      console.log('delete');
+       |    }).catch(err => {
+       |      console.error(err);
+       |    });
+       |  }
+       |</script>
+       |</html>
+       |""".stripMargin.as(MediaType.HTML_UTF_8)
   }
 
   @Options

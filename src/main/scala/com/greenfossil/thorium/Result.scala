@@ -16,47 +16,80 @@
 
 package com.greenfossil.thorium
 
-import com.linecorp.armeria.common.{Cookie, HttpResponse, MediaType}
+import com.linecorp.armeria.common.{Cookie, HttpStatus, MediaType}
 import io.netty.util.AsciiString
 
-import java.io.InputStream
-import java.time.format.DateTimeFormatter
-import java.time.{ZoneOffset, ZonedDateTime}
-import scala.collection.immutable.TreeMap
+import java.time.ZonedDateTime
 
-private object CaseInsensitiveOrdered extends Ordering[String]:
-  def compare(left: String, right: String): Int =
-    left.compareToIgnoreCase(right)
+def Ok(body: SimpleResponse): Result =
+  Result.of(HttpStatus.OK, body)
 
-object ResponseHeader:
-  val basicDateFormatPattern = "EEE, dd MMM yyyy HH:mm:ss"
-  val httpDateFormat: DateTimeFormatter =
-    DateTimeFormatter
-      .ofPattern(basicDateFormatPattern + " 'GMT'")
-      .withLocale(java.util.Locale.ENGLISH)
-      .withZone(ZoneOffset.UTC)
+def BadRequest(body: SimpleResponse): Result =
+  Result.of(HttpStatus.BAD_REQUEST, body)
 
-  def apply(headers: Map[String, String]): ResponseHeader = apply(headers, null)
+def NotFound(body: SimpleResponse): Result =
+  Result.of(HttpStatus.NOT_FOUND, body)
 
-  def apply(headers: Map[String, String], reasonPhrase: String): ResponseHeader =
-    val ciHeaders = TreeMap[String, String]()(CaseInsensitiveOrdered) ++ headers
-    new ResponseHeader(ciHeaders, Option(reasonPhrase))
+def Forbidden(body: SimpleResponse): Result =
+  Result.of(HttpStatus.FORBIDDEN, body)
 
-case class ResponseHeader(headers: TreeMap[String, String], reasonPhrase:Option[String] = None)
+def InternalServerError(body: SimpleResponse): Result =
+  Result.of(HttpStatus.INTERNAL_SERVER_ERROR, body)
+
+def Unauthorized(body: SimpleResponse): Result =
+  Result.of(HttpStatus.UNAUTHORIZED, body)
+
+def Redirect(url: String, queryParamTup:(String, String), queryParamTups: (String, String)*): Result =
+  val params = queryParamTup +: queryParamTups
+  Redirect(url, params.map((name, value) => (name, Seq(value)) ).toMap)
+
+def Redirect(url: String, queryString: Map[String, Seq[String]]): Result =
+  Redirect(url, queryString, HttpStatus.SEE_OTHER)
+
+def Redirect(url: String, queryString: Map[String, Seq[String]], status: HttpStatus): Result =
+  val loc = s"${url}${ queryString.toList.map{case (k, v) => Endpoint.paramKeyValueUrlEncoded(k, v)}.mkString("?", "&", "")}"
+  Result.ofRedirect(status,loc)
+
+inline def Redirect[A](inline location: A): Result =
+  Redirect(location, HttpStatus.SEE_OTHER)
+
+inline def Redirect[A](inline location: A, inline status: HttpStatus): Result =
+  ${RedirectImpl( '{location}, '{status}) }
+
+import scala.quoted.*
+def RedirectImpl[A: Type](locExpr: Expr[A], statusExpr: Expr[HttpStatus])(using quotes: Quotes): Expr[Result] =
+  locExpr match
+    case '{$ea: EssentialAction} =>
+      '{Result.ofRedirect($statusExpr, EndpointMcr($locExpr).url)}
+    case '{$ep: Endpoint} =>
+      '{Result.ofRedirect($statusExpr, $ep.url)}
+    case '{$ref: AnyRef} =>
+      '{Result.ofRedirect($statusExpr, EndpointMcr($ref).url)}
+
 
 object Result:
+
+  def isRedirect(code: Int): Boolean = code >= 300 && code <= 308
 
   def apply(body: ActionResponse): Result =
     body match
       case bodyResult: Result => bodyResult
-      case body: (HttpResponse | String | Array[Byte] | InputStream) =>
-        new Result(ResponseHeader(Map.empty), body, None, None, Nil, None)
+      case body: SimpleResponse =>
+        new Result(status = HttpStatus.OK, body = body)
 
-case class Result(header: ResponseHeader,
-                  body: HttpResponse | String | Array[Byte] | InputStream,
+  def of(status: HttpStatus, simpleResponse: SimpleResponse): Result =
+    Result(status = status, body = simpleResponse)
+
+  def ofRedirect(status: HttpStatus, location: String): Result =
+    if isRedirect(status.code()) then Result(status = status,  body = location)
+    else throw IllegalArgumentException(s"Redirect status: ${status} not supported")
+
+case class Result(header: ResponseHeader = ResponseHeader(Map.empty),
+                  status: HttpStatus,
+                  body: SimpleResponse,
                   newSessionOpt: Option[Session] = None,
                   newFlashOpt: Option[Flash] = None,
-                  newCookies:Seq[Cookie],
+                  newCookies:Seq[Cookie] = Nil,
                   contentTypeOpt: Option[MediaType] = None
                  ):
 

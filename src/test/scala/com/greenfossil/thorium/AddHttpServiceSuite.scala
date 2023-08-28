@@ -17,11 +17,10 @@
 package com.greenfossil.thorium
 
 import com.greenfossil.commons.json.Json
-import com.greenfossil.thorium.{*, given}
 
 import scala.language.implicitConversions
 
-class Request1Suite extends munit.FunSuite{
+class AddHttpServiceSuite extends munit.FunSuite{
   import com.linecorp.armeria.client.*
   import com.linecorp.armeria.common.*
 
@@ -60,6 +59,11 @@ class Request1Suite extends munit.FunSuite{
         val cookie2 = Cookie.ofSecure("cookie2", "two")
         Ok("Here is your cookie").withCookies(cookie1, cookie2)
       })
+      .addHttpService("/json2", Action {req =>
+        Json.obj(
+          "msg" -> "HelloWorld!"
+        )
+      })
       .start()
   }
 
@@ -71,33 +75,28 @@ class Request1Suite extends munit.FunSuite{
   import com.linecorp.armeria.scala.implicits.*
   test("Text") {
     val client = WebClient.of(s"http://localhost:${server.port}")
-
     val creq = HttpRequest.of(HttpMethod.POST, "/text", MediaType.PLAIN_TEXT, "Hello Armeria!")
-    client.execute(creq).aggregate().thenAccept(
-      aggregate =>
-        assertNoDiff(aggregate.contentUtf8(), "Received Text")
-    ).toScala
+    val resp = client.execute(creq).aggregate().join()
+    assertNoDiff(resp.contentUtf8(), "Received Text")
   }
 
   test("Json"){
     val client = WebClient.of(s"http://localhost:${server.port}")
     val creq = HttpRequest.of(HttpMethod.POST, "/json", MediaType.JSON, Json.obj("msg" -> "Hello Armeria!").toString)
-    client.execute(creq).aggregate().thenAccept(aggregate =>
-      assertNoDiff(aggregate.contentUtf8(), "Received Text")
-    )
+    val resp = client.execute(creq).aggregate().join()
+    assertNoDiff(resp.contentUtf8(), "Received Text")
   }
 
   test("FormUrlEncoded"){
     val client = WebClient.of(s"http://localhost:${server.port}")
     val creq = HttpRequest.of(HttpMethod.POST, "/form", MediaType.FORM_DATA, "msg[]=Hello&msg[]=Armeria!")
-    client.execute(creq).aggregate().thenAccept(aggregate =>
-      assertNoDiff(aggregate.contentUtf8(), "Received Text")
-    ).toScala
+    val resp = client.execute(creq).aggregate().join()
+    assertNoDiff(resp.contentUtf8(), "Received Text")
   }
 
-  test("Multipart Form"){
-//    val fileURI = getClass.getClassLoader.getResource("sample.png").toURI
-//    val file = new File(fileURI)
+  test("Multipart Form") {
+    //    val fileURI = getClass.getClassLoader.getResource("sample.png").toURI
+    //    val file = new File(fileURI)
     import com.linecorp.armeria.common.multipart.*
     val mp = Multipart.of(
       BodyPart.of(ContentDisposition.of("form-data", "name1"), "hello1"),
@@ -105,20 +104,22 @@ class Request1Suite extends munit.FunSuite{
       BodyPart.of(ContentDisposition.of("form-data", "name2", "hello.txt"), "hello1")
     )
     val client = WebClient.of(s"http://localhost:${server.port}")
-    client.execute(mp.toHttpRequest("/multipart-form")).aggregate().thenAccept(aggregate =>
-      assertNoDiff(aggregate.contentUtf8(), "Received Text")
-    ).toScala
+    val resp = client.execute(mp.toHttpRequest("/multipart-form")).aggregate().join()
+    assertNoDiff(resp.contentUtf8(), "Received Text")
   }
 
   test("Cookie"){
-    val creq = HttpRequest.of(HttpMethod.GET, "/cookie")
-    val client = WebClient.of(s"http://localhost:${server.port}")
-    client.execute(creq).aggregate().thenAccept(aggregate => {
-      val cookies = aggregate.headers().cookies()
-      assertEquals(cookies.size, 2)
-      assertNoDiff(aggregate.contentUtf8(), "Here is your cookie")
-      }
-    ).toScala
+    val aggregate = WebClient.of(s"http://localhost:${server.port}").get("/cookie").aggregate().join()
+    val cookies = aggregate.headers().cookies()
+    assertEquals(cookies.size, 2)
+    assertNoDiff(aggregate.contentUtf8(), "Here is your cookie")
+  }
+
+  test("Json") {
+    val resp = WebClient.of(s"http://localhost:${server.port}").get("/json2").aggregate().join()
+    assertEquals(resp.status(), HttpStatus.OK)
+    assertEquals(resp.contentType(), MediaType.JSON)
+    assertNoDiff(resp.contentUtf8(), """{"msg":"HelloWorld!"}""")
   }
 
 }

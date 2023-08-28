@@ -16,6 +16,8 @@
 
 package com.greenfossil.thorium
 
+import com.greenfossil.commons.json.JsValue
+import com.greenfossil.htmltags.Tag
 import com.linecorp.armeria.common.{Cookie, HttpData, HttpHeaderNames, HttpMethod, HttpResponse, HttpStatus, MediaType, ResponseHeaders}
 import com.linecorp.armeria.common.stream.StreamMessage
 
@@ -121,17 +123,20 @@ object HttpResponseConverter:
         case hr: HttpResponse => hr
         case s: String => HttpResponse.of(s)
         case bytes: Array[Byte] => HttpResponse.of(HttpStatus.OK, Option(req.contentType).getOrElse(MediaType.ANY_TYPE), HttpData.wrap(bytes))
+        case jsValue: JsValue => HttpResponse.of(HttpStatus.OK, MediaType.JSON, HttpData.ofUtf8(jsValue.stringify))
+        case tag : Tag => HttpResponse.of(HttpStatus.OK, MediaType.HTML_UTF_8, HttpData.ofUtf8(tag.render))
         case is: InputStream =>
           HttpResponse.of(
             ResponseHeaders.of(HttpStatus.OK, HttpHeaderNames.CONTENT_TYPE, Option(req.contentType).getOrElse(MediaType.ANY_TYPE)),
             StreamMessage.fromOutputStream(os => Using.resources(is, os) { (is, os) => is.transferTo(os) })
           )
-        case result: Result => _toHttpResponse(req, result.body).get
+        case result: Result =>
+          if Result.isRedirect(result.status.code()) then HttpResponse.ofRedirect(result.status, result.body.asInstanceOf[String])
+          else _toHttpResponse(req, result.body).get
 
   def convertActionResponseToHttpResponse(req: com.greenfossil.thorium.Request, actionResp: ActionResponse): HttpResponse =
     serverLogger.debug(s"Convert ActionResponse to HttpResponse.")
     (for {
-      
       httpResp <- _toHttpResponse(req, actionResp)
       httpRespWithHeaders <- _addHttpResponseHeaders(req, actionResp, httpResp)
     } yield httpRespWithHeaders)

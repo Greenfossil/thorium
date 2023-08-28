@@ -41,8 +41,7 @@ class EndpointMacro3Suite extends munit.FunSuite:
 
     import com.linecorp.armeria.client.WebClient
     val client = WebClient.of(s"http://localhost:${server.port}")
-    val resp = client.get("/redirect")
-    resp.aggregate().thenApply { aggResp =>
+    client.get("/redirect").aggregate().thenApply { aggResp =>
       val locationHeader = aggResp.headers().get("location")
       assertEquals(locationHeader, "/sayHello/User")
     }.join()
@@ -56,8 +55,7 @@ class EndpointMacro3Suite extends munit.FunSuite:
 
     import com.linecorp.armeria.client.WebClient
     val client = WebClient.of(s"http://localhost:${server.port}")
-    val resp = client.get("/path")
-    resp.aggregate().thenApply { aggResp =>
+    client.get("/path").aggregate().thenApply { aggResp =>
       val locationHeader = aggResp.headers().get("location")
       assertEquals(locationHeader, "/redirect")
     }.join()

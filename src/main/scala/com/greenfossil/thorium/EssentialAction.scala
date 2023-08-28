@@ -16,6 +16,8 @@
 
 package com.greenfossil.thorium
 
+import com.greenfossil.commons.json.JsValue
+import com.greenfossil.htmltags.Tag
 import com.linecorp.armeria.common.{HttpRequest, HttpResponse}
 import com.linecorp.armeria.server.{HttpService, ServiceRequestContext}
 import org.slf4j.LoggerFactory
@@ -23,7 +25,9 @@ import org.slf4j.LoggerFactory
 import java.io.InputStream
 import java.util.concurrent.CompletableFuture
 
-type ActionResponse = HttpResponse | String | Array[Byte] | InputStream | Result
+type SimpleResponse = String | Array[Byte] | JsValue | Tag | InputStream
+
+type ActionResponse = SimpleResponse | Result
 
 private[thorium] val actionLogger = LoggerFactory.getLogger("com.greenfossil.thorium.action")
 
@@ -77,7 +81,7 @@ trait EssentialAction extends HttpService :
           futureResp.complete(httpResp)
         })
       }
-    HttpResponse.from(futureResp)
+    HttpResponse.of(futureResp)
 
 end EssentialAction
 

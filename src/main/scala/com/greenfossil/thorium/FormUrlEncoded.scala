@@ -8,6 +8,8 @@ import java.lang.reflect.ParameterizedType
 
 case class FormUrlEndcoded(form: Map[String, Seq[String]]):
   export form.*
+  def getFirst(fieldName: String):Option[String] = 
+    get(fieldName).map(_.headOption.orNull)
 
 object FormUrlEncodedRequestConverterFunction extends RequestConverterFunction:
   override def convertRequest(ctx: ServiceRequestContext,

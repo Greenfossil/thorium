@@ -16,6 +16,7 @@
 
 package com.greenfossil.thorium
 
+import com.greenfossil.commons.json.Json
 import com.greenfossil.data.mapping.Mapping
 import com.linecorp.armeria.common.multipart.MultipartFile
 import com.linecorp.armeria.common.{Cookie, HttpMethod, MediaType}
@@ -68,7 +69,11 @@ extension (s: String)
   def removingFromSession(keys: String*)(using request: Request): Result =
     Result(s).removingFromSession(keys *)
 
+  def jsonPrettyPrint: String =
+    Json.prettyPrint(Json.parse(s))
+
 end extension
+
 extension (is: InputStream)
   def withHeaders(headers: (String | AsciiString, String)*): Result =
     Result(is).withHeaders(headers*)
