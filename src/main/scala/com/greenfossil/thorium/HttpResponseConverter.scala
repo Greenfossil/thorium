@@ -123,8 +123,6 @@ object HttpResponseConverter:
         case hr: HttpResponse => hr
         case s: String => HttpResponse.of(s)
         case bytes: Array[Byte] => HttpResponse.of(HttpStatus.OK, Option(req.contentType).getOrElse(MediaType.ANY_TYPE), HttpData.wrap(bytes))
-        case jsValue: JsValue => HttpResponse.of(HttpStatus.OK, MediaType.JSON, HttpData.ofUtf8(jsValue.stringify))
-        case tag : Tag => HttpResponse.of(HttpStatus.OK, MediaType.HTML_UTF_8, HttpData.ofUtf8(tag.render))
         case is: InputStream =>
           HttpResponse.of(
             ResponseHeaders.of(HttpStatus.OK, HttpHeaderNames.CONTENT_TYPE, Option(req.contentType).getOrElse(MediaType.ANY_TYPE)),

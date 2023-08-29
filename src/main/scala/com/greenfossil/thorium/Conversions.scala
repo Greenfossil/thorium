@@ -16,13 +16,14 @@
 
 package com.greenfossil.thorium
 
-import java.time.ZoneId
+import com.greenfossil.commons.json.JsValue
+import com.greenfossil.htmltags.Tag
+import com.linecorp.armeria.common.{HttpResponse, HttpStatus, MediaType}
 
-object RequestAttrs:
-  import io.netty.util.AttributeKey
-  val TZ = AttributeKey.valueOf[ZoneId]("tz")
-  val Session = AttributeKey.valueOf[Session]("session")
-  val Flash = AttributeKey.valueOf[Flash]("flash")
-  val Config = AttributeKey.valueOf[Configuration]("config")
-  val Request = AttributeKey.valueOf[Request]("request")
-  val CSRFToken = AttributeKey.valueOf[String]("csrf-token")
+given Conversion[HttpResponse, Result] = Result(_)
+
+given Conversion[JsValue, Result] with
+  def apply(jsValue: JsValue): Result = Result.of(HttpStatus.OK, jsValue.stringify, MediaType.JSON)
+
+private given  Conversion[Tag, Result] with
+  def apply(tag: Tag): Result = Result.of(HttpStatus.OK, tag.render, MediaType.HTML_UTF_8)
