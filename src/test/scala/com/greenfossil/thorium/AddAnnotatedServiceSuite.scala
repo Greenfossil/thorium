@@ -38,7 +38,7 @@ private object Service:
   def foobaz(form: FormUrlEndcoded)(implicit req: Request) =
     s"${req.path} form:${form} content:${req.asText}"
 
-class Request2Suite extends munit.FunSuite:
+class AddAnnotatedServiceSuite extends munit.FunSuite:
   import com.linecorp.armeria.client.*
   import com.linecorp.armeria.common.*
 
@@ -55,55 +55,43 @@ class Request2Suite extends munit.FunSuite:
     server.stop()
   }
 
-  import com.linecorp.armeria.scala.implicits.*
-
   test("foo") {
     val client = WebClient.of(s"http://localhost:${server.port}")
 
     val creq = HttpRequest.of(HttpMethod.GET, "/foo", MediaType.PLAIN_TEXT, "HelloWorld!")
-    client.execute(creq).aggregate().thenAccept(
-      aggregate =>
-        assertNoDiff(aggregate.contentUtf8(), "/foo content:HelloWorld!")
-    ).toScala
+    val resp = client.execute(creq).aggregate().join()
+    assertNoDiff(resp.contentUtf8(), "/foo content:HelloWorld!")
   }
 
   test("bar") {
     val client = WebClient.of(s"http://localhost:${server.port}")
 
     val creq = HttpRequest.of(HttpMethod.GET, "/bar", MediaType.PLAIN_TEXT, "HelloWorld!")
-    client.execute(creq).aggregate().thenAccept(
-      aggregate =>
-        assertNoDiff(aggregate.contentUtf8(), "/bar content:HelloWorld!")
-    ).toScala
+    val resp = client.execute(creq).aggregate().join()
+    assertNoDiff(resp.contentUtf8(), "/bar content:HelloWorld!")
   }
 
   test("baz") {
     val client = WebClient.of(s"http://localhost:${server.port}")
 
     val creq = HttpRequest.of(HttpMethod.GET, "/baz/homer", MediaType.PLAIN_TEXT, "HelloWorld!")
-    client.execute(creq).aggregate().thenAccept(
-      aggregate =>
-        assertNoDiff(aggregate.contentUtf8(), "/baz/homer name:homer content:HelloWorld!")
-    ).toScala
+    val resp = client.execute(creq).aggregate().join()
+    assertNoDiff(resp.contentUtf8(), "/baz/homer name:homer content:HelloWorld!")
   }
 
   test("foobaz") {
     val client = WebClient.of(s"http://localhost:${server.port}")
 
     val creq = HttpRequest.of(HttpMethod.POST, "/foobaz/homer", MediaType.FORM_DATA, "msg[]=Hello&msg[]=World!")
-    client.execute(creq).aggregate().thenAccept(
-      aggregate =>
-        assertNoDiff(aggregate.contentUtf8(), "/foobaz/homer form:FormUrlEndcoded(ListMap(msg[] -> List(Hello, World!))) content:msg[]=Hello&msg[]=World!")
-    ).toScala
+    val resp = client.execute(creq).aggregate().join()
+    assertNoDiff(resp.contentUtf8(), "/foobaz/homer form:FormUrlEndcoded(ListMap(msg[] -> List(Hello, World!))) content:msg[]=Hello&msg[]=World!")
   }
 
   test("foobaz - wrong media-type") {
     val client = WebClient.of(s"http://localhost:${server.port}")
 
     val creq = HttpRequest.of(HttpMethod.POST, "/foobaz/homer", MediaType.JSON, "msg[]=Hello&msg[]=World!")
-    client.execute(creq).aggregate().thenAccept(
-      aggregate =>
-        assertEquals(aggregate.status(), HttpStatus.BAD_REQUEST)
-    ).toScala
+    val resp = client.execute(creq).aggregate().join()
+    assertEquals(resp.status(), HttpStatus.BAD_REQUEST)
   }
 

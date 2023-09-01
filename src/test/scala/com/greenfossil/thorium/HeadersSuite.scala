@@ -16,7 +16,6 @@
 
 package com.greenfossil.thorium
 
-import com.greenfossil.thorium.{*, given}
 import com.linecorp.armeria.common.{Cookie, HttpStatus}
 import com.linecorp.armeria.server.annotation.Get
 
@@ -44,8 +43,7 @@ class HeadersSuite extends munit.FunSuite {
 
     import com.linecorp.armeria.client.WebClient
     val client = WebClient.of(s"http://localhost:${server.port}")
-    val resp = client.get("/headers")
-    resp.aggregate().thenApply{ aggResp =>
+    client.get("/headers").aggregate().thenApply{ aggResp =>
       assertEquals(aggResp.status(), HttpStatus.OK)
       assertNoDiff(aggResp.contentUtf8(), "Headers sent")
     }.join()

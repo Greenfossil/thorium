@@ -40,13 +40,13 @@ object Server:
    * Port is read from app.http.port in application.conf
    * @return
    */
-  def apply(): Server = Server(null, Nil, Nil, None, Configuration())
+  def apply(): Server = Server(null, Nil, Nil, Nil, None, Configuration())
 
   def apply(classLoader: ClassLoader): Server =
-    Server(null, Nil, Nil, None, Configuration.from(classLoader))
+    Server(null, Nil, Nil, Nil, None, Configuration.from(classLoader))
 
   def apply(port: Int): Server =
-    Server(null, Nil, Nil, None, Configuration.usingPort(port))
+    Server(null, Nil, Nil, Nil, None, Configuration.usingPort(port))
 
   private def defaultRequestConverter(requestConverterAttrs: Tuple,
                                       defaultRequestConverterFnOpt: Option[ServiceRequestContext => Void]): RequestConverterFunction =
@@ -97,7 +97,7 @@ object Server:
                 val httpResp = HttpResponseConverter.convertActionResponseToHttpResponse(req, actionResp)
                 futureResp.complete(httpResp)
               })
-          HttpResponse.from(futureResp)
+          HttpResponse.of(futureResp)
 
         case _ =>
           ResponseConverterFunction.fallthrough()
@@ -105,6 +105,7 @@ object Server:
 case class Server(server: AServer,
                   httpServices: Seq[(String, HttpService)],
                   annotatedServices: Seq[AnyRef] = Nil,
+                  routeFnList: Seq[ServiceBindingBuilder => Unit] = Nil,
                   errorHandlerOpt: Option[ServerErrorHandler],
                   configuration: Configuration,
                   requestConverters: Seq[RequestConverterFunction] = Nil,
@@ -143,13 +144,16 @@ case class Server(server: AServer,
 
   def addServices(newServices: AnyRef*): Server  =
     copy(annotatedServices = annotatedServices ++ newServices)
-    
+
+  def addRoute(route: ServiceBindingBuilder => Unit): Server =
+    copy(routeFnList = routeFnList :+ route)
+
   def addCSRFProtection(): Server =
-    addCSRFProtection(CSRFProtectionDecoratingFunction()) 
-  
+    addCSRFProtection(CSRFProtectionDecoratingFunction())
+
   def addCSRFProtectcion(allowOriginFn: (String, ServiceRequestContext) => Boolean): Server =
     addCSRFProtection(CSRFProtectionDecoratingFunction(allowOriginFn))
-    
+
   def addCSRFProtection(allowOriginFn: (String, ServiceRequestContext) => Boolean,
                         verifyMethodFn: String => Boolean,
                         blockCSRFResponseFn: (ServiceRequestContext, String, Boolean, Boolean) => (MediaType, String)): Server =
@@ -210,14 +214,9 @@ case class Server(server: AServer,
     sb.maxRequestLength(configuration.maxRequestLength)
     configuration.maxNumConnectionOpt.foreach(maxConn => sb.maxNumConnections(maxConn))
     sb.requestTimeout(configuration.requestTimeout)
-    httpServices.foreach{ route =>
-      sb.service(route._1, route._2.decorate((delegate, ctx, req) =>{
-        //embed the env and http config
-        ctx.setAttr(RequestAttrs.Config, configuration)
-        delegate.serve(ctx,req)
-      }))
-    }
-    annotatedServices.foreach{s => sb.annotatedService(s)}
+    httpServices.foreach(sb.service.tupled)
+    annotatedServices.foreach(sb.annotatedService)
+    routeFnList.foreach(_.apply(sb.route()))
     sb.annotatedServiceExtensions(allRequestConverters, allResponseConverters, allExceptionHandlers)
     errorHandlerOpt.foreach{ handler => sb.errorHandler(handler.orElse(ServerErrorHandler.ofDefault()))}
     serverBuilderSetupFn.foreach(_.apply(sb))

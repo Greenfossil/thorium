@@ -62,12 +62,12 @@ object HttpResponseConverter:
         case _ => (Nil, None, None)
     (getNewSessionCookie(req, newSessionOpt) ++ getNewFlashCookie(req, newFlashOpt) ++  getCSRFCookie(req)).toList ++ newCookies
 
-  private def responseHeader(req: Request, actionResp: ActionResponse): ResponseHeader =
+  private def responseHeader(actionResp: ActionResponse): ResponseHeader =
     actionResp match
       case result: Result => result.header
       case _ => null
 
-  private def contentTypeOpt(req: Request, actionResp: ActionResponse): Option[MediaType] =
+  private def contentTypeOpt(actionResp: ActionResponse): Option[MediaType] =
     actionResp match
       case result: Result => result.contentTypeOpt
       case _ => None
@@ -110,8 +110,8 @@ object HttpResponseConverter:
                              ): Try[HttpResponse] =
     for {
       respWithCookies <- Try(addCookiesToHttpResponse(getAllCookies(req, actionResp), httpResp))
-      respWithHeaders <- Try(addHeadersToHttpResponse(responseHeader(req, actionResp), respWithCookies))
-      httpResponse <- Try(addContentTypeToHttpResponse(contentTypeOpt(req, actionResp), respWithHeaders))
+      respWithHeaders <- Try(addHeadersToHttpResponse(responseHeader(actionResp), respWithCookies))
+      httpResponse <- Try(addContentTypeToHttpResponse(contentTypeOpt(actionResp), respWithHeaders))
     } yield httpResponse
 
   private def _toHttpResponse(req: com.greenfossil.thorium.Request, actionResponse: ActionResponse): Try[HttpResponse] =
@@ -126,12 +126,13 @@ object HttpResponseConverter:
             ResponseHeaders.of(HttpStatus.OK, HttpHeaderNames.CONTENT_TYPE, Option(req.contentType).getOrElse(MediaType.ANY_TYPE)),
             StreamMessage.fromOutputStream(os => Using.resources(is, os) { (is, os) => is.transferTo(os) })
           )
-        case result: Result => _toHttpResponse(req, result.body).get
+        case result: Result =>
+          if Result.isRedirect(result.status.code()) then HttpResponse.ofRedirect(result.status, result.body.asInstanceOf[String])
+          else _toHttpResponse(req, result.body).get
 
   def convertActionResponseToHttpResponse(req: com.greenfossil.thorium.Request, actionResp: ActionResponse): HttpResponse =
     serverLogger.debug(s"Convert ActionResponse to HttpResponse.")
     (for {
-      
       httpResp <- _toHttpResponse(req, actionResp)
       httpRespWithHeaders <- _addHttpResponseHeaders(req, actionResp, httpResp)
     } yield httpRespWithHeaders)

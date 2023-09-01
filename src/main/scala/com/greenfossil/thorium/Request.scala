@@ -70,6 +70,10 @@ trait Request(val requestContext: ServiceRequestContext,
   def queryParam(param: String): Option[String] = Option(requestContext.queryParam(param))
 
   def queryParams(param: String): List[String] = requestContext.queryParams(param).asScala.toList
+  
+  def pathParam(name: String) = requestContext.pathParam(name)
+  
+  def pathParams: Map[String, String] = requestContext.pathParams().asScala.toMap
 
   def isXhr: Boolean =
     // Check header key and value if XHR (case insensitive)

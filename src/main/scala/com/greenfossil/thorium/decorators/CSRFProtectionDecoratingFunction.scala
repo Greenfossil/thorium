@@ -1,3 +1,19 @@
+/*
+ * Copyright 2022 Greenfossil Pte Ltd
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
 package com.greenfossil.thorium.decorators
 
 import com.greenfossil.thorium
@@ -168,7 +184,7 @@ class CSRFProtectionDecoratingFunction(allowOriginFn: (String, ServiceRequestCon
             .aggregate()
             .thenAccept: multipart =>
               val part = multipart.field(csrfCookieName)
-              futureResp.complete(part.contentUtf8())
+              futureResp.complete(if part == null then null else part.contentUtf8())
     else {
       csrfLogger.debug(s"Find CSRFToken found unsupported for contentType:${mediaType}.")
       futureResp.complete(null)
@@ -233,5 +249,5 @@ class CSRFProtectionDecoratingFunction(allowOriginFn: (String, ServiceRequestCon
               unauthorizedResponse(config, mediaType, content)
             futureResp.complete(resp)
           })
-      HttpResponse.from(futureResp)
+      HttpResponse.of(futureResp)
 

@@ -53,7 +53,7 @@ object AnnotatedPathMacroSupport extends MacroSupport(globalDebug = false):
         val paramNameValueLookup: Map[String, Term] =
           paramNames.zip(paramValues)
             .toMap
-            .filter((key, value) => annotatedParamNames.contains(key))
+            .filter((key, _) => annotatedParamNames.contains(key))
 
         val annList = applyTerm.symbol.annotations //Get Endpoint annotations
         getAnnotatedPath(epExpr, annList, paramNameValueLookup, onSuccessCallback, supportQueryStringPost)

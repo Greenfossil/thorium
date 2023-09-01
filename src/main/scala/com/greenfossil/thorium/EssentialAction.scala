@@ -23,7 +23,9 @@ import org.slf4j.LoggerFactory
 import java.io.InputStream
 import java.util.concurrent.CompletableFuture
 
-type ActionResponse = HttpResponse | String | Array[Byte] | InputStream | Result
+type SimpleResponse = String | Array[Byte] | InputStream | HttpResponse
+
+type ActionResponse = SimpleResponse | Result
 
 private[thorium] val actionLogger = LoggerFactory.getLogger("com.greenfossil.thorium.action")
 
@@ -77,7 +79,7 @@ trait EssentialAction extends HttpService :
           futureResp.complete(httpResp)
         })
       }
-    HttpResponse.from(futureResp)
+    HttpResponse.of(futureResp)
 
 end EssentialAction
 

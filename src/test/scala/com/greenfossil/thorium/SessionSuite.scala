@@ -16,7 +16,6 @@
 
 package com.greenfossil.thorium
 
-import com.greenfossil.thorium.{*, given}
 import com.linecorp.armeria.client.logging.LoggingClient
 import com.linecorp.armeria.common.HttpStatus
 import com.linecorp.armeria.server.annotation.Get
@@ -60,10 +59,8 @@ class SessionSuite extends munit.FunSuite {
       .decorator(CookieClient.newDecorator(CookiePolicy.acceptAll()))
       .decorator(LoggingClient.newDecorator())
       .build()
-    val resp = client.get("/s0")
-    resp.aggregate().thenAccept{ aggResp =>
-      assert(aggResp.contentUtf8().startsWith("S3 reached"))
-    }
+    val resp = client.get("/s0").aggregate().join()
+    assert(resp.contentUtf8().startsWith("S3 reached"))
     server.stop()
   }
 
