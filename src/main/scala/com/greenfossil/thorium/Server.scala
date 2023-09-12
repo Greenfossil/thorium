@@ -209,7 +209,7 @@ case class Server(server: AServer,
   def buildServer(port: Int, sessionProtocols: Seq[SessionProtocol]): AServer =
     val sb = AServer.builder()
     //Setup Protocol and ensure at least one of it is either Https or Http
-    sb.port(port, sessionProtocols.asJava)
+    sb.port(port, sessionProtocols*)
 
     sb.maxRequestLength(configuration.maxRequestLength)
     configuration.maxNumConnectionOpt.foreach(maxConn => sb.maxNumConnections(maxConn))

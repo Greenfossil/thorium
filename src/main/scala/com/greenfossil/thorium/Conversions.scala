@@ -25,5 +25,5 @@ given Conversion[HttpResponse, Result] = Result(_)
 given Conversion[JsValue, Result] with
   def apply(jsValue: JsValue): Result = Result.of(HttpStatus.OK, jsValue.stringify, MediaType.JSON)
 
-private given  Conversion[Tag, Result] with
+given  Conversion[Tag, Result] with
   def apply(tag: Tag): Result = Result.of(HttpStatus.OK, tag.render, MediaType.HTML_UTF_8)

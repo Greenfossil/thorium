@@ -16,8 +16,7 @@
 
 package com.greenfossil.thorium
 
-import com.greenfossil.commons.json.{JsValue, Json}
-import com.greenfossil.htmltags.Tag
+import com.greenfossil.commons.json.Json
 import com.linecorp.armeria.common.{Cookie, MediaType}
 import io.netty.util.AsciiString
 
@@ -191,96 +190,3 @@ given ArrayBytesResultable: Resultable[Array[Byte]] with
 
     def removingFromSession(keys: String*)(using request: Request): Result =
       Result(bytes).removingFromSession(keys *)
-
-given TagResultable: Resultable[Tag] with
-
-  extension (tag: Tag)
-    def withHeaders(headers: (String | AsciiString, String)*): Result =
-      Result.of(tag).withHeaders(headers*)
-
-    def withDateHeaders(headers: (String, ZonedDateTime)*): Result =
-      Result.of(tag).withDateHeaders(headers *)
-
-    def discardingHeader(name: String): Result =
-      Result.of(tag).discardingHeader(name)
-
-    def as(contentType: MediaType): Result =
-      Result.of(tag).as(contentType)
-
-    def withCookies(cookies: Cookie*): Result =
-      Result.of(tag).withCookies(cookies *)
-
-    def discardingCookies[A <: String | Cookie](cookies: A*)(using request: Request): Result =
-      Result.of(tag).discardingCookies(cookies *)
-
-    def withSession(session: Session): Result =
-      Result.of(tag).withSession(session)
-
-    def withSession(sessions: (String, String)*): Result =
-      Result.of(tag).withSession(sessions *)
-
-    def withNewSession: Result =
-      Result.of(tag).withSession()
-
-    def flashing(flash: Flash): Result =
-      Result.of(tag).flashing(flash)
-
-    def flashing(values: (String, String)*): Result =
-      Result.of(tag).flashing(values *)
-
-    def session(using request: Request): Session =
-      Result.of(tag).session
-
-    def addingToSession(values: (String, String)*)(using request: Request): Result =
-      Result.of(tag).addingToSession(values *)
-
-    def removingFromSession(keys: String*)(using request: Request): Result =
-      Result.of(tag).removingFromSession(keys *)
-
-given JsValueResultable: Resultable[JsValue] with
-
-  extension (jsValue: JsValue)
-    def withHeaders(headers: (String | AsciiString, String)*): Result =
-      Result.of(jsValue).withHeaders(headers*)
-
-    def withDateHeaders(headers: (String, ZonedDateTime)*): Result =
-      Result.of(jsValue).withDateHeaders(headers *)
-
-    def discardingHeader(name: String): Result =
-      Result.of(jsValue).discardingHeader(name)
-
-    def as(contentType: MediaType): Result =
-      Result.of(jsValue).as(contentType)
-
-    def withCookies(cookies: Cookie*): Result =
-      Result.of(jsValue).withCookies(cookies *)
-
-    def discardingCookies[A <: String | Cookie](cookies: A*)(using request: Request): Result =
-      Result.of(jsValue).discardingCookies(cookies *)
-
-    def withSession(session: Session): Result =
-      Result.of(jsValue).withSession(session)
-
-    def withSession(sessions: (String, String)*): Result =
-      Result.of(jsValue).withSession(sessions *)
-
-    def withNewSession: Result =
-      Result.of(jsValue).withSession()
-
-    def flashing(flash: Flash): Result =
-      Result.of(jsValue).flashing(flash)
-
-    def flashing(values: (String, String)*): Result =
-      Result.of(jsValue).flashing(values *)
-
-    def session(using request: Request): Session =
-      Result.of(jsValue).session
-
-    def addingToSession(values: (String, String)*)(using request: Request): Result =
-      Result.of(jsValue).addingToSession(values *)
-
-    def removingFromSession(keys: String*)(using request: Request): Result =
-      Result.of(jsValue).removingFromSession(keys *)
-
-    def jsonPrettyPrint: String =
-      Json.prettyPrint(jsValue)

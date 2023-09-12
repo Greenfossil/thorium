@@ -16,9 +16,11 @@
 
 package com.greenfossil.thorium
 
+import com.greenfossil.commons.json.Json
 import com.linecorp.armeria.common.MediaType
 
-//class AddRouteSuite extends munit.FunSuite {
+import scala.language.implicitConversions
+
 object AddRouteSuite:
 
   var server: Server = null
@@ -35,15 +37,36 @@ object AddRouteSuite:
           }
       .addRoute: route =>
         route.post("/route/howdy").consumes(MediaType.FORM_DATA).build:
-          Action { implicit req =>
+          Action { req =>
             val form: FormUrlEndcoded = req.asFormUrlEncoded
             s"Howdy ${form.getFirst("name")}"
           }
       .addRoute: route =>
-        route.get("/route/welcome/:name").build:
-          Action { implicit req =>
+        route.get("/route/greetings-tag/:name").build:
+          Action { req =>
             import com.greenfossil.htmltags.*
             h2(s"Welcome! ${req.pathParam("name")}")
+          }
+      .addRoute: route =>
+        route.get("/route/howdy-tag/:name").build:
+          Action { req =>
+            import com.greenfossil.htmltags.*
+            h2(s"Howdy! ${req.pathParam("name")}")
+              .flashing("test" -> "test")
+          }
+      .addRoute: route =>
+        route.get("/route/greetings-json/:name").build:
+          Action{req =>
+            Json.obj{
+              "Welcome" -> req.pathParam("name")
+            }
+          }
+      .addRoute: route =>
+        route.get("/route/howdy-json/:name").build:
+          Action { req =>
+            Json.obj {
+              "Howdy" -> req.pathParam("name")
+            }.flashing("test" -> "test")
           }
       .start()
 
