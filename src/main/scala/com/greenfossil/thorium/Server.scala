@@ -290,33 +290,34 @@ case class Server(server: AServer,
 
   def start(sessionProtocols: SessionProtocol*): Server =
     val newServer = buildServer(sessionProtocols*)
-    Runtime.getRuntime.addShutdownHook(Thread(
-      () => {
-        serverLogger.info("Stopping server...")
-        newServer.stop().join
-        serverLogger.info("Server stopped.")
-      }
-    ))
-    println(banner)
-    serverLogger.info(s"Starting Server...")
-    newServer.start().join()
-    serverLogger.info("Server started.")
-    copy(server = newServer)
+    doStartServer(newServer)
 
   def startSecure(sessionProtocols: SessionProtocol*): Server =
     val newSecureServer = buildSecureServer(sessionProtocols*)
+    doStartServer(newSecureServer)
+
+  private def doStartServer(server: AServer): Server =
     Runtime.getRuntime.addShutdownHook(Thread(
       () => {
-        newSecureServer.stop().join
+        serverLogger.info("Stopping server...")
+        server.stop().join
         serverLogger.info("Server stopped.")
       }
     ))
     println(banner)
     serverLogger.info(s"Starting Server...")
-    newSecureServer.start().join()
+
+    server.start().join()
     serverLogger.info("Server started.")
-    copy(server = newSecureServer)
+    copy(server = server)
 
   def stop(): Future[Unit] =
     import com.linecorp.armeria.scala.implicits.*
     server.stop().toScala
+
+  def printRoutes: Server =
+    println(s"Service Routes declared: ${serviceRoutes.size}")
+    serviceRoutes foreach { route =>
+      println(s"${route.methods().asScala.mkString(",")} - $route")
+    }
+    this
