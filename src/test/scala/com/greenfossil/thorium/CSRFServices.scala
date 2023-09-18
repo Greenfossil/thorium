@@ -51,9 +51,8 @@ object CSRFServices:
 
   @Post("/csrf/email/change")
   @RequestTimeout(1, TimeUnit.HOURS)
-  def changePassword = Action { request =>
+  def changePassword = Action : _ =>
         "Password Changed"
-  }
 
   @Get("/csrf/do-delete")
   @RequestTimeout(1, TimeUnit.HOURS)

@@ -285,6 +285,23 @@ case class Result(header: ResponseHeader = ResponseHeader(Map.empty),
   def flashing(values: (String, String)*): Result = 
     flashing(Flash(values.toMap))
 
+    /**
+     *
+     * @param values - values are added to an existing new Flash, else a new Flash would be created with these values
+     * @return
+     */
+  def addingToFlashing(values: (String, String)*): Result =
+  flashing(Flash(newFlashOpt.map(_.data).getOrElse(Map.empty) ++ values.toMap))
+
+
+  /**
+   *
+   * @param keys - keys are removed from current new Flash instance, else it is ignored
+   * @return
+   */
+  def removingFromFlashing(keys: String*): Result =
+  flashing(Flash(newFlashOpt.map(_.data -- keys).getOrElse(Map.empty)))
+
   /**
    * @param request Current request
    * @return The session carried by this result. Reads the request’s session if this result does not modify the session.

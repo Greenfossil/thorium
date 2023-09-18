@@ -21,26 +21,22 @@ import com.linecorp.armeria.server.annotation.Get
 
 trait Base:
   @Get("/base/foo")
-  def foo = Action { request =>
+  def foo = Action: _ =>
     "hello foo"
-  }
 
   @Get("/base/bar")
-  def bar = Action{ request =>
+  def bar = Action: _ =>
     Redirect(foo)
-  }
-
 
 object Sub1 extends Base:
+
   @Get("/sub1/foo")
-  override def foo = Action { request =>
+  override def foo = Action: _ =>
     "hello sub1 foo"
-  }
 
   @Get("/sub1/foobaz")
-  def foobaz = Action {request =>
+  def foobaz = Action: _ =>
     Redirect(foo)
-  }
 
   def foobazRedirect =  EndpointMcr(foo).url
 

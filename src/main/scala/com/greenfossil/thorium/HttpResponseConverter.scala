@@ -73,8 +73,8 @@ object HttpResponseConverter:
       case _ => None
 
   /*
-   * Keep current request Session, if not new values
-   * Discard session is newSession isEmpty or append new values
+   * Keep current request Session, if newSessionOpt is None
+   * If newSessionOpt is defined, discard session if newSession isEmpty or create a new Session with values
    */
   private def getNewSessionCookie(req: Request, newSessionOpt: Option[Session]): Option[Cookie] =
     newSessionOpt.map { newSession =>
@@ -82,9 +82,8 @@ object HttpResponseConverter:
         if newSession.isEmpty then
           CookieUtil.bakeDiscardCookie(req.httpConfiguration.sessionConfig.cookieName)(using req)
         else
-          //Append new session will to session cookie
-          val session = req.session + newSession
-          CookieUtil.bakeSessionCookie(session)(using req).orNull
+          //Bake a new session cookie
+          CookieUtil.bakeSessionCookie(newSession)(using req).orNull
       }
 
   private def getNewFlashCookie(req: Request, newFlashOpt: Option[Flash]): Option[Cookie] =

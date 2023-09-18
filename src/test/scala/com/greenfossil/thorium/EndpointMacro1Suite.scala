@@ -24,23 +24,23 @@ import java.time.LocalDateTime
 class EndpointMacro1Suite extends munit.FunSuite {
 
   @Get("/endpoint1")
-  def endpoint1 = Action { req => "endpoint1" }
+  def endpoint1 = Action { _ => "endpoint1" }
 
   @Get("/endpoint2/:name")
-  def endpoint2(@Param name : String) = Action { req => "endpoint2"}
+  def endpoint2(@Param name : String) = Action { _ => "endpoint2"}
 
   @Get("/endpoint3") //query string
-  def endpoint3(@Param name: String) = Action { req => "endpoint3"}
+  def endpoint3(@Param name: String) = Action { _ => "endpoint3"}
 
   @Get("/endpoint4/:id")
-  def endpoint4(@Param id: Long, @Param name: String) = Action { req => "endpoint3"}
+  def endpoint4(@Param id: Long, @Param name: String) = Action { _ => "endpoint3"}
 
   @Post("/endpoint4/:name")
-  def endpoint4(@Param members: Seq[String], @Param name: String, @Param time: LocalDateTime) = Action { req => "endpoint5"}
+  def endpoint4(@Param members: Seq[String], @Param name: String, @Param time: LocalDateTime) = Action { _ => "endpoint5"}
 
   @Post
   @Path("/endpoint5/:id/:name")
-  def endpoint5(@Param id: Long, @Param name: String) = Action { req => "endpoint5" }
+  def endpoint5(@Param id: Long, @Param name: String) = Action { _ => "endpoint5" }
 
   test("annotated endpoint"){
     val ep1 = endpoint1.endpoint

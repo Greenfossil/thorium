@@ -29,13 +29,13 @@ import java.time.Duration
 class CSRFProtectionDecoratingFunction3Suite extends munit.FunSuite:
 
   test("SameOrigin POST"):
-    doPost(origin => origin)
+    doPost(identity)
 
   test("null Origin POST"):
-    doPost(origin => null)
+    doPost(_ => null)
 
   test("Cross Origin POST"):
-    doPost(origin => "http://another-site")
+    doPost(_ => "http://another-site")
 
   def doPost(originFn: String => String)(using loc: munit.Location) =
     val server = Server(0)
