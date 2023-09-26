@@ -113,26 +113,26 @@ object HttpResponseConverter:
       httpResponse <- Try(addContentTypeToHttpResponse(contentTypeOpt(actionResp), respWithHeaders))
     } yield httpResponse
 
-  private def _toHttpResponse(req: com.greenfossil.thorium.Request, actionResponse: ActionResponse): Try[HttpResponse] =
+  private def _toHttpResponse(req: com.greenfossil.thorium.Request, status: HttpStatus, actionResponse: ActionResponse): Try[HttpResponse] =
     Try:
       actionResponse match
         case null => throw new Exception(s"Null response in request [${req.uri}]")
         case hr: HttpResponse => hr
-        case s: String => HttpResponse.of(s)
-        case bytes: Array[Byte] => HttpResponse.of(HttpStatus.OK, Option(req.contentType).getOrElse(MediaType.ANY_TYPE), HttpData.wrap(bytes))
+        case s: String => HttpResponse.of(status,  MediaType.PLAIN_TEXT_UTF_8, s)
+        case bytes: Array[Byte] => HttpResponse.of(status, Option(req.contentType).getOrElse(MediaType.ANY_TYPE), HttpData.wrap(bytes))
         case is: InputStream =>
           HttpResponse.of(
-            ResponseHeaders.of(HttpStatus.OK, HttpHeaderNames.CONTENT_TYPE, Option(req.contentType).getOrElse(MediaType.ANY_TYPE)),
+            ResponseHeaders.of(status, HttpHeaderNames.CONTENT_TYPE, Option(req.contentType).getOrElse(MediaType.ANY_TYPE)),
             StreamMessage.fromOutputStream(os => Using.resources(is, os) { (is, os) => is.transferTo(os) })
           )
         case result: Result =>
           if Result.isRedirect(result.status.code()) then HttpResponse.ofRedirect(result.status, result.body.asInstanceOf[String])
-          else _toHttpResponse(req, result.body).get
+          else _toHttpResponse(req, result.status, result.body).get
 
   def convertActionResponseToHttpResponse(req: com.greenfossil.thorium.Request, actionResp: ActionResponse): HttpResponse =
     serverLogger.debug(s"Convert ActionResponse to HttpResponse.")
     (for {
-      httpResp <- _toHttpResponse(req, actionResp)
+      httpResp <- _toHttpResponse(req, HttpStatus.OK, actionResp)
       httpRespWithHeaders <- _addHttpResponseHeaders(req, actionResp, httpResp)
     } yield httpRespWithHeaders)
       .fold(

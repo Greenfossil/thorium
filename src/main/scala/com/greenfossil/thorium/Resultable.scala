@@ -17,7 +17,7 @@
 package com.greenfossil.thorium
 
 import com.greenfossil.commons.json.Json
-import com.linecorp.armeria.common.{Cookie, MediaType}
+import com.linecorp.armeria.common.{Cookie, HttpStatus, MediaType}
 import io.netty.util.AsciiString
 
 import java.io.InputStream
@@ -32,6 +32,8 @@ trait Resultable[A]:
     def discardingHeader(name: String): Result
 
     def as(contentType: MediaType): Result
+
+    def as(status: HttpStatus, contentType: MediaType): Result
 
     def withCookies(cookies: Cookie*): Result
 
@@ -67,6 +69,9 @@ given StringResultable: Resultable[String] with
 
     def as(contentType: MediaType): Result =
       Result(s).as(contentType)
+
+    def as(status: HttpStatus, contentType: MediaType): Result =
+      Result(s).as(status, contentType)  
 
     def withCookies(cookies: Cookie*): Result =
       Result(s).withCookies(cookies*)
@@ -116,6 +121,9 @@ given InputStreamResultable: Resultable[InputStream] with
     def as(contentType: MediaType): Result =
       Result(is).as(contentType)
 
+    def as(status: HttpStatus, contentType: MediaType): Result =
+      Result(is).as(status, contentType)
+    
     def withCookies(cookies: Cookie*): Result =
       Result(is).withCookies(cookies *)
 
@@ -160,6 +168,9 @@ given ArrayBytesResultable: Resultable[Array[Byte]] with
 
     def as(contentType: MediaType): Result =
       Result(bytes).as(contentType)
+
+    def as(status: HttpStatus, contentType: MediaType): Result =
+      Result(bytes).as(status, contentType)  
 
     def withCookies(cookies: Cookie*): Result =
       Result(bytes).withCookies(cookies *)

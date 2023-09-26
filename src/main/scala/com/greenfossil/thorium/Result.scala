@@ -179,6 +179,9 @@ case class Result(header: ResponseHeader = ResponseHeader(Map.empty),
   def discardingHeader(name: String): Result = 
     copy(header = header.copy(headers = header.headers - name))
 
+  def as(status: HttpStatus, contentType: MediaType): Result =
+    copy(status = status, contentTypeOpt = Some(contentType))
+  
   def as(contentType: MediaType): Result =
     copy(contentTypeOpt = Some(contentType))
 

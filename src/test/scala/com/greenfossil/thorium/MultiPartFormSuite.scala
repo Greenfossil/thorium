@@ -16,6 +16,9 @@
 
 package com.greenfossil.thorium
 
+import com.linecorp.armeria.client.WebClient
+import com.linecorp.armeria.common.{ContentDisposition, HttpStatus, MediaType}
+import com.linecorp.armeria.common.multipart.{BodyPart, Multipart}
 import com.linecorp.armeria.server.annotation.Post
 import munit.FunSuite
 
@@ -33,6 +36,22 @@ class MultiPartFormSuite extends FunSuite{
       val files = request.files
       Ok(s"Received multipart request with files: ${files.size}")
     }
+
+    @Post("/multipart-bad-request")
+    def multipartFormBadRequest: Action = Action.multipart { implicit request =>
+      BadRequest("Bad Request")
+    }
+
+    @Post("/multipart-bad-request-2")
+    def multipartForm4: Action = Action.multipart { implicit request =>
+      "Bad Request 2".as(HttpStatus.BAD_REQUEST, MediaType.JSON)
+    }
+
+    @Post("/multipart-internal-server-error")
+    def multipartFormInternalServerError: Action = Action.multipart { implicit request =>
+      InternalServerError("Internal Server Error")
+    }
+
   }
 
 
@@ -41,7 +60,9 @@ class MultiPartFormSuite extends FunSuite{
   override def beforeAll(): Unit = {
 
     try{
-      server = Server().addServices(FormServices).start()
+      server = Server()
+        .addServices(FormServices)
+        .start()
     }catch {
       case ex: Throwable =>
     }
@@ -85,6 +106,36 @@ class MultiPartFormSuite extends FunSuite{
       "------WebKitFormBoundaryOrtvYGBXE2gxan8t--\r\n'"
     val result = command.!!.trim
     assertEquals(result, "Received multipart request with files: 0")
+  }
+
+  test("POST with bad request") {
+    val mpReq =
+      val bodyPart = BodyPart.of(ContentDisposition.of("form-data", "name"), "homer")
+      Multipart.of(bodyPart)
+        .toHttpRequest(s"http://localhost:${server.port}/multipart-bad-request")
+    val resp = WebClient.of().execute(mpReq).aggregate().join
+    assertEquals(resp.status(), HttpStatus.BAD_REQUEST)
+    assertNoDiff(resp.contentUtf8(), "Bad Request")
+  }
+
+  test("POST with bad request 2") {
+    val mpReq =
+      val bodyPart = BodyPart.of(ContentDisposition.of("form-data", "name"), "homer")
+      Multipart.of(bodyPart)
+        .toHttpRequest(s"http://localhost:${server.port}/multipart-bad-request-2")
+    val resp = WebClient.of().execute(mpReq).aggregate().join
+    assertEquals(resp.status(), HttpStatus.BAD_REQUEST)
+    assertNoDiff(resp.contentUtf8(), "Bad Request 2")
+  }
+
+  test("POST with internal server error") {
+    val mpReq =
+      val bodyPart = BodyPart.of(ContentDisposition.of("form-data", "name"), "homer")
+      Multipart.of(bodyPart)
+        .toHttpRequest(s"http://localhost:${server.port}/multipart-internal-server-error")
+    val resp = WebClient.of().execute(mpReq).aggregate().join
+    assertEquals(resp.status(), HttpStatus.INTERNAL_SERVER_ERROR)
+    assertNoDiff(resp.contentUtf8(), "Internal Server Error")
   }
 
 }
