@@ -30,39 +30,39 @@ object AddRouteSuite:
   def test =
     server = Server(8080)
       .addRoute: route =>
-        route.get("/route/greetings/:name").build:
+        route.get("/route/html/:name").build:
           Action { req =>
             val name = req.pathParam("name")
             s"<h1>Greetings ${name}!</h1>".as(MediaType.HTML_UTF_8)
           }
       .addRoute: route =>
-        route.post("/route/howdy").consumes(MediaType.FORM_DATA).build:
+        route.post("/route/form").consumes(MediaType.FORM_DATA).build:
           Action { req =>
             val form: FormUrlEndcoded = req.asFormUrlEncoded
             s"Howdy ${form.getFirst("name")}"
           }
       .addRoute: route =>
-        route.get("/route/greetings-tag/:name").build:
+        route.get("/route/html-tag/:name").build:
           Action { req =>
             import com.greenfossil.htmltags.*
             h2(s"Welcome! ${req.pathParam("name")}")
           }
       .addRoute: route =>
-        route.get("/route/howdy-tag/:name").build:
+        route.get("/route/html-tag-flash/:name").build:
           Action { req =>
             import com.greenfossil.htmltags.*
             h2(s"Howdy! ${req.pathParam("name")}")
               .flashing("test" -> "test")
           }
       .addRoute: route =>
-        route.get("/route/greetings-json/:name").build:
+        route.get("/route/json/:name").build:
           Action{req =>
             Json.obj{
               "Welcome" -> req.pathParam("name")
             }
           }
       .addRoute: route =>
-        route.get("/route/howdy-json/:name").build:
+        route.get("/route/json-flash/:name").build:
           Action { req =>
             Json.obj {
               "Howdy" -> req.pathParam("name")

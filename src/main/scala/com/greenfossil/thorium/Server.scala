@@ -117,7 +117,7 @@ case class Server(server: AServer,
                   requestConverterAttrs: Tuple = EmptyTuple,
                   responseConverterAttrs: Tuple = EmptyTuple,
                   csrfProtectionDecoratingFunctionOpt: Option[CSRFProtectionDecoratingFunction] = None,
-                  docServiceNameOpt: Option[String] = None
+                  docServiceOpt: Option[(String, DocService)] = None
                  ):
 
   def mode: Mode = configuration.environment.mode
@@ -206,7 +206,7 @@ case class Server(server: AServer,
   private def buildSecureServer(sessionProtocols: SessionProtocol*): AServer =
     buildServer(configuration.httpPort, SessionProtocol.HTTPS +: sessionProtocols)
 
-  def buildServer(port: Int, sessionProtocols: Seq[SessionProtocol]): AServer =
+  private def buildServer(port: Int, sessionProtocols: Seq[SessionProtocol]): AServer =
     val sb = AServer.builder()
     //Setup Protocol and ensure at least one of it is either Https or Http
     sb.port(port, sessionProtocols*)
@@ -220,7 +220,7 @@ case class Server(server: AServer,
     sb.annotatedServiceExtensions(allRequestConverters, allResponseConverters, allExceptionHandlers)
     errorHandlerOpt.foreach{ handler => sb.errorHandler(handler.orElse(ServerErrorHandler.ofDefault()))}
     serverBuilderSetupFn.foreach(_.apply(sb))
-    docServiceNameOpt.foreach(name => sb.serviceUnder(name, new DocService()))
+    docServiceOpt.foreach((name, docsService) => sb.serviceUnder(name, docsService))
     //Setup request logging
     sb.accessLogWriter(requestLog => {
       val serviceRequestContext = requestLog.context().asInstanceOf[ServiceRequestContext]
@@ -259,9 +259,13 @@ case class Server(server: AServer,
   def serverBuilderSetup(setupFn: ServerBuilder => Unit): Server =
     copy(serverBuilderSetupFn = Option(setupFn))
 
-  def addDocService(): Server = addDocService("/docs")
+  def addDocService(): Server = addDocService("/docs", new DocService())
 
-  def addDocService(prefix: String): Server = copy(docServiceNameOpt = Option(prefix))
+  def addDocService(name: String): Server = addDocService(name, new DocService())
+
+  def addDocService(docService: DocService): Server = addDocService("/docs", docService)
+
+  def addDocService(name: String, docService: DocService): Server = copy(docServiceOpt = Option((name, docService)))
 
   private val thoriumBanner  =
     """

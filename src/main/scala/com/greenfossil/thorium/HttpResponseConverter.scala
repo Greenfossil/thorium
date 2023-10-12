@@ -94,12 +94,12 @@ object HttpResponseConverter:
     val hasThoriumFlashHeader =
       req.getHeader("X-THORIUM-FLASH").exists("AGAIN".equalsIgnoreCase)
         && HttpMethod.GET == req.method
-    val flashOpt = if !hasThoriumFlashHeader then newFlashOpt else newFlashOpt.map(newFlash => req.flash ++ newFlash ).orElse(Option(req.flash))
+    val flashOpt = if !hasThoriumFlashHeader then newFlashOpt else newFlashOpt.map(newFlash => req.flash ++ newFlash).orElse(Option(req.flash))
     flashOpt.flatMap { newFlash =>
       CookieUtil.bakeFlashCookie(newFlash)(using req) //Create a new flash cookie
     }.orElse {
       //Expire the current flash cookie
-      if req.flash.isEmpty then None
+      if req.flash == null || req.flash.isEmpty then None
       else Some(CookieUtil.bakeDiscardCookie(req.httpConfiguration.flashConfig.cookieName)(using req))
     }
 

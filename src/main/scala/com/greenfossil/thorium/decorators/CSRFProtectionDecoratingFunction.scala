@@ -28,6 +28,9 @@ import java.util.Base64
 import java.util.concurrent.CompletableFuture
 import scala.util.Try
 
+/**
+ * Implementation - https://cheatsheetseries.owasp.org/cheatsheets/Cross-Site_Request_Forgery_Prevention_Cheat_Sheet.html
+ */
 object CSRFProtectionDecoratingFunction:
 
   val csrfLogger = LoggerFactory.getLogger("com.greenfossil.thorium.csrf")
