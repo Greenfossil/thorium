@@ -49,6 +49,22 @@ case class Endpoint(path: String, method: String, queryParams: List[(String, Any
       .map(prefix => prefix + url)
       .getOrElse(url)
 
+  /**
+   * 
+   * @param params - replace the existing queryParams with params
+   * @return
+   */
+  def setQueryParams(params: (String, Any)*): Endpoint =
+    copy(queryParams = params.toList)
+
+  /**
+   * 
+   * @param params - append params to existing queryParams
+   * @return
+   */
+  def addQueryParams(params: (String, Any)*): Endpoint =
+    copy(queryParams = queryParams ++ params)
+
   override def toString: String = url
 
 object Endpoint:

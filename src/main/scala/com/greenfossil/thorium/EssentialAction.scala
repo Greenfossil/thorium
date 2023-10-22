@@ -50,7 +50,7 @@ trait EssentialAction extends HttpService :
    * @return
    */
   override def serve(svcRequestContext: ServiceRequestContext, httpRequest: HttpRequest): HttpResponse =
-    actionLogger.debug(s"Processing EssentialAction.serve - method:${svcRequestContext.method()}, content-type:${httpRequest.contentType()}, uri:${svcRequestContext.uri()}")
+    actionLogger.debug(s"Processing EssentialAction.serve - method:${svcRequestContext.method()}, content-type:${httpRequest.contentType()}, path:${httpRequest.uri}")
     val futureResp = new CompletableFuture[HttpResponse]()
     svcRequestContext
       .request()

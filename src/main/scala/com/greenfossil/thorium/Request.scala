@@ -114,7 +114,17 @@ trait Request(val requestContext: ServiceRequestContext,
     */
   def uriScheme: String = uri.getScheme
 
+  /**
+   *
+   * @return - path, which does not include query string
+   */
   def path: String = requestContext.path()
+
+  /**
+   *
+   * @return - path and its query string if exists
+   */
+  def pathAndQueryString: String = aggregatedHttpRequest.path()
 
   def endpoint: Endpoint = Endpoint(path)
 

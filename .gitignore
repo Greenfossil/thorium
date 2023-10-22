@@ -7,6 +7,4 @@ target/
 metals.sbt
 .bsp
 .lh/
-src/main/java
-src/test/scala/com/greenfossil/webserver/JWTSuite.scala
-/src/test/scala/com/greenfossil/thorium/InheritedAnnotatedPath2Suite.scala
+src/test/scala/experiments/
