@@ -37,7 +37,7 @@ class FirstResponderDecoratingFunction(val configuration: Configuration,
                                        val ignoreRequestFn: ServiceRequestContext => Boolean = _.request().uri().getPath.startsWith("/assets")
                                       ) extends DecoratingHttpServiceFunction:
   override def serve(delegate: HttpService, ctx: ServiceRequestContext, req: HttpRequest): HttpResponse =
-    firstResponderLogger.debug(s"FirstResponder - method:${req.method()} request.uri:${req.uri()}")
+    firstResponderLogger.debug(s"FirstResponder - remote:${ctx.remoteAddress()} method:${req.method()} request.uri:${req.uri()}")
     if firstResponderLogger.isTraceEnabled() then
       firstResponderLogger.trace(s"Headers:${req.headers().size()}")
       req.headers().forEach((key, value) => firstResponderLogger.trace(s"key:$key value:$value"))
