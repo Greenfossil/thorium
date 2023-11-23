@@ -16,12 +16,15 @@
 
 package com.greenfossil.thorium
 
-import com.greenfossil.commons.json.Json
+import com.greenfossil.commons.json.{JsObject, Json}
 import com.greenfossil.thorium.decorators.{CSRFProtectionDecoratingFunction, FirstResponderDecoratingFunction}
 import com.linecorp.armeria.common.*
+import com.linecorp.armeria.common.logging.RequestLog
 import com.linecorp.armeria.server.annotation.{ExceptionHandlerFunction, RequestConverterFunction, ResponseConverterFunction}
 import com.linecorp.armeria.server.docs.DocService
+import com.linecorp.armeria.server.logging.AccessLogWriter
 import com.linecorp.armeria.server.{Server as AServer, *}
+import com.typesafe.config.ConfigObject
 import io.netty.util.AttributeKey
 import org.slf4j.LoggerFactory
 
@@ -221,29 +224,8 @@ case class Server(server: AServer,
     errorHandlerOpt.foreach{ handler => sb.errorHandler(handler.orElse(ServerErrorHandler.ofDefault()))}
     serverBuilderSetupFn.foreach(_.apply(sb))
     docServiceOpt.foreach((name, docsService) => sb.serviceUnder(name, docsService))
-    //Setup request logging
-    sb.accessLogWriter(requestLog => {
-      val serviceRequestContext = requestLog.context().asInstanceOf[ServiceRequestContext]
-      val proxiedAddresses = serviceRequestContext.proxiedAddresses()
-      armeriaLogger.info(
-        Json.obj(
-          "timestamp" -> LocalDateTime.now.toString,
-          "requestId" -> requestLog.context().id.text(),
-          "clientIP" -> serviceRequestContext.clientAddress().getHostAddress,
-          "remoteIP" -> serviceRequestContext.remoteAddress().asInstanceOf[InetSocketAddress].toString,
-          "proxiedDestinationAddresses" -> proxiedAddresses.destinationAddresses().asScala.toSeq.mkString("[", ", ", "]"),
-          "status" -> requestLog.responseHeaders().status().code(),
-          "method" -> requestLog.context().method().toString,
-          "path" -> requestLog.context().path(),
-          "query" -> requestLog.context().query(),
-          "scheme" -> requestLog.context().request().scheme(),
-          "requestLength" -> requestLog.responseLength(),
-          "headers" -> requestLog.context().request().headers().toString,
-          "requestStartTimeMillis" -> requestLog.responseStartTimeMillis(),
-        ).toString
-      )
-    }, true)
-
+    //Setup request & response logging
+    sb.accessLogWriter(accessLogWriter(_), true)
     /*
      * Setup Decorator, Request First Initializer
      */
@@ -255,6 +237,37 @@ case class Server(server: AServer,
     sb.routeDecorator().pathPrefix("/").build(FirstResponderDecoratingFunction(configuration))
 
     sb.build
+
+  private def accessLogWriter(requestLog: RequestLog): Unit =
+    val serviceRequestContext = requestLog.context().asInstanceOf[ServiceRequestContext]
+    val proxiedAddresses = serviceRequestContext.proxiedAddresses()
+
+    val requestObject = configuration.config.getObject("app.accessLogger.requestProperties")
+    val responseObject = configuration.config.getObject("app.accessLogger.responseProperties")
+
+    def configObjectToJson(configObject: ConfigObject): JsObject =
+      import scala.jdk.CollectionConverters.*
+      Json.toJson(
+        configObject.asScala.keys.map { key =>
+          key -> configObject.toConfig.getString(key)
+        }.toMap
+      )
+
+    def defaultJson(): JsObject = Json.obj(
+      "timestamp" -> LocalDateTime.now.toString,
+      "requestId" -> requestLog.context().id.text(),
+      "clientIP" -> serviceRequestContext.clientAddress().getHostAddress,
+      "remoteIP" -> serviceRequestContext.remoteAddress().toString,
+      "proxiedDestinationAddresses" -> proxiedAddresses.destinationAddresses().asScala.toSeq.mkString("[", ", ", "]")
+    )
+
+    val requestJson: JsObject = defaultJson() ++
+      Json.obj("headers" -> requestLog.requestHeaders().toString) ++ configObjectToJson(requestObject)
+    AccessLogWriter.custom(Json.obj("request" -> requestJson).toString).log(requestLog)
+
+    val responseJson: JsObject = defaultJson() ++
+      Json.obj("headers" -> requestLog.responseHeaders().toString) ++ configObjectToJson(responseObject)
+    AccessLogWriter.custom(Json.obj("response" -> responseJson).toString).log(requestLog)
 
   def serverBuilderSetup(setupFn: ServerBuilder => Unit): Server =
     copy(serverBuilderSetupFn = Option(setupFn))
