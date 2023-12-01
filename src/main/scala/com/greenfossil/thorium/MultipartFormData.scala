@@ -27,18 +27,24 @@ import scala.util.Try
 case class MultipartFormData(aggMultipart: AggregatedMultipart, multipartUploadLocation: Path):
   import scala.jdk.CollectionConverters.*
 
-  def bodyPart: Seq[AggregatedBodyPart] = aggMultipart.bodyParts().asScala.toSeq
+  lazy val bodyPart: Seq[AggregatedBodyPart] = aggMultipart.bodyParts().asScala.toSeq
 
-  def names() = aggMultipart.names().asScala
+  lazy val names: List[String] = aggMultipart.names().asScala.toList
 
   lazy val asFormUrlEncoded: FormUrlEndcoded =
     val xs = for {
-      name <- names()
+      name <- names
       part <- aggMultipart.fields(name).asScala
-      if part.contentType().is(MediaType.PLAIN_TEXT)
-      content = part.content(Option(part.contentType().charset()).getOrElse(Charset.forName("UTF-8")))
-    } yield (name, content)
-    FormUrlEndcoded(xs.toList.groupMap(_._1)(_._2))
+      content =
+        if part.contentType().is(MediaType.PLAIN_TEXT) then
+          part.content(Option(part.contentType().charset()).getOrElse(Charset.forName("UTF-8")))
+        else if part.filename() != null then
+          part.filename()
+        else null
+      if content != null
+    } yield
+      (name, content)
+    FormUrlEndcoded(xs.groupMap(_._1)(_._2))
 
   private def saveFileTo( part: AggregatedBodyPart): Option[File] =
     Try {
@@ -52,16 +58,32 @@ case class MultipartFormData(aggMultipart: AggregatedMultipart, multipartUploadL
 
   lazy val files: List[MultipartFile] =
     for {
-      name <- names().toList
+      name <- names
       part <- aggMultipart.fields(name).asScala
       if part.filename() != null && !part.content().isEmpty
       file <- saveFileTo(part)
     } yield  MultipartFile.of(name, part.filename(), file)
 
   /**
-   *
+   * Find a file using the form name
+   * @param formNameRegex - this is the alias of findFileOfFormName
+   * @return
+   */
+  def findFile(formNameRegex: String): Option[MultipartFile] =
+    findFileOfFormName(formNameRegex)
+
+  /**
+   * Find a file using the form name
+   * @param formNameRegex
+   * @return
+   */
+  def findFileOfFormName(formNameRegex: String): Option[MultipartFile] =
+    files.find(file => file.name.matches(formNameRegex) && file.file().length() > 0)
+
+  /**
+   * Find a file using the actual loaded filename
    * @param fileNameRegex
    * @return
    */
-  def findFile(fileNameRegex: String): Option[MultipartFile] =
-    files.find(file => file.name.matches(fileNameRegex) && file.file().length() > 0)
+  def findFileOfFileName(fileNameRegex: String): Option[MultipartFile] =
+    files.find(file => file.filename().matches(fileNameRegex) && file.file().length() > 0)

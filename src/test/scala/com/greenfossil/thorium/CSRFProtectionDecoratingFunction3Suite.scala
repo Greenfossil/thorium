@@ -75,6 +75,6 @@ class CSRFProtectionDecoratingFunction3Suite extends munit.FunSuite:
     val reqOpts = RequestOptions.builder().responseTimeout(Duration.ofHours(1)).build()
     val postResp = client.execute(csrfMultipartRequest, reqOpts).aggregate().join()
     assertNoDiff(postResp.status().codeAsText(), "200")
-    assertNoDiff(postResp.contentUtf8(), s"Received multipart request with files: 1, form:FormUrlEndcoded(Map(name -> List(Homer), APP_CSRF_TOKEN -> List(${csrfCookie.value()})))")
+    assertNoDiff(postResp.contentUtf8(), s"Received multipart request with files: 1, form:FormUrlEndcoded(Map(file -> List(file.txt), name -> List(Homer), APP_CSRF_TOKEN -> List(${csrfCookie.value()})))")
 
     server.stop()
