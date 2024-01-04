@@ -1,6 +1,6 @@
 package com.greenfossil.thorium
 
-import com.greenfossil.data.mapping.Mapping.{*, given}
+import com.greenfossil.data.mapping.Mapping.*
 import com.linecorp.armeria.client.WebClient
 import com.linecorp.armeria.common.ContentDisposition
 import com.linecorp.armeria.common.multipart.{BodyPart, Multipart, MultipartFile}
@@ -56,6 +56,6 @@ class MultipartFileDataBindingSuite extends munit.FunSuite:
     assertNoDiff(resp.contentUtf8(), "Received")
 
     //Stop server
-    val status = server.stop().value
+    server.stop().value
   }
 

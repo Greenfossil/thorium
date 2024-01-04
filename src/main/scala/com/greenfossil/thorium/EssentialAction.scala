@@ -59,16 +59,16 @@ trait EssentialAction extends HttpService :
         actionLogger.debug("Setting up blockingTaskExecutor()")
         svcRequestContext.blockingTaskExecutor().execute(() => {
           //Invoke EssentialAction
-          var ctxCl = Thread.currentThread().getContextClassLoader
+          val ctxCl = Thread.currentThread().getContextClassLoader
           if ctxCl == null then {
-            val ctxCl = this.getClass.getClassLoader
-            actionLogger.debug(s"Async setContextClassloader:${ctxCl}")
-            Thread.currentThread().setContextClassLoader(ctxCl)
+            val cl = this.getClass.getClassLoader
+            actionLogger.debug(s"Async setContextClassloader:${cl}")
+            Thread.currentThread().setContextClassLoader(cl)
           }
           val httpResp =
             try
               val req = new Request(svcRequestContext, aggregateRequest) {}
-              actionLogger.debug(s"Invoke EssentialAction.apply. cl:${ctxCl}, req:${req.hashCode()}")
+              actionLogger.debug(s"Invoke EssentialAction.apply. cl:$ctxCl, req:${req.hashCode()}")
               val resp = apply(req)
               actionLogger.debug("Response from EssentialAction.apply")
               HttpResponseConverter.convertActionResponseToHttpResponse(req, resp)
