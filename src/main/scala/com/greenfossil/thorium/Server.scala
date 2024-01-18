@@ -55,7 +55,7 @@ object Server:
                                       defaultRequestConverterFnOpt: Option[ServiceRequestContext => Void]): RequestConverterFunction =
     (svcRequestContext: ServiceRequestContext,
      aggHttpRequest: AggregatedHttpRequest,
-     expectedResultType: Class[_],
+     expectedResultType: Class[?],
      expectedParameterizedResultType: ParameterizedType) =>
       requestConverterAttrs.toList.foreach {
         case (key: AttributeKey[Any]@unchecked, value) =>

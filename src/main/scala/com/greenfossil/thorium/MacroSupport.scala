@@ -23,7 +23,7 @@ trait MacroSupport(globalDebug: Boolean):
   def findEnclosingTerm(using quotes: Quotes)(sym: quotes.reflect.Symbol): quotes.reflect.Symbol =
     import quotes.reflect.*
     sym match
-      case sym if sym.flags is Flags.Macro => findEnclosingTerm(sym.owner)
+      case sym if sym.flags.is(Flags.Macro) => findEnclosingTerm(sym.owner)
       case sym if !sym.isTerm              => findEnclosingTerm(sym.owner)
       case _                               => sym
 
