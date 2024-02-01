@@ -21,10 +21,10 @@ import java.time.Duration
 object CSRFMain:
 
   @main
-  def main =
+  def csrfMain =
     val server = Server(8080)
       .addServices(CSRFServices)
-      .addCSRFProtection()
+      .addCSRFGuard()
       .serverBuilderSetup(_.requestTimeout(Duration.ofHours(1)))
       .start()
 

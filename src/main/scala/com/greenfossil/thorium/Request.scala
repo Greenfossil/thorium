@@ -18,7 +18,7 @@ package com.greenfossil.thorium
 
 import com.greenfossil.commons.LocaleUtil
 import com.greenfossil.commons.json.{JsValue, Json}
-import com.greenfossil.thorium.decorators.CSRFProtectionDecoratingFunction
+import com.greenfossil.thorium.decorators.CSRFGuardModule
 import com.linecorp.armeria.common.*
 import com.linecorp.armeria.server.{ProxiedAddresses, ServiceRequestContext}
 import org.slf4j.LoggerFactory
@@ -50,6 +50,8 @@ trait Request(val requestContext: ServiceRequestContext,
 
   def flash: Flash = requestContext.attr(RequestAttrs.Flash)
 
+  def recaptchaResponse: Recaptcha = requestContext.attr(RequestAttrs.RecaptchaResponse)
+
   def csrfTokenName: String = config.httpConfiguration.csrfConfig.cookieName
 
   /*
@@ -57,7 +59,7 @@ trait Request(val requestContext: ServiceRequestContext,
    * Every request can have only 1 csrf-token
    */
   lazy val csrfToken: String =
-    val token = CSRFProtectionDecoratingFunction.generateCSRFToken(using this)
+    val token = CSRFGuardModule.generateCSRFToken(using this)
     requestContext.setAttr(RequestAttrs.CSRFToken, token)
     token
 

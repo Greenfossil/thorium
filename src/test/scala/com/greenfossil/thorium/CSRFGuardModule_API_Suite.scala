@@ -16,15 +16,15 @@
 
 package com.greenfossil.thorium
 
-import com.greenfossil.thorium.decorators.CSRFProtectionDecoratingFunction
+import com.greenfossil.thorium.decorators.CSRFGuardModule
 
-class CSRFProtectionDecoratingFunction1Suite extends munit.FunSuite:
+class CSRFGuardModule_API_Suite extends munit.FunSuite:
 
   test("csrfToken - hmac with different key") {
     (for {
-      csrfToken <- CSRFProtectionDecoratingFunction.generateCSRFToken("ABCD", "HmacSHA256", "1234")
+      csrfToken <- CSRFGuardModule.generateCSRFToken("ABCD", "HmacSHA256", "1234")
     } yield
-      val verifyResult = CSRFProtectionDecoratingFunction.verifyHmac(csrfToken, "ABCD1", "HmacSHA256")
+      val verifyResult = CSRFGuardModule.verifyHmac(csrfToken, "ABCD1", "HmacSHA256")
       println(s"csrfToken = ${csrfToken}")
       println(s"verifyResult = ${verifyResult}")
       verifyResult
@@ -37,9 +37,9 @@ class CSRFProtectionDecoratingFunction1Suite extends munit.FunSuite:
 
   test("csrfToken - with same key") {
     (for {
-      csrfToken <- CSRFProtectionDecoratingFunction.generateCSRFToken("ABCD", "HmacSHA256", "1234")
+      csrfToken <- CSRFGuardModule.generateCSRFToken("ABCD", "HmacSHA256", "1234")
     } yield
-      val verifyResult = CSRFProtectionDecoratingFunction.verifyHmac(csrfToken, "ABCD", "HmacSHA256")
+      val verifyResult = CSRFGuardModule.verifyHmac(csrfToken, "ABCD", "HmacSHA256")
       println(s"csrfToken = ${csrfToken}")
       println(s"verifyResult = ${verifyResult}")
       verifyResult

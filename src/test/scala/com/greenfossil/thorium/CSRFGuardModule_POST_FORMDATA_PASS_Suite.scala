@@ -16,14 +16,14 @@
 
 package com.greenfossil.thorium
 
-import com.greenfossil.thorium.decorators.CSRFProtectionDecoratingFunction
+import com.greenfossil.thorium.decorators.CSRFGuardModule
 import com.linecorp.armeria.client.*
 import com.linecorp.armeria.common.*
 
 import java.net.URLEncoder
 import java.time.Duration
 
-class CSRFProtectionDecoratingFunction2Suite extends munit.FunSuite:
+class CSRFGuardModule_POST_FORMDATA_PASS_Suite extends munit.FunSuite:
 
   test("SameOrigin POST /csrf/email/change"):
     doPost(identity)
@@ -39,18 +39,14 @@ class CSRFProtectionDecoratingFunction2Suite extends munit.FunSuite:
   private def doPost(originFn: String => String)(using loc:munit.Location) =
     val server = Server(0)
       .addServices(CSRFServices)
-      .serverBuilderSetup(sb => {
-        sb.routeDecorator()
-          .pathPrefix("/")
-          .build(CSRFProtectionDecoratingFunction())
-      })
+      .addCSRFGuard()
       .start()
     
     val postEpPath = "/csrf/email/change"
     val csrfCookieTokenName = Configuration().httpConfiguration.csrfConfig.cookieName
     val target = s"http://localhost:${server.port}"
     val client = WebClient.of(target)
-    val csrfCookie = CSRFProtectionDecoratingFunction.generateCSRFTokenCookie(Configuration(), Some("ABC"))
+    val csrfCookie = CSRFGuardModule.generateCSRFTokenCookie(Configuration(), Some("ABC"))
     val content = s"email=password&${csrfCookieTokenName}=${URLEncoder.encode(csrfCookie.value(), "UTF-8")}"
     
     //Set up headers

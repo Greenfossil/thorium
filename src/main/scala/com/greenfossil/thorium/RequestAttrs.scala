@@ -26,3 +26,4 @@ object RequestAttrs:
   val Config = AttributeKey.valueOf[Configuration]("config")
   val Request = AttributeKey.valueOf[Request]("request")
   val CSRFToken = AttributeKey.valueOf[String]("csrf-token")
+  val RecaptchaResponse  = AttributeKey.valueOf[Recaptcha]("recaptcha-response")

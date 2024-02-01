@@ -74,6 +74,10 @@ val APP_HTTP_CSRF__SAME_SITE = "app.http.csrf.sameSite"
 val APP_HTTP_CSRF__JWT = "app.http.csrf.jwt"
 val APP_HTTP_CSRF__ALLOW_PATH_PREFIXES = "app.http.csrf.allowPathPrefixes"
 
+val APP_HTTP_RECAPTCHA__SECRETKEY = "app.http.recaptcha.secretKey"
+val APP_HTTP_RECAPTCHA__SITEKEY = "app.http.recaptcha.siteKey"
+val APP_HTTP_RECAPTCHA__TOKENNAME = "app.http.recaptcha.tokenName"
+
 object HttpConfiguration:
   def from(config: Config, environment: Environment): HttpConfiguration = 
     HttpConfiguration(
@@ -121,6 +125,11 @@ object HttpConfiguration:
         jwt = JWTConfigurationParser(config, APP_HTTP_CSRF__JWT),
         allowPathPrefixes = config.getStringList(APP_HTTP_CSRF__ALLOW_PATH_PREFIXES).asScala.toSeq
       ),
+      recaptchaConfig = RecaptchaConfiguration(
+        secretKey = config.getString(APP_HTTP_RECAPTCHA__SECRETKEY),
+        siteKey = config.getString(APP_HTTP_RECAPTCHA__SITEKEY),
+        tokenName = config.getString(APP_HTTP_RECAPTCHA__TOKENNAME)
+      ),
       secretConfig = getSecretConfiguration(config, environment),
       environment = environment
     )
@@ -148,6 +157,7 @@ case class HttpConfiguration(
    sessionConfig: SessionConfiguration = SessionConfiguration(),
    flashConfig: FlashConfiguration = FlashConfiguration(),
    csrfConfig: CSRFConfiguration = CSRFConfiguration(),
+   recaptchaConfig: RecaptchaConfiguration = RecaptchaConfiguration("change-me","change-me", "g-recaptcha-response"),
    secretConfig: SecretConfiguration = SecretConfiguration(),
    environment: Environment
 )
@@ -256,6 +266,12 @@ case class CSRFConfiguration(
                               jwt: JWTConfiguration = JWTConfiguration(),
                               allowPathPrefixes: Seq[String] = Nil
 ) extends CookieConfigurationLike
+
+case class RecaptchaConfiguration(
+                                 secretKey: String,
+                                 siteKey: String,
+                                 tokenName: String
+                                 )
 
 /**
  * The application secret. Must be set. A value of "changeme" will cause the application to fail to start in

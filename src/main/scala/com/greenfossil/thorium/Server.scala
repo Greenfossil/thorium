@@ -17,7 +17,7 @@
 package com.greenfossil.thorium
 
 import com.greenfossil.commons.json.{JsObject, Json}
-import com.greenfossil.thorium.decorators.{CSRFProtectionDecoratingFunction, FirstResponderDecoratingFunction}
+import com.greenfossil.thorium.decorators.{CSRFGuardModule, FirstResponderDecoratingFunction, ThreatGuardModule, ThreatGuardModuleDecoratingFunction}
 import com.linecorp.armeria.common.*
 import com.linecorp.armeria.common.logging.RequestLog
 import com.linecorp.armeria.server.annotation.{ExceptionHandlerFunction, RequestConverterFunction, ResponseConverterFunction}
@@ -36,7 +36,6 @@ import scala.concurrent.Future
 import scala.language.implicitConversions
 
 private [thorium] val serverLogger = LoggerFactory.getLogger("com.greenfossil.thorium.server")
-private [thorium] val armeriaLogger = LoggerFactory.getLogger("com.linecorp.armeria.logging.access")
 
 object Server:
   /**
@@ -119,7 +118,7 @@ case class Server(server: AServer,
                   defaultResponseConverterFnOpt: Option[ServiceRequestContext => Void] = None,
                   requestConverterAttrs: Tuple = EmptyTuple,
                   responseConverterAttrs: Tuple = EmptyTuple,
-                  csrfProtectionDecoratingFunctionOpt: Option[CSRFProtectionDecoratingFunction] = None,
+                  threatGuardModuleOpt: Option[ThreatGuardModule] = None,
                   docServiceOpt: Option[(String, DocService)] = None
                  ):
 
@@ -151,20 +150,19 @@ case class Server(server: AServer,
   def addRoute(route: ServiceBindingBuilder => Unit): Server =
     copy(routeFnList = routeFnList :+ route)
 
-  def addCSRFProtection(): Server =
-    addCSRFProtection(CSRFProtectionDecoratingFunction())
+  def addCSRFGuard(): Server =
+    addThreatGuardModule(CSRFGuardModule())
 
-  def addCSRFProtectcion(allowOriginFn: (String, ServiceRequestContext) => Boolean): Server =
-    addCSRFProtection(CSRFProtectionDecoratingFunction(allowOriginFn))
+  def addCSRFGuard(allowOriginFn: (String, ServiceRequestContext) => Boolean): Server =
+    addThreatGuardModule(CSRFGuardModule(allowOriginFn))
 
-  def addCSRFProtection(allowOriginFn: (String, ServiceRequestContext) => Boolean,
-                        verifyMethodFn: String => Boolean,
-                        blockCSRFResponseFn: (ServiceRequestContext, String, Boolean, Boolean) => (MediaType, String)): Server =
-    val csrfProtectionDecoratingFunction = new CSRFProtectionDecoratingFunction(allowOriginFn, verifyMethodFn, blockCSRFResponseFn)
-    addCSRFProtection(csrfProtectionDecoratingFunction)
+  def addCSRFGuard(allowOriginFn: (String, ServiceRequestContext) => Boolean,
+                   verifyMethodFn: String => Boolean): Server =
+    val guardModule = new CSRFGuardModule(allowOriginFn, verifyMethodFn)
+    addThreatGuardModule(guardModule)
 
-  def addCSRFProtection(CSRFProtectionDecoratingFunction: CSRFProtectionDecoratingFunction): Server =
-    this.copy(csrfProtectionDecoratingFunctionOpt = Option(CSRFProtectionDecoratingFunction))
+  def addThreatGuardModule(guardModule: ThreatGuardModule): Server =
+    this.copy(threatGuardModuleOpt = Option(guardModule))
 
 
   def setErrorHandler(h: ServerErrorHandler): Server =
@@ -229,9 +227,10 @@ case class Server(server: AServer,
     /*
      * Setup Decorator, Request First Initializer
      */
-    
-    csrfProtectionDecoratingFunctionOpt.foreach{csrfFn =>
-      sb.routeDecorator().pathPrefix("/").build(csrfFn)
+
+    threatGuardModuleOpt.foreach{ guardModule =>
+      val guardModuleDecorator = ThreatGuardModuleDecoratingFunction(guardModule)
+      sb.routeDecorator().pathPrefix("/").build(guardModuleDecorator)
     }
     
     sb.routeDecorator().pathPrefix("/").build(FirstResponderDecoratingFunction(configuration))
