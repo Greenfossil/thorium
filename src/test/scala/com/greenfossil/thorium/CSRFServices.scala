@@ -97,8 +97,6 @@ object CSRFServices:
   def multipartFile: Action = Action.multipart { implicit request =>
     val form = request.asFormUrlEncoded
     val files = request.files
-    val msg = s"Received multipart request with files: ${files.size}, form:${form}"
-    println("====> " + msg)
-    Ok(msg)
+    Ok(s"Received multipart request with files: ${files.size}, form:$form")
   }
 

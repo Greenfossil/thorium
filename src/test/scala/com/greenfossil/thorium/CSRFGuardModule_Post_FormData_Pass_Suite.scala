@@ -23,7 +23,7 @@ import com.linecorp.armeria.common.*
 import java.net.URLEncoder
 import java.time.Duration
 
-class CSRFGuardModule_POST_FORMDATA_PASS_Suite extends munit.FunSuite:
+class CSRFGuardModule_Post_FormData_Pass_Suite extends munit.FunSuite:
 
   test("SameOrigin POST /csrf/email/change"):
     doPost(identity)

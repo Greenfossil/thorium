@@ -72,7 +72,6 @@ class AddHttpServiceSuite extends munit.FunSuite{
     server.stop()
   }
 
-  import com.linecorp.armeria.scala.implicits.*
   test("Text") {
     val client = WebClient.of(s"http://localhost:${server.port}")
     val creq = HttpRequest.of(HttpMethod.POST, "/text", MediaType.PLAIN_TEXT, "Hello Armeria!")
