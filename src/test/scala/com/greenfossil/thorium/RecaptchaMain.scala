@@ -9,8 +9,10 @@ object RecaptchaMain:
 
   val recaptchaPathVerificationFn: ServiceRequestContext => Boolean =
     (ctx: ServiceRequestContext) =>
-      ctx.path()
-        .matches("/recaptcha/.+/guarded-form|/recaptcha/guarded-form") //prone to misconfigurations and not good for refactoring
+      val isMatched = ctx.path()
+        .matches("/recaptcha/guarded-form|/recaptcha/multipart-form") //prone to misconfigurations and not good for refactoring
+      println(s"RecaptchaMain verification fn - ctx.path() = ${ctx.path()} isMatched = ${isMatched}")
+      isMatched
 
   @main
   def recaptchaMain =

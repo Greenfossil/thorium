@@ -21,28 +21,32 @@ import com.greenfossil.htmltags.*
 
 object RecaptchaFormPage:
 
-  def apply(sitekey: String, endpoint: Endpoint)(using request: Request): Tag =
+  def apply(endpoint: Endpoint, isMultipart: Boolean)(using request: Request): Tag =
+    val siteKey = request.httpConfiguration.recaptchaConfig.siteKey
     html(
-      head(
-        script(src:="https://www.google.com/recaptcha/api.js" /*async defer ? how to add this to htmltag?*/),
-        script(
-          """function onSubmit(token){
-            |  document.getElementById('demo-form').submit();
-            |}""".stripMargin
-        )
-      ),
-      body(
-        ifTrue(request.flash.data.nonEmpty,
-          div(style:="background:lightblue;height:40px;", "Recaptcha response:" + request.flash.data.values.mkString(","))
+        head(
+          script(src:="https://www.google.com/recaptcha/api.js" /*async defer ? how to add this to htmltag?*/),
+          script(
+            s"""function onSubmit(token){
+              |  var msg = 'isMultipart:' + $isMultipart  + ' - token:' + token ;
+              |  console.log(msg);
+              |  alert(msg);
+              |  document.getElementById('demo-form').submit();
+              |}""".stripMargin
+          )
         ),
-        hr,
-        form(action := endpoint.url, method:="POST", id:="demo-form")(
-          div(
-            label("Blog"),
-            input(tpe:="text", name:="blog", placeholder:="Write your blog")
+        body(
+          ifTrue(request.flash.data.nonEmpty,
+            div(style:="background:lightblue;height:40px;", "Recaptcha response:" + request.flash.data.values.mkString(","))
           ),
-          button(cls:="ui button g-recaptcha", cls:="g-recaptcha",  data.sitekey:=sitekey, data.callback:="onSubmit", data.action:="submit", "Submit"),
-          button(cls:="ui button g-recaptcha", cls:="g-recaptcha",  data.sitekey:=sitekey, data.callback:="onSubmit", data.action:="cancel", "Cancel")
+          hr,
+          form(action := endpoint.url, method:="POST", id:="demo-form", ifTrue(isMultipart, enctype := "multipart/form-data"))(
+            div(
+              label("Blog"),
+              input(tpe:="text", name:="blog", placeholder:="Write your blog")
+            ),
+            button(cls:="ui button g-recaptcha", cls:="g-recaptcha",  data.sitekey:=siteKey, data.callback:="onSubmit", data.action:="submit", "Submit"),
+            button(cls:="ui button g-recaptcha", cls:="g-recaptcha",  data.sitekey:=siteKey, data.callback:="onSubmit", data.action:="cancel", "Cancel")
+          )
         )
       )
-    )

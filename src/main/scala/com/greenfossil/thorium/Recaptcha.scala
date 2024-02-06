@@ -3,10 +3,12 @@ package com.greenfossil.thorium
 import com.greenfossil.commons.json.*
 import com.greenfossil.data.mapping.Mapping
 import com.greenfossil.data.mapping.Mapping.*
-import com.linecorp.armeria.client.WebClient
-import com.linecorp.armeria.common.{MediaType, QueryParams}
+import com.linecorp.armeria.client.{RequestOptions, WebClient}
+import com.linecorp.armeria.common.{HttpData, MediaType}
 import org.slf4j.LoggerFactory
 
+import java.net.URLEncoder
+import java.nio.charset.StandardCharsets
 import java.time.Instant
 import scala.util.Try
 
@@ -23,7 +25,6 @@ object Recaptcha:
         else
           request.requestContext.setAttr(RequestAttrs.RecaptchaResponse, recaptcha)
           result
-
     )
 
 
@@ -35,24 +36,25 @@ object Recaptcha:
       .bindFromRequest()
       .fold(
         ex => Try(throw new IllegalArgumentException(s"Binding exception - ${ex.errors.map(_.message).mkString(",")}")),
-        xs => siteVerify(xs, secretKey)
+        xs => siteVerify(xs, secretKey, request.httpConfiguration.recaptchaConfig.timeout)
       )
 
-  def siteVerify(captchaValues: Seq[String], recaptchaSecret: String): Try[Recaptcha] =
+  def siteVerify(captchaValues: Seq[String], recaptchaSecret: String, timeout: Int): Try[Recaptcha] =
     captchaValues.find(_.nonEmpty) match
-      case Some(token) => siteVerify(token, recaptchaSecret)
+      case Some(token) => siteVerify(token, recaptchaSecret, timeout)
       case None => Try(throw new IllegalArgumentException("No recaptcha token found"))
 
 
   /**
    * https://developers.google.com/recaptcha/docs/verify
    *
-   * @param captchaValue
+   * @param recaptchaToken
    * @param recaptchaSecret
    * @return - json
    *         Recaptcha V2 response format
    *         {
    *         "success": true|false,
+   *         "action": string            // the action name for this request (important to verify)
    *         "challenge_ts": timestamp,  // timestamp of the challenge load (ISO format yyyy-MM-dd'T'HH:mm:ssZZ)
    *         "hostname": string,         // the hostname of the site where the reCAPTCHA was solved
    *         "error-codes": [...]        // optional
@@ -68,21 +70,28 @@ object Recaptcha:
    *         "error-codes": [...]        // optional
    *         }
    */
-  def siteVerify(captchaValue: String, recaptchaSecret: String): Try[Recaptcha] =
+  def siteVerify(recaptchaToken: String, recaptchaSecret: String, timeout: Int): Try[Recaptcha] =
     //POST to googleVerifyURL using query-params
     Try:
-      val resp = WebClient.of()
-        .post("https://www.google.com/recaptcha/api/siteverify", QueryParams.of("secret", recaptchaSecret, "response", captchaValue), "")
-        .aggregate()
-        .join()
+      if recaptchaToken == null || recaptchaToken.isBlank then throw IllegalArgumentException("recaptchaToken missing")
+      else
+        val content = s"secret=${URLEncoder.encode(recaptchaSecret, StandardCharsets.UTF_8)}&response=${URLEncoder.encode(recaptchaToken, StandardCharsets.UTF_8)}"
+        logger.debug(s"siteVerify content:${content}")
+        val resp = WebClient.of()
+          .prepare()
+          .post("https://www.google.com/recaptcha/api/siteverify")
+          .content(MediaType.FORM_DATA, HttpData.of(StandardCharsets.UTF_8, content))
+          .requestOptions(RequestOptions.builder().responseTimeoutMillis(timeout).build())
+          .execute()
+          .aggregate()
+          .join()
 
-      /*
-       * Json format - success, challenge_ts, hostname, score, action
-       */
-      logger.debug(s"status:${resp.status()}, content-type:${resp.contentType()}, content:${resp.contentUtf8()}")
-      assert(resp.contentType().belongsTo(MediaType.JSON))
-      new Recaptcha(Json.parse(resp.contentUtf8()))
-
+        /*
+         * Json format - success, challenge_ts, hostname, score, action
+         */
+        logger.debug(s"siteVerify response - status:${resp.status()}, content-type:${resp.contentType()}, content:${resp.contentUtf8()}")
+        assert(resp.contentType().belongsTo(MediaType.JSON))
+        new Recaptcha(Json.parse(resp.contentUtf8()))
 
 case class Recaptcha(jsValue: JsValue):
   def success:Boolean =
@@ -91,6 +100,10 @@ case class Recaptcha(jsValue: JsValue):
 
   def fail: Boolean = !success
 
+  /**
+   * Only for V3, for V2 is None
+   * @return
+   */
   def scoreOpt:Option[Double] =
     (jsValue \ "score").asOpt[Double]
 

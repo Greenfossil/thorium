@@ -162,7 +162,8 @@ case class Server(server: AServer,
     addThreatGuardModule(guardModule)
 
   def addThreatGuardModule(guardModule: ThreatGuardModule): Server =
-    this.copy(threatGuardModuleOpt = Option(guardModule))
+    if guardModule == null then this
+    else this.copy(threatGuardModuleOpt = Option(guardModule))
 
 
   def setErrorHandler(h: ServerErrorHandler): Server =
@@ -224,10 +225,10 @@ case class Server(server: AServer,
     docServiceOpt.foreach((name, docsService) => sb.serviceUnder(name, docsService))
     //Setup request & response logging
     sb.accessLogWriter(accessLogWriter(_), true)
+
     /*
      * Setup Decorator, Request First Initializer
      */
-
     threatGuardModuleOpt.foreach{ guardModule =>
       val guardModuleDecorator = ThreatGuardModuleDecoratingFunction(guardModule)
       sb.routeDecorator().pathPrefix("/").build(guardModuleDecorator)
@@ -327,9 +328,9 @@ case class Server(server: AServer,
     serverLogger.info("Server started.")
     copy(server = server)
 
-  def stop(): Future[Unit] =
-    import com.linecorp.armeria.scala.implicits.*
-    server.stop().toScala
+  def stop(): Future[Void] =
+    import scala.jdk.FutureConverters._
+    server.stop().asScala
 
   def printRoutes: Server =
     println(s"Service Routes declared: ${serviceRoutes.size}")

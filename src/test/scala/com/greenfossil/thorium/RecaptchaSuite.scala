@@ -6,7 +6,7 @@ class RecaptchaSuite extends munit.FunSuite {
 
   test("GoogleRecaptchaUtil.siteVerify"){
     val v2SecretKey = "6LdzoV8pAAAAAASY-HTjl0cuRqa0wTmP2Ez_Jv43"
-    Recaptcha.siteVerify("bad-token", v2SecretKey)
+    Recaptcha.siteVerify("bad-token", v2SecretKey, 1000)
       .fold(
         ex => fail("Request should succeed", ex),
         recaptchaResponse =>

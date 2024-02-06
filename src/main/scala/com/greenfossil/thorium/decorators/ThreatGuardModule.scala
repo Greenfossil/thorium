@@ -24,6 +24,7 @@ import com.linecorp.armeria.server.{HttpService, ServiceRequestContext}
 import org.slf4j.Logger
 
 import java.util.concurrent.CompletableFuture
+import scala.util.Using
 
 class AndThreatGuardModule(moduleA: ThreatGuardModule, moduleB: ThreatGuardModule) extends ThreatGuardModule:
 
@@ -59,13 +60,14 @@ trait ThreatGuardModule:
     val futureResp = new CompletableFuture[String]()
     logger.debug(s"Extract token from request - content-type:${ctx.request().contentType()}")
     if mediaType == null then
-      logger.warn("Null media type assume not token")
+      logger.warn("Null media type found. Treat token as null")
       futureResp.complete(null)
     else if mediaType.is(MediaType.FORM_DATA) then
       ctx.request()
         .aggregate()
         .thenAccept: aggReq =>
           ctx.blockingTaskExecutor().execute(() => {
+            //Extract token from FormData
             val form = FormUrlEncodedParser.parse(aggReq.contentUtf8())
             val token = form.get(tokenName).flatMap(_.find(!_.isBlank)).orNull
             logger.trace(s"Found Token:$token, content-type:$mediaType.")
@@ -75,13 +77,17 @@ trait ThreatGuardModule:
       ctx.request()
         .aggregate()
         .thenAccept: aggReg =>
-          Multipart.from(aggReg.toHttpRequest.toDuplicator.duplicate())
-            .aggregate()
-            .thenAccept: multipart =>
-              val part = multipart.field(tokenName)
-              val token = if part == null then null else part.contentUtf8()
-              logger.trace(s"Found Token:$token, content-type:$mediaType.")
-              futureResp.complete(token)
+          ctx.blockingTaskExecutor().execute(() => {
+            //Extract token from Multipart
+            Multipart.from(aggReg.toHttpRequest.toDuplicator.duplicate())
+              .aggregate()
+              .thenAccept: multipart =>
+                val partOpt = Using.resource(multipart.fields(tokenName).stream())(_.filter(!_.contentUtf8().isBlank).findFirst())
+                val token = if partOpt.isEmpty then null else partOpt.get().contentUtf8()
+                logger.trace(s"Found Token:$token, content-type:$mediaType.")
+                futureResp.complete(token)
+          })
+
     else {
       logger.info(s"Token found unsupported for content-type:$mediaType.")
       futureResp.complete(null)

@@ -77,6 +77,7 @@ val APP_HTTP_CSRF__ALLOW_PATH_PREFIXES = "app.http.csrf.allowPathPrefixes"
 val APP_HTTP_RECAPTCHA__SECRETKEY = "app.http.recaptcha.secretKey"
 val APP_HTTP_RECAPTCHA__SITEKEY = "app.http.recaptcha.siteKey"
 val APP_HTTP_RECAPTCHA__TOKENNAME = "app.http.recaptcha.tokenName"
+val APP_HTTP_RECAPTCHA__TIMEOUT = "app.http.recaptcha.timeout"
 
 object HttpConfiguration:
   def from(config: Config, environment: Environment): HttpConfiguration = 
@@ -128,7 +129,8 @@ object HttpConfiguration:
       recaptchaConfig = RecaptchaConfiguration(
         secretKey = config.getString(APP_HTTP_RECAPTCHA__SECRETKEY),
         siteKey = config.getString(APP_HTTP_RECAPTCHA__SITEKEY),
-        tokenName = config.getString(APP_HTTP_RECAPTCHA__TOKENNAME)
+        tokenName = config.getString(APP_HTTP_RECAPTCHA__TOKENNAME),
+        timeout = config.getInt(APP_HTTP_RECAPTCHA__TIMEOUT)
       ),
       secretConfig = getSecretConfiguration(config, environment),
       environment = environment
@@ -157,7 +159,7 @@ case class HttpConfiguration(
    sessionConfig: SessionConfiguration = SessionConfiguration(),
    flashConfig: FlashConfiguration = FlashConfiguration(),
    csrfConfig: CSRFConfiguration = CSRFConfiguration(),
-   recaptchaConfig: RecaptchaConfiguration = RecaptchaConfiguration("change-me","change-me", "g-recaptcha-response"),
+   recaptchaConfig: RecaptchaConfiguration = RecaptchaConfiguration("change-me","change-me", "g-recaptcha-response", 3000),
    secretConfig: SecretConfiguration = SecretConfiguration(),
    environment: Environment
 )
@@ -270,7 +272,8 @@ case class CSRFConfiguration(
 case class RecaptchaConfiguration(
                                  secretKey: String,
                                  siteKey: String,
-                                 tokenName: String
+                                 tokenName: String,
+                                 timeout: Int /*request timeout*/,
                                  )
 
 /**
