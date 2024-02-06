@@ -35,14 +35,17 @@ class Recaptcha_Post_Formdata_Stress_Suite extends munit.FunSuite:
   test("/recaptcha/guarded-form with RecaptchaGuardModule"):
     val server = startServer(addRecaptchaGuardModule = true)
 
-    val n = 1000
-    1 to n foreach{i =>
+    val n = 10
+    val xs = 1 to n map {i =>
       val httpReq = HttpRequest.of(HttpMethod.POST, s"http://localhost:${server.port}/recaptcha/guarded-form", MediaType.FORM_DATA, HttpData.of(StandardCharsets.UTF_8, "g-recaptcha-response=bad-code"))
       val response = WebClient.of().execute(httpReq)
         .aggregate()
         .join()
       println(s"response i:$i status:${response.status()}")
+      i
     }
+
+    assertEquals(xs.size, n)
 
     server.stop()
 

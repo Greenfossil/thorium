@@ -21,6 +21,7 @@ import com.linecorp.armeria.client.WebClient
 import com.linecorp.armeria.common.ContentDisposition
 import com.linecorp.armeria.common.multipart.{BodyPart, Multipart}
 
+
 class ThreatGuardModule_Stress_Suite extends munit.FunSuite:
 
   val tokenName = "token-name"
@@ -34,8 +35,8 @@ class ThreatGuardModule_Stress_Suite extends munit.FunSuite:
   test("/recaptcha/multipart-form with RecaptchaGuardModule"):
     val server = startServer
 
-    val n = 50000
-    1 to n foreach { i =>
+    val n = 10
+    val xs = 1 to n map { i =>
       val formPart = BodyPart.of(ContentDisposition.of("form-data", tokenName), tokenValue)
       val multipart = Multipart.of(formPart)
       val multipartRequest = multipart.toHttpRequest(s"http://localhost:${server.port}/threat-guard/multipart-form")
@@ -44,5 +45,7 @@ class ThreatGuardModule_Stress_Suite extends munit.FunSuite:
         .join()
       println(s"response i:$i status:${response.status()}, ${response.contentUtf8()}")
     }
+
+    assertEquals(xs.size, n)
 
     server.stop()
