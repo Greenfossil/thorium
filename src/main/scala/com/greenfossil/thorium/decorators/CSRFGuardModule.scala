@@ -41,13 +41,47 @@ object CSRFGuardModule:
 
   val defaultToVerifyMethodFn = (method: String) => verificationRequiredMethods.contains(method)
 
+  /**
+   * No white-listing for any origin
+   * @return
+   */
   def apply(): CSRFGuardModule =
     apply((_, _) => false)
 
-  def apply(allowOriginFn: (String, ServiceRequestContext) => Boolean): CSRFGuardModule =
+  /**
+   * Allow white-listing of servers by checking the Origin
+   * @param allowWhiteListPredicate - (Request Header Origin, ServiceRequestContext) => To Allow Origin
+   * @return
+   */
+  def apply(allowWhiteListPredicate: (String, ServiceRequestContext) => Boolean): CSRFGuardModule =
     enabledCSRFProtection = true
     csrfLogger.info(s"CSRFProtection enabled.")
-    new CSRFGuardModule(allowOriginFn = allowOriginFn, verifyModMethodFn = defaultToVerifyMethodFn)
+    new CSRFGuardModule(allowWhiteListPredicate = allowWhiteListPredicate, (_, _, _) => true, verifyModMethodPredicate = defaultToVerifyMethodFn)
+
+
+  /**
+   * Allow white-listing of servers by checking the Origin
+   *
+   * @param isSameOriginPredicate - (Request Header Origin, ServiceRequestContext) => To Allow Origin
+   * @return
+   */
+  def apply(isSameOriginPredicate: (String, String, ServiceRequestContext) => Boolean): CSRFGuardModule =
+    enabledCSRFProtection = true
+    csrfLogger.info(s"CSRFProtection enabled.")
+    new CSRFGuardModule((_, _) => false, isSameOriginPredicate, verifyModMethodPredicate = defaultToVerifyMethodFn)
+
+
+  /**
+   *  Allow white-listing of servers by checking the Origin and
+   *  Allow further constrainting of SameOrgin - this is invoked only after evaluated isSameOrigin is true
+   * @param allowWhiteListPredicate
+   * @param isSameOriginPredicate
+   * @return
+   */
+  def apply(allowWhiteListPredicate: (String, ServiceRequestContext) => Boolean, isSameOriginPredicate: (String, String, ServiceRequestContext) => Boolean): CSRFGuardModule =
+    enabledCSRFProtection = true
+    csrfLogger.info(s"CSRFProtection enabled.")
+    new CSRFGuardModule(allowWhiteListPredicate = allowWhiteListPredicate, isSameOriginPredicate, verifyModMethodPredicate = defaultToVerifyMethodFn)
 
   def generateCSRFTokenCookie(configuration: Configuration, sessionIdOpt: Option[String]): Cookie =
     val csrfToken = generateCSRFToken(configuration, sessionIdOpt)
@@ -101,7 +135,15 @@ object CSRFGuardModule:
 
 end CSRFGuardModule
 
-class CSRFGuardModule(allowOriginFn: (String, ServiceRequestContext) => Boolean, verifyModMethodFn: String => Boolean) extends ThreatGuardModule:
+/**
+ * allPathPrefixes can only be set using application.conf - app.http.csrf.allowPathPrefixes
+ * @param allowWhiteListPredicate - (Request Header Origin, ServiceRequestContext) => To Allow Origin
+ * @param isSameOriginPredicate - (Request Header Origin, Request Header Referer, ServiceRequestContext) => Allow Same Origin
+ *                              this field is to allow further verification for same origin
+ *                              Note: this is invoked only after evaluated isSameOrigin is true
+ * @param verifyModMethodPredicate
+ */
+class CSRFGuardModule(allowWhiteListPredicate: (String, ServiceRequestContext) => Boolean, isSameOriginPredicate: (String,  String, ServiceRequestContext) => Boolean, verifyModMethodPredicate: String => Boolean) extends ThreatGuardModule:
 
   protected val logger = CSRFGuardModule.csrfLogger
 
@@ -111,15 +153,17 @@ class CSRFGuardModule(allowOriginFn: (String, ServiceRequestContext) => Boolean,
     val origin = headers.get(HttpHeaderNames.ORIGIN)
     val referer = headers.get(HttpHeaderNames.REFERER)
     val isSameTarget = origin != null && origin.startsWith(req.uri.getScheme) && origin.endsWith(req.uri.getAuthority)
-    val isSameOrigin =  "same-origin" == headers.get(HttpHeaderNames.SEC_FETCH_SITE) || isSameTarget
-    val isAllowOrigin = allowOriginFn(origin, ctx)
-    val isNonModMethods = !verifyModMethodFn(ctx.method.name) //Methods POST, PUT,PATCH and DELETE are mod methods
+    val verifiedSameOrigin =  "same-origin" == headers.get(HttpHeaderNames.SEC_FETCH_SITE) || isSameTarget
+    val verifiedSameOriginPredicate = isSameOriginPredicate(origin, referer, ctx)
+    val isSameOrigin = verifiedSameOrigin &&  verifiedSameOriginPredicate
+    val isAllowWhiteList = allowWhiteListPredicate(origin, ctx)
+    val isNonModMethods = !verifyModMethodPredicate(ctx.method.name) //Methods POST, PUT,PATCH and DELETE are mod methods
     if  isAssetPath(ctx) || isNonModMethods || (allPathPrefixes(ctx)  && isSameOrigin) then
-      logger.trace(s"$Request granted - isSameOrigin:$isSameOrigin, allowOrigin:$isAllowOrigin, method:${req.method}, uri:${req.uri}, Origin: $origin, referer:$referer")
+      logger.trace(s"$Request granted - isSameOrigin:$isSameOrigin, isSameOriginPredicate:$verifiedSameOriginPredicate allowWhiteList:$isAllowWhiteList, method:${req.method}, uri:${req.uri}, Origin: $origin, referer:$referer")
       CompletableFuture.completedFuture(true)
     else
       val config = ctx.attr(RequestAttrs.Config)
-      logger.info(s"Verifying request - isSameOrigin:$isSameOrigin, allowOrigin:$isAllowOrigin Origin: $origin, referer:$referer, method:${req.method}, uri:${req.uri}, content-type:${req.contentType} ...")
+      logger.info(s"Verifying request - isSameOrigin:$isSameOrigin, isSameOriginPredicate:$verifiedSameOriginPredicate, allowWhiteList:$isAllowWhiteList Origin: $origin, referer:$referer, method:${req.method}, uri:${req.uri}, content-type:${req.contentType} ...")
       headers.forEach((key, value) => logger.debug(s"Header:$key - value:$value"))
 
       val cookies = headers.cookies
@@ -141,8 +185,8 @@ class CSRFGuardModule(allowOriginFn: (String, ServiceRequestContext) => Boolean,
           val isHMACVerified = isTokenPairMatched && verifyHmac(cookieCSRFToken, appSecret, config.httpConfiguration.csrfConfig.jwt.signatureAlgorithm)
           logger.info(s"isTokenMatched:$isTokenPairMatched, isHhmacVerified:$isHMACVerified")
           //logs request header
-          val isSafe = isHMACVerified || isAllowOrigin //isSameOrigin - must also ensure csrf tokens exists and validated
-          val msg = s"Request isSafe:$isSafe, Origin: $origin, isSameOrigin:$isSameOrigin, allowOrigin:$isAllowOrigin, method:${req.method}, uri:${req.uri} path:${req.path} content-type:${req.contentType}"
+          val isSafe = isHMACVerified || isAllowWhiteList || isSameOrigin   //must also ensure csrf tokens exists and validated
+          val msg = s"Request isSafe:$isSafe, Origin: $origin, isSameOrigin:$isSameOrigin, allowWhistList:$isAllowWhiteList, method:${req.method}, uri:${req.uri} path:${req.path} content-type:${req.contentType}"
           if isSafe then logger.debug(msg)
           else
             logger.warn(msg)

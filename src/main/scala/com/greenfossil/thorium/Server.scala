@@ -17,7 +17,7 @@
 package com.greenfossil.thorium
 
 import com.greenfossil.commons.json.{JsObject, Json}
-import com.greenfossil.thorium.decorators.{CSRFGuardModule, FirstResponderDecoratingFunction, ThreatGuardModule, ThreatGuardModuleDecoratingFunction}
+import com.greenfossil.thorium.decorators.{CSRFGuardModule, FirstResponderDecoratingFunction, RecaptchaGuardModule, ThreatGuardModule, ThreatGuardModuleDecoratingFunction}
 import com.linecorp.armeria.common.*
 import com.linecorp.armeria.common.logging.RequestLog
 import com.linecorp.armeria.server.annotation.{ExceptionHandlerFunction, RequestConverterFunction, ResponseConverterFunction}
@@ -150,17 +150,82 @@ case class Server(server: AServer,
   def addRoute(route: ServiceBindingBuilder => Unit): Server =
     copy(routeFnList = routeFnList :+ route)
 
+  /**
+   * Add CSRFGuard
+   * @return
+   */
   def addCSRFGuard(): Server =
     addThreatGuardModule(CSRFGuardModule())
 
-  def addCSRFGuard(allowOriginFn: (String, ServiceRequestContext) => Boolean): Server =
-    addThreatGuardModule(CSRFGuardModule(allowOriginFn))
+  /**
+   * Add CSRFGuard
+   * @param allowWhiteListPredicate
+   * @return
+   */
+  def addCSRFGuard(allowWhiteListPredicate: (String, ServiceRequestContext) => Boolean): Server =
+    addThreatGuardModule(CSRFGuardModule(allowWhiteListPredicate))
 
-  def addCSRFGuard(allowOriginFn: (String, ServiceRequestContext) => Boolean,
-                   verifyMethodFn: String => Boolean): Server =
-    val guardModule = new CSRFGuardModule(allowOriginFn, verifyMethodFn)
+  /**
+   * Add CSRFGuard
+   * @param isSameOriginPredicate
+   * @return
+   */
+  def addCSRFGuard(isSameOriginPredicate: (String, String, ServiceRequestContext) => Boolean): Server =
+    addThreatGuardModule(CSRFGuardModule(isSameOriginPredicate))
+
+  /**
+   * Add CSRFGuard
+   * @param allowWhiteListPredicate
+   * @param verifyMethodFn
+   * @return
+   */
+  def addCSRFGuard(allowWhiteListPredicate: (String, ServiceRequestContext) => Boolean, verifyMethodFn: String => Boolean): Server =
+    val guardModule = new CSRFGuardModule(allowWhiteListPredicate, (_, _, _) => true, verifyMethodFn)
     addThreatGuardModule(guardModule)
 
+  /**
+   * Add CSRFGuard
+   * @param allowWhiteListPredicate
+   * @param isSameOriginPredicate
+   * @return
+   */
+  def addCSRFGuard(allowWhiteListPredicate: (String, ServiceRequestContext) => Boolean,
+                   isSameOriginPredicate: (String, String, ServiceRequestContext) => Boolean): Server =
+    addThreatGuardModule(CSRFGuardModule(allowWhiteListPredicate, isSameOriginPredicate))
+
+  /**
+   * Add CSRFGuard
+   * @param allowWhiteListPredicate
+   * @param isSameOriginPredicate
+   * @param verifyMethodFn
+   * @return
+   */
+  def addCSRFGuard(allowWhiteListPredicate: (String, ServiceRequestContext) => Boolean,
+                   isSameOriginPredicate: (String, String, ServiceRequestContext) => Boolean,
+                   verifyMethodFn: String => Boolean): Server =
+    addThreatGuardModule(new CSRFGuardModule(allowWhiteListPredicate, isSameOriginPredicate, verifyMethodFn))
+
+
+  /**
+   * Add RecaptchaGuard
+   * @return
+   */
+  def addRecaptchaGuard(): Server =
+    addThreatGuardModule(RecaptchaGuardModule())
+
+  /**
+   * Add RecaptchaGuard
+   * @param pathVerifyPredicate
+   * @return
+   */
+  def addRecaptchaGuard(pathVerifyPredicate: (String, ServiceRequestContext) => Boolean): Server =
+    addThreatGuardModule(RecaptchaGuardModule(pathVerifyPredicate))
+
+  /**
+   *
+   * @param guardModule
+   * @return
+   */
   def addThreatGuardModule(guardModule: ThreatGuardModule): Server =
     if guardModule == null then this
     else this.copy(threatGuardModuleOpt = Option(guardModule))

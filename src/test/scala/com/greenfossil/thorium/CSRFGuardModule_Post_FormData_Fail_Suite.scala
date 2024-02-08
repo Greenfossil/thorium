@@ -37,7 +37,7 @@ class CSRFGuardModule_Post_FormData_Fail_Suite extends munit.FunSuite:
   private def doPost(originFn: String => String)(using loc:munit.Location) =
     val server = Server(0)
       .addServices(CSRFServices)
-      .addCSRFGuard()
+      .addCSRFGuard((origin, referer, ctx) => false)
       .start()
     
     val postEpPath = "/csrf/email/change"
