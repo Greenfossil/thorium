@@ -61,6 +61,54 @@ object RecaptchaServices:
     }
   }
 
+  @Get("/recaptcha/form-stress-test")
+  def recaptchaFormStressTest: Action = Action { implicit request =>
+    RecaptchaFormPage(postRecaptchaFormStressTest.endpoint, isMultipart = false)
+  }
+
+  /**
+   * No Recaptcha guarding
+   * @return
+   */
+  @Post("/recaptcha/form-stress-test")
+  def postRecaptchaFormStressTest: Action = Action { implicit request =>
+      import com.greenfossil.data.mapping.Mapping.*
+      tuple("blog" -> text, "action" ->  text).bindFromRequest()
+        .fold(
+          error => BadRequest("Bad Request"),
+          (blog, action) =>
+            val msg = s"Success - request #${blog} action:$action"
+            println(msg)
+            msg
+        )
+  }
+
+  @Get("/recaptcha/form-stress-test2")
+  def recaptchaFormStressTest2: Action = Action { implicit request =>
+    RecaptchaFormPage(postRecaptchaFormStressTest2.endpoint, isMultipart = false, useRecaptcha = true)
+  }
+
+  /**
+   * explicit Recaptcha  verification Recaptcha#onVerify done in the post method
+   * @return
+   */
+  @Post("/recaptcha/form-stress-test2")
+  def postRecaptchaFormStressTest2: Action = Action { implicit request =>
+    Recaptcha.onVerified(r => r.success) {
+      import com.greenfossil.data.mapping.Mapping.*
+      tuple("blog" -> text, "g-recaptcha-response" ->  seq[String]).bindFromRequest()
+        .fold(
+          error =>
+            println(s"Form error = ${error}")
+            BadRequest("Bad Request " + error),
+          (blog, xs) =>
+            val msg = s"Success - request #${blog} g-recaptcha-response:${xs.mkString}"
+            println(msg)
+            msg
+        )
+    }
+  }
+
   /**
    * RecaptchaGuardModule
    *

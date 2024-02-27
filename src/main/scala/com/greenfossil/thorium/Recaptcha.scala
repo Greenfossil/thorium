@@ -3,7 +3,8 @@ package com.greenfossil.thorium
 import com.greenfossil.commons.json.*
 import com.greenfossil.data.mapping.Mapping
 import com.greenfossil.data.mapping.Mapping.*
-import com.linecorp.armeria.client.{RequestOptions, WebClient}
+import com.linecorp.armeria.client.retry.{Backoff, RetryRule, RetryingClient}
+import com.linecorp.armeria.client.WebClient
 import com.linecorp.armeria.common.{HttpData, MediaType}
 import org.slf4j.LoggerFactory
 
@@ -76,12 +77,16 @@ object Recaptcha:
       if recaptchaToken == null || recaptchaToken.isBlank then throw IllegalArgumentException("recaptchaToken missing")
       else
         val content = s"secret=${URLEncoder.encode(recaptchaSecret, StandardCharsets.UTF_8)}&response=${URLEncoder.encode(recaptchaToken, StandardCharsets.UTF_8)}"
-        logger.debug(s"siteVerify content:${content}")
-        val resp = WebClient.of()
+        logger.debug(s"siteVerify content:$content")
+
+        val resp = WebClient.builder()
+          .decorator(RetryingClient.newDecorator(RetryRule.failsafe(Backoff.fibonacci(1000, timeout))))
+          .writeTimeoutMillis(timeout)
+          .responseTimeoutMillis(timeout)
+          .build()
           .prepare()
           .post("https://www.google.com/recaptcha/api/siteverify")
           .content(MediaType.FORM_DATA, HttpData.of(StandardCharsets.UTF_8, content))
-          .requestOptions(RequestOptions.builder().responseTimeoutMillis(timeout).build())
           .execute()
           .aggregate()
           .join()

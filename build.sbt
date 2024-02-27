@@ -23,6 +23,7 @@ lazy val thorium = project
       "com.linecorp.armeria" % "armeria-logback" % "1.27.1",
       "org.overviewproject" % "mime-types" % "1.0.4",
       "org.slf4j" % "slf4j-api" % "2.0.10",
+      "com.microsoft.playwright" % "playwright" % "1.41.2" % Test,
       "ch.qos.logback" % "logback-classic" % "1.4.14" % Test,
       "org.scalameta" %% "munit" % "0.7.29" % Test
     )

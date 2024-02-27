@@ -21,19 +21,16 @@ import com.greenfossil.htmltags.*
 
 object RecaptchaFormPage:
 
-  def apply(endpoint: Endpoint, isMultipart: Boolean)(using request: Request): Tag =
+  def apply(endpoint: Endpoint, isMultipart: Boolean, useRecaptcha: Boolean = false)(using request: Request): Tag =
     val siteKey = request.httpConfiguration.recaptchaConfig.siteKey
     html(
         head(
-          script(src:="https://www.google.com/recaptcha/api.js" /*async defer ? how to add this to htmltag?*/),
-          script(
+          ifTrue(useRecaptcha, script(src:="https://www.google.com/recaptcha/api.js" /*async defer ? how to add this to htmltag?*/)),
+          ifTrue(useRecaptcha, script(
             s"""function onSubmit(token){
-              |  var msg = 'isMultipart:' + $isMultipart  + ' - token:' + token ;
-              |  console.log(msg);
-              |  alert(msg);
               |  document.getElementById('demo-form').submit();
               |}""".stripMargin
-          )
+          ))
         ),
         body(
           ifTrue(request.flash.data.nonEmpty,
@@ -45,8 +42,8 @@ object RecaptchaFormPage:
               label("Blog"),
               input(tpe:="text", name:="blog", placeholder:="Write your blog")
             ),
-            button(cls:="ui button g-recaptcha", cls:="g-recaptcha",  data.sitekey:=siteKey, data.callback:="onSubmit", data.action:="submit", "Submit"),
-            button(cls:="ui button g-recaptcha", cls:="g-recaptcha",  data.sitekey:=siteKey, data.callback:="onSubmit", data.action:="cancel", "Cancel")
+            button(cls:="ui button g-recaptcha", cls:="g-recaptcha", tpe:="submit", name:="action", value:="submit", data.sitekey:=siteKey, data.callback:="onSubmit", data.action:="submit", "Submit"),
+            button(cls:="ui button g-recaptcha", cls:="g-recaptcha", tpe:="submit", name:="action", value:="cancel", data.sitekey:=siteKey, data.callback:="onSubmit", data.action:="cancel", "Cancel")
           )
         )
       )

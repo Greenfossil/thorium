@@ -7,12 +7,9 @@ import java.time.Duration
 
 object RecaptchaMain:
 
-  val recaptchaPathVerificationFn: (String, ServiceRequestContext) => Boolean =
-    (path: String, ctx: ServiceRequestContext) =>
-      val isMatched =
-        path.matches("/recaptcha/guarded-form|/recaptcha/multipart-form") //prone to misconfigurations and not good for refactoring
-      println(s"RecaptchaMain verification fn - ctx.path() = ${ctx.path()} isMatched = ${isMatched}")
-      isMatched
+  def recaptchaPathVerificationFn(path: String, ctx: ServiceRequestContext):Boolean =
+      //prone to misconfigurations and not good for refactoring
+      path.matches("/recaptcha/guarded-form|/recaptcha/multipart-form")
 
   @main
   def recaptchaMain =

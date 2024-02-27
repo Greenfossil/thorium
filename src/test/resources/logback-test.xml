@@ -27,15 +27,16 @@
     </root>
 
     <logger name="com.linecorp.armeria.server.Routers" level="off"/>
-    <logger name="com.linecorp.armeria" level="trace"/>
+    <logger name="com.linecorp.armeria" level="debug"/>
     <logger name="com.linecorp.armeria.common.Flags" level="off"/>
     <logger name="com.linecorp.armeria.logging.traffic" level="off"/>
     <logger name="com.linecorp.armeria.internal" level="off"/>
-    <logger name="com.linecorp.armeria.logging" level="trace"/>
-    <logger name="com.linecorp.armeria.client" level="trace"/>
-    <logger name="com.greenfossil.thorium.csrf" level="info"/>
+    <logger name="com.linecorp.armeria.logging" level="debug"/>
+    <logger name="com.linecorp.armeria.client" level="off"/>
+    <logger name="com.greenfossil.thorium.first-responder" level="off"/>
+    <logger name="com.greenfossil.thorium.csrf" level="off"/>
     <logger name="com.greenfossil.thorium.action" level="off"/>
-    <logger name="com.greenfossil.elementum.recaptcha" level="trace"/>
+    <logger name="com.greenfossil.elementum.recaptcha" level="off"/>
 
 
 </configuration>
