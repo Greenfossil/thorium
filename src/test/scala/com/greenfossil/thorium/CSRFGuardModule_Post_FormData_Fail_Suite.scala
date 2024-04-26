@@ -16,12 +16,15 @@
 
 package com.greenfossil.thorium
 
-import com.linecorp.armeria.client.*
-import com.linecorp.armeria.common.*
+import com.linecorp.armeria.common.MediaType
 
+import java.net.{URI, http}
 import java.time.Duration
 
 class CSRFGuardModule_Post_FormData_Fail_Suite extends munit.FunSuite:
+
+  //Important - allow content-length to be sent in the headers
+  System.setProperty("jdk.httpclient.allowRestrictedHeaders", "content-length")
 
   test("SameOrigin POST /csrf/email/change"):
     doPost(identity)
@@ -37,34 +40,29 @@ class CSRFGuardModule_Post_FormData_Fail_Suite extends munit.FunSuite:
   private def doPost(originFn: String => String)(using loc:munit.Location) =
     val server = Server(0)
       .addServices(CSRFServices)
-      .addCSRFGuard((origin, referer, ctx) => false)
+      .addCSRFGuard((_ /*origin*/, _ /*referer*/, _ /*ctx*/) => false)
       .start()
     
     val postEpPath = "/csrf/email/change"
     val target = s"http://localhost:${server.port}"
-    val client = WebClient.of(target)
     val content = s"email=password"
     
-    //Set up headers
-    val headersBuilder = RequestHeaders.builder(HttpMethod.POST, postEpPath)
-      .contentType(MediaType.FORM_DATA)
-      .contentLength(content.length)
+    //Set up Request
+    val requestBuilder = http.HttpRequest.newBuilder(URI.create(target + postEpPath))
+      .POST(http.HttpRequest.BodyPublishers.ofString(content))
+      .headers(
+        "content-type", MediaType.FORM_DATA.toString,
+        "content-length", content.length.toString //required to set allowRestrictedHeaders
+      )
 
     //Set origin
-    Option(originFn(target)).map(target => headersBuilder.set("Origin", target))
+    Option(originFn(target)).foreach(target => requestBuilder.header("Origin", target))
     
-    //Build headers
-    val headers = headersBuilder.build()
-    
-    //Build request
-    val request = HttpRequest.of(headers, HttpData.ofUtf8(content))
-    
-    //Set response timeout
-    val reqOpts = RequestOptions.builder().responseTimeout(Duration.ofHours(1)).build()
-    
-    val postResp = client.execute(request, reqOpts).aggregate().join()
-    assertNoDiff(postResp.status().codeAsText(), "401")
-    assertNoDiff(postResp.contentUtf8(), """|<!DOCTYPE html>
+    val postResp = http.HttpClient.newBuilder().connectTimeout(Duration.ofHours(1)).build()
+      .send(requestBuilder.build(), http.HttpResponse.BodyHandlers.ofString())
+
+    assertEquals(postResp.statusCode(), 401)
+    assertNoDiff(postResp.body(), """|<!DOCTYPE html>
                                             |<html>
                                             |<head>
                                             |  <title>Unauthorized Access</title>

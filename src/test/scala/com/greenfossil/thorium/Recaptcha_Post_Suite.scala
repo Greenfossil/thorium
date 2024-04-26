@@ -20,47 +20,64 @@ package com.greenfossil.thorium
 import com.greenfossil.thorium.decorators.RecaptchaGuardModule
 import com.linecorp.armeria.client.{RequestOptions, WebClient}
 import com.linecorp.armeria.common.multipart.{BodyPart, Multipart}
-import com.linecorp.armeria.common.{ContentDisposition, HttpData, HttpStatus}
+import com.linecorp.armeria.common.{ContentDisposition, HttpStatus}
 
-import java.nio.charset.StandardCharsets
+import java.net.URI
+import java.net.http.{HttpClient, HttpRequest, HttpResponse}
+import java.time.Duration
 
 class Recaptcha_Post_Suite extends munit.FunSuite:
 
   private def startServer(addRecaptchaGuardModule: Boolean = true): Server =
     val server = Server(0)
       .addServices(RecaptchaServices)
-      .addThreatGuardModule( if !addRecaptchaGuardModule then null else RecaptchaGuardModule(RecaptchaMain.recaptchaPathVerificationFn))
+      .addThreatGuardModule( if !addRecaptchaGuardModule then null else RecaptchaGuardModule(RecaptchaMainTestService.recaptchaPathVerificationFn))
     server.start()
 
   test("/recaptcha/form"):
     val server = startServer()
-    val response= WebClient.of().post(s"http://localhost:${server.port}/recaptcha/form", HttpData.empty())
-      .aggregate()
-      .join()
+
+    val resp = HttpClient.newBuilder().connectTimeout(Duration.ofSeconds(5)).build()
+      .send(
+        HttpRequest.newBuilder(URI.create(s"http://localhost:${server.port}/recaptcha/form"))
+          .POST(HttpRequest.BodyPublishers.noBody())
+          .build(),
+        HttpResponse.BodyHandlers.ofString()
+      )
 
     server.stop()
-    assertEquals(response.status(), HttpStatus.UNAUTHORIZED)
-    assertNoDiff(response.contentUtf8(), "Recaptcha exception - No recaptcha token found")
+    assertEquals(resp.statusCode(), HttpStatus.UNAUTHORIZED.code())
+    assertNoDiff(resp.body(), "Recaptcha exception - No recaptcha token found")
 
   test("/recaptcha/form - with an invalid g-recaptcha-response".ignore):
     val server = startServer()
-    val response = WebClient.of().post(s"http://localhost:${server.port}/recaptcha/form", HttpData.of(StandardCharsets.UTF_8, "g-recaptcha-response=bad-code"))
-      .aggregate()
-      .join()
+
+    val resp = HttpClient.newBuilder().connectTimeout(Duration.ofSeconds(5)).build()
+      .send(
+        HttpRequest.newBuilder(URI.create(s"http://localhost:${server.port}/recaptcha/form"))
+          .POST(HttpRequest.BodyPublishers.ofString("g-recaptcha-response=bad-code"))
+          .build(),
+        HttpResponse.BodyHandlers.ofString()
+      )
 
     server.stop()
-    assertEquals(response.status(), HttpStatus.UNAUTHORIZED)
-    assertNoDiff(response.contentUtf8(), """Unauthorize access - Recaptcha({"success":false,"error-codes":["invalid-input-response"]})""")
+    assertEquals(resp.statusCode(), HttpStatus.UNAUTHORIZED.code())
+    assertNoDiff(resp.body(), """Unauthorize access - Recaptcha({"success":false,"error-codes":["invalid-input-response"]})""")
 
   test("/recaptcha/guarded-form with RecaptchaGuardModule"):
     val server = startServer()
-    val response = WebClient.of().post(s"http://localhost:${server.port}/recaptcha/guarded-form", HttpData.of(StandardCharsets.UTF_8, "g-recaptcha-response=bad-code"))
-      .aggregate()
-      .join()
+
+    val resp = HttpClient.newBuilder().connectTimeout(Duration.ofSeconds(5)).build()
+      .send(
+        HttpRequest.newBuilder(URI.create(s"http://localhost:${server.port}/recaptcha/guarded-form"))
+          .POST(HttpRequest.BodyPublishers.ofString("g-recaptcha-response=bad-code"))
+          .build(),
+        HttpResponse.BodyHandlers.ofString()
+      )
 
     server.stop()
-    assertEquals(response.status(), HttpStatus.UNAUTHORIZED)
-    assertNoDiff(response.contentUtf8(), """|<!DOCTYPE html>
+    assertEquals(resp.statusCode(), HttpStatus.UNAUTHORIZED.code())
+    assertNoDiff(resp.body(), """|<!DOCTYPE html>
                                             |<html>
                                             |<head>
                                             |  <title>Unauthorized Access</title>
@@ -73,13 +90,18 @@ class Recaptcha_Post_Suite extends munit.FunSuite:
 
   test("/recaptcha/guarded-form with no RecaptchaGuardModule"):
     val server = startServer(false)
-    val response = WebClient.of().post(s"http://localhost:${server.port}/recaptcha/guarded-form", HttpData.of(StandardCharsets.UTF_8, "g-recaptcha-response=bad-code"))
-      .aggregate()
-      .join()
+
+    val resp = HttpClient.newBuilder().connectTimeout(Duration.ofSeconds(5)).build()
+      .send(
+        HttpRequest.newBuilder(URI.create(s"http://localhost:${server.port}/recaptcha/guarded-form"))
+          .POST(HttpRequest.BodyPublishers.ofString("g-recaptcha-response=bad-code"))
+          .build(),
+        HttpResponse.BodyHandlers.ofString()
+      )
 
     server.stop()
-    assertEquals(response.status(), HttpStatus.SEE_OTHER)
-    assertNoDiff(response.contentUtf8(), "")
+    assertEquals(resp.statusCode(), HttpStatus.SEE_OTHER.code())
+    assertNoDiff(resp.body(), "")
 
 
   test("/recaptcha/multipart-form with RecaptchaGuardModule"):

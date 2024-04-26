@@ -18,6 +18,9 @@ package com.greenfossil.thorium
 
 import com.linecorp.armeria.server.annotation.{Get, Param}
 
+import java.net.URI
+import java.net.http.{HttpClient, HttpRequest, HttpResponse}
+
 object TestServices:
   @Get("/sayHello/:name")
   def sayHello(@Param name: String)(using request: Request): String =
@@ -35,29 +38,31 @@ object TestServices:
 class EndpointMacro3Suite extends munit.FunSuite:
 
   test("redirect") {
-    val server = Server()
+    val server = Server(0)
       .addServices(TestServices)
       .start()
 
-    import com.linecorp.armeria.client.WebClient
-    val client = WebClient.of(s"http://localhost:${server.port}")
-    client.get("/redirect").aggregate().thenApply { aggResp =>
-      val locationHeader = aggResp.headers().get("location")
-      assertEquals(locationHeader, "/sayHello/User")
-    }.join()
+    val resp = HttpClient.newHttpClient()
+      .send(
+        HttpRequest.newBuilder(URI.create(s"http://localhost:${server.port}/redirect")).build(),
+        HttpResponse.BodyHandlers.ofString()
+      )
+    assertEquals(resp.statusCode(), 303)
+    assertNoDiff(resp.headers().firstValue("location").get(), "/sayHello/User")
     server.stop()
   }
 
   test("path") {
-    val server = Server()
+    val server = Server(0)
       .addServices(TestServices)
       .start()
 
-    import com.linecorp.armeria.client.WebClient
-    val client = WebClient.of(s"http://localhost:${server.port}")
-    client.get("/path").aggregate().thenApply { aggResp =>
-      val locationHeader = aggResp.headers().get("location")
-      assertEquals(locationHeader, "/redirect")
-    }.join()
+    val resp = HttpClient.newHttpClient()
+      .send(
+        HttpRequest.newBuilder(URI.create(s"http://localhost:${server.port}/path")).build(),
+        HttpResponse.BodyHandlers.ofString()
+      )
+    assertEquals(resp.statusCode(), 303)
+    assertNoDiff(resp.headers().firstValue("location").get(), "/redirect")
     server.stop()
   }

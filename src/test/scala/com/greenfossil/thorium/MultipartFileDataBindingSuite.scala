@@ -40,7 +40,7 @@ class MultipartFileDataBindingSuite extends munit.FunSuite:
 
   test("POST with file content") {
     //Start
-    val server = Server()
+    val server = Server(0)
       .addServices(FormServices)
       .start()
 

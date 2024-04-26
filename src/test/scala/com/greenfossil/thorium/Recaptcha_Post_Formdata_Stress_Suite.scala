@@ -18,10 +18,11 @@
 package com.greenfossil.thorium
 
 import com.greenfossil.thorium.decorators.RecaptchaGuardModule
-import com.linecorp.armeria.client.WebClient
-import com.linecorp.armeria.common.{HttpData, HttpMethod, HttpRequest, MediaType}
+import com.linecorp.armeria.common.MediaType
 
-import java.nio.charset.StandardCharsets
+import java.net.http.{HttpClient, HttpResponse}
+import java.net.{URI, http}
+import java.time.Duration
 
 
 class Recaptcha_Post_Formdata_Stress_Suite extends munit.FunSuite:
@@ -29,19 +30,21 @@ class Recaptcha_Post_Formdata_Stress_Suite extends munit.FunSuite:
   private def startServer(addRecaptchaGuardModule: Boolean = true): Server =
     val server = Server(0)
       .addServices(RecaptchaServices)
-      .addThreatGuardModule( if !addRecaptchaGuardModule then null else RecaptchaGuardModule(RecaptchaMain.recaptchaPathVerificationFn))
+      .addThreatGuardModule( if !addRecaptchaGuardModule then null else RecaptchaGuardModule(RecaptchaMainTestService.recaptchaPathVerificationFn))
     server.start()
 
   test("/recaptcha/guarded-form with RecaptchaGuardModule"):
     val server = startServer(addRecaptchaGuardModule = true)
 
     val n = 10
+    val client = HttpClient.newBuilder().connectTimeout(Duration.ofSeconds(5)).build()
     val xs = 1 to n map {i =>
-      val httpReq = HttpRequest.of(HttpMethod.POST, s"http://localhost:${server.port}/recaptcha/guarded-form", MediaType.FORM_DATA, HttpData.of(StandardCharsets.UTF_8, "g-recaptcha-response=bad-code"))
-      val response = WebClient.of().execute(httpReq)
-        .aggregate()
-        .join()
-      println(s"response i:$i status:${response.status()}")
+      val req = http.HttpRequest.newBuilder(URI.create(s"http://localhost:${server.port}/recaptcha/guarded-form"))
+        .POST(http.HttpRequest.BodyPublishers.ofString("g-recaptcha-response=bad-code"))
+        .header("content-type", MediaType.FORM_DATA.toString)
+        .build()
+      val resp = client.send(req, HttpResponse.BodyHandlers.ofString())
+      println(s"response i:$i status:${resp.statusCode()}")
       i
     }
 

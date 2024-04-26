@@ -18,6 +18,7 @@ package com.greenfossil.thorium
 
 import com.greenfossil.commons.json.Json
 
+import java.net.{CookieManager, URI, http}
 import scala.language.implicitConversions
 
 class AddHttpServiceSuite extends munit.FunSuite{
@@ -27,7 +28,7 @@ class AddHttpServiceSuite extends munit.FunSuite{
   var server: Server = null
 
   override def beforeAll(): Unit = {
-    server = Server()
+    server = Server(0)
       .addHttpService("/text", Action { req =>
         val method = req.method
         if req.asText == "Hello Armeria!" && method == HttpMethod.POST then Ok("Received Text")
@@ -57,7 +58,7 @@ class AddHttpServiceSuite extends munit.FunSuite{
       .addHttpService("/cookie", Action { req =>
         val cookie1 = Cookie.ofSecure("cookie1", "one")
         val cookie2 = Cookie.ofSecure("cookie2", "two")
-        Ok("Here is your cookie").withCookies(cookie1, cookie2)
+        Ok("Here are your cookies").withCookies(cookie1, cookie2)
       })
       .addHttpService("/json2", Action {req =>
         Json.obj(
@@ -73,24 +74,36 @@ class AddHttpServiceSuite extends munit.FunSuite{
   }
 
   test("Text") {
-    val client = WebClient.of(s"http://localhost:${server.port}")
-    val creq = HttpRequest.of(HttpMethod.POST, "/text", MediaType.PLAIN_TEXT, "Hello Armeria!")
-    val resp = client.execute(creq).aggregate().join()
-    assertNoDiff(resp.contentUtf8(), "Received Text")
+    val resp = http.HttpClient.newHttpClient().send(
+      http.HttpRequest.newBuilder(URI.create(s"http://localhost:${server.port}/text"))
+        .POST(http.HttpRequest.BodyPublishers.ofString("Hello Armeria!"))
+        .header("Content-Type", MediaType.PLAIN_TEXT.toString)
+        .build(),
+      http.HttpResponse.BodyHandlers.ofString()
+    )
+    assertNoDiff(resp.body(), "Received Text")
   }
 
   test("Json"){
-    val client = WebClient.of(s"http://localhost:${server.port}")
-    val creq = HttpRequest.of(HttpMethod.POST, "/json", MediaType.JSON, Json.obj("msg" -> "Hello Armeria!").toString)
-    val resp = client.execute(creq).aggregate().join()
-    assertNoDiff(resp.contentUtf8(), "Received Text")
+    val resp = http.HttpClient.newHttpClient().send(
+      http.HttpRequest.newBuilder(URI.create(s"http://localhost:${server.port}/json"))
+        .POST(http.HttpRequest.BodyPublishers.ofString(Json.obj("msg" -> "Hello Armeria!").stringify))
+        .header("Content-Type", MediaType.JSON.toString)
+        .build(),
+      http.HttpResponse.BodyHandlers.ofString()
+    )
+    assertNoDiff(resp.body(), "Received Text")
   }
 
   test("FormUrlEncoded"){
-    val client = WebClient.of(s"http://localhost:${server.port}")
-    val creq = HttpRequest.of(HttpMethod.POST, "/form", MediaType.FORM_DATA, "msg[]=Hello&msg[]=Armeria!")
-    val resp = client.execute(creq).aggregate().join()
-    assertNoDiff(resp.contentUtf8(), "Received Text")
+    val resp = http.HttpClient.newHttpClient().send(
+      http.HttpRequest.newBuilder(URI.create(s"http://localhost:${server.port}/form"))
+        .POST(http.HttpRequest.BodyPublishers.ofString("msg[]=Hello&msg[]=Armeria!"))
+        .header("Content-Type", MediaType.FORM_DATA.toString)
+        .build(),
+      http.HttpResponse.BodyHandlers.ofString()
+    )
+    assertNoDiff(resp.body(), "Received Text")
   }
 
   test("Multipart Form") {
@@ -107,18 +120,31 @@ class AddHttpServiceSuite extends munit.FunSuite{
     assertNoDiff(resp.contentUtf8(), "Received Text")
   }
 
-  test("Cookie"){
-    val aggregate = WebClient.of(s"http://localhost:${server.port}").get("/cookie").aggregate().join()
-    val cookies = aggregate.headers().cookies()
+  test("Armeria Cookie"){
+    val resp = WebClient.of(s"http://localhost:${server.port}").get("/cookie").aggregate().join()
+    val cookies = resp.headers().cookies()
     assertEquals(cookies.size, 2)
-    assertNoDiff(aggregate.contentUtf8(), "Here is your cookie")
+    assertNoDiff(resp.contentUtf8(), "Here are your cookies")
   }
 
-  test("Json") {
-    val resp = WebClient.of(s"http://localhost:${server.port}").get("/json2").aggregate().join()
-    assertEquals(resp.status(), HttpStatus.OK)
-    assertEquals(resp.contentType(), MediaType.JSON)
-    assertNoDiff(resp.contentUtf8(), """{"msg":"HelloWorld!"}""")
+  test("HttpClient Cookie"){
+    val cm = CookieManager()
+    val resp = http.HttpClient.newBuilder().cookieHandler(cm).build().send(
+      http.HttpRequest.newBuilder(URI.create(s"http://localhost:${server.port}/cookie")).build(),
+      http.HttpResponse.BodyHandlers.ofString()
+    )
+    assertEquals(cm.getCookieStore.getCookies.size, 2)
+    assertNoDiff(resp.body(), "Here are your cookies")
+  }
+
+  test("Json2") {
+    val resp = http.HttpClient.newHttpClient().send(
+      http.HttpRequest.newBuilder(URI.create(s"http://localhost:${server.port}/json2")).build(),
+      http.HttpResponse.BodyHandlers.ofString()
+    )
+    assertEquals(resp.statusCode(), HttpStatus.OK.code())
+    assertEquals(resp.headers().firstValue("content-type").get, MediaType.JSON.toString)
+    assertNoDiff(resp.body(), """{"msg":"HelloWorld!"}""")
   }
 
 }

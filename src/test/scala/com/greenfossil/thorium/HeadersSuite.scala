@@ -19,9 +19,11 @@ package com.greenfossil.thorium
 import com.linecorp.armeria.common.{Cookie, HttpStatus}
 import com.linecorp.armeria.server.annotation.Get
 
+import java.net.{CookieManager, HttpCookie, URI}
+import java.net.http.{HttpClient, HttpRequest, HttpResponse}
 import scala.annotation.nowarn
 
-object HeadersServices {
+object HeadersServices:
   @Get("/headers") @nowarn
   def headers = Action { request =>
     Ok("Headers sent")
@@ -30,23 +32,34 @@ object HeadersServices {
         "Access-Control-Allow-Headers" -> "Origin, X-Requested-With, Content-Type, Accept")
       .withSession("session" -> "sessionValue")
       .flashing("flash" -> "flashValue")
-      .withCookies(Cookie.of("Cookie1", "Cookie1Value"), Cookie.of("Cookie2", "CookieValue2"))
+      .withCookies(Cookie.of("Cookie1", "Cookie1Value"), Cookie.of("Cookie2", "Cookie2Value"))
   }
-
-}
+end HeadersServices
 
 class HeadersSuite extends munit.FunSuite {
   test("header, session, flash"){
-    val server = Server()
+    val server = Server(0)
       .addServices(HeadersServices)
       .start()
 
-    import com.linecorp.armeria.client.WebClient
-    val client = WebClient.of(s"http://localhost:${server.port}")
-    client.get("/headers").aggregate().thenApply{ aggResp =>
-      assertEquals(aggResp.status(), HttpStatus.OK)
-      assertNoDiff(aggResp.contentUtf8(), "Headers sent")
-    }.join()
+    val cm = CookieManager()
+    val resp = HttpClient.newBuilder().cookieHandler(cm).build().send(
+      HttpRequest.newBuilder(URI.create(s"http://localhost:${server.port}/headers")).build(),
+      HttpResponse.BodyHandlers.ofString()
+    )
+    def findCookie(name: String): HttpCookie =
+      val opt = cm.getCookieStore.getCookies.stream().filter(_.getName == name).findFirst()
+      opt.orElseGet(() => null)
+
+    resp.headers().map().forEach((k, v) => println(s"k = ${k}, v:${v}"))
+    assertNoDiff(resp.headers().firstValue("access-control-allow-origin").get, "*")
+    assertNoDiff(resp.headers().firstValue("access-control-allow-headers").get, "Origin, X-Requested-With, Content-Type, Accept")
+    assertEquals(resp.statusCode(), HttpStatus.OK.code())
+    assertEquals(findCookie("APP_SESSION").getSecure, false)
+    assertEquals(findCookie("APP_FLASH").getSecure, false)
+    assertEquals(findCookie("Cookie1").getValue, "Cookie1Value")
+    assertEquals(findCookie("Cookie2").getValue, "Cookie2Value")
+    assertNoDiff(resp.body(), "Headers sent")
     server.stop()
   }
 

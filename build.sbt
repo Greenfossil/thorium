@@ -14,19 +14,20 @@ lazy val thorium = project
     Compile / javacOptions ++= Seq("-source", "17"),
 
     libraryDependencies ++= Seq(
-      "com.greenfossil" %% "htmltags" % "1.0.5",
-      "com.greenfossil" %% "data-mapping" % "1.0.14",
+      "com.greenfossil" %% "htmltags" % "1.0.6",
+      "com.greenfossil" %% "data-mapping" % "1.0.16",
       "com.greenfossil" %% "commons-i18n" % "1.0.9",
       "com.greenfossil" %% "typesafe-config-ext" % "1.0.2",
       "io.projectreactor" % "reactor-core" % "3.5.9",
-      "com.linecorp.armeria" % "armeria" % "1.28.0",
-      "com.linecorp.armeria" % "armeria-logback" % "1.28.0",
+      "com.linecorp.armeria" % "armeria" % "1.28.3",
+      "com.linecorp.armeria" % "armeria-logback" % "1.28.3",
       "org.overviewproject" % "mime-types" % "1.0.4",
       "org.slf4j" % "slf4j-api" % "2.0.10",
-      "com.microsoft.playwright" % "playwright" % "1.41.2" % Test,
+      "com.microsoft.playwright" % "playwright" % "1.43.0" % Test,
       "ch.qos.logback" % "logback-classic" % "1.4.14" % Test,
       "org.scalameta" %% "munit" % "0.7.29" % Test
     )
   )
 
-parallelExecution := false
+Test / javacOptions += "-Djdk.httpclient.allowRestrictedHeaders=content-length" //This is required
+

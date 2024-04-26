@@ -3,6 +3,8 @@ package com.greenfossil.thorium
 import com.greenfossil.thorium.{*, given}
 import com.linecorp.armeria.server.annotation.{Get, Post}
 
+import scala.language.implicitConversions
+
 object RecaptchaServices:
   /*
    * Note: recaptcha sign up information is in the link below, and copied here http://www.google.com/recaptcha/admin

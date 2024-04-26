@@ -16,9 +16,11 @@
 
 package com.greenfossil.thorium
 
-import com.linecorp.armeria.client.logging.LoggingClient
 import com.linecorp.armeria.common.HttpStatus
 import com.linecorp.armeria.server.annotation.Get
+
+import java.net.http.{HttpClient, HttpRequest, HttpResponse}
+import java.net.{CookieManager, URI}
 
 object SessionServices {
   @Get("/s0")
@@ -47,20 +49,21 @@ object SessionServices {
 class SessionSuite extends munit.FunSuite {
 
   test("Session, Flash propagation") {
-    val server = Server()
+    val server = Server(0)
       .addServices(SessionServices)
       .start()
 
-    import com.linecorp.armeria.client.WebClient
-    import com.linecorp.armeria.client.cookie.*
-    val client = WebClient
-      .builder(s"http://localhost:${server.port}")
-      .followRedirects()
-      .decorator(CookieClient.newDecorator(CookiePolicy.acceptAll()))
-      .decorator(LoggingClient.newDecorator())
+    val cm = CookieManager()
+    val req = HttpRequest.newBuilder(URI.create(s"http://localhost:${server.port}/s0")).build()
+    val resp = HttpClient.newBuilder()
+      .followRedirects(HttpClient.Redirect.NORMAL)
+      .cookieHandler(cm)
       .build()
-    val resp = client.get("/s0").aggregate().join()
-    assert(resp.contentUtf8().startsWith("S3 reached"))
+      .send(req, HttpResponse.BodyHandlers.ofString())
+    assert(resp.body().startsWith("S3 reached"))
+    assertEquals(cm.getCookieStore.getCookies.size(), 1)
+    assertNoDiff(cm.getCookieStore.getCookies.stream().filter(_.getName == "APP_SESSION").findFirst().get.getName, "APP_SESSION")
+    cm.getCookieStore.getCookies.stream().forEach(c => println(s"c = ${c}"))
     server.stop()
   }
 

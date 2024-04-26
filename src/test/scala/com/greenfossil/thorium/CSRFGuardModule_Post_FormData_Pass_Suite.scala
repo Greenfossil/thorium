@@ -17,13 +17,15 @@
 package com.greenfossil.thorium
 
 import com.greenfossil.thorium.decorators.CSRFGuardModule
-import com.linecorp.armeria.client.*
 import com.linecorp.armeria.common.*
 
-import java.net.URLEncoder
+import java.net.{CookieManager, HttpCookie, URI, URLEncoder, http}
 import java.time.Duration
 
 class CSRFGuardModule_Post_FormData_Pass_Suite extends munit.FunSuite:
+
+  //Important - allow content-length to be sent in the headers
+  System.setProperty("jdk.httpclient.allowRestrictedHeaders", "content-length")
 
   test("SameOrigin POST /csrf/email/change"):
     doPost(identity)
@@ -45,30 +47,30 @@ class CSRFGuardModule_Post_FormData_Pass_Suite extends munit.FunSuite:
     val postEpPath = "/csrf/email/change"
     val csrfCookieTokenName = Configuration().httpConfiguration.csrfConfig.cookieName
     val target = s"http://localhost:${server.port}"
-    val client = WebClient.of(target)
-    val csrfCookie = CSRFGuardModule.generateCSRFTokenCookie(Configuration(), Some("ABC"))
+    val csrfCookie: Cookie = CSRFGuardModule.generateCSRFTokenCookie(Configuration(), Some("ABC"))
     val content = s"email=password&${csrfCookieTokenName}=${URLEncoder.encode(csrfCookie.value(), "UTF-8")}"
     
-    //Set up headers
-    val headersBuilder = RequestHeaders.builder(HttpMethod.POST, postEpPath)
-      .contentType(MediaType.FORM_DATA)
-      .contentLength(content.length)
-      .cookies(csrfCookie)
-    
+    val cm = CookieManager()
+    val cookie = HttpCookie(csrfCookieTokenName, csrfCookie.value())
+    cookie.setDomain(csrfCookie.domain())
+    cookie.setPath(csrfCookie.path())
+    cm.getCookieStore.add(URI.create(target), cookie)
+
+    //Set up Request
+    val requestBuilder = http.HttpRequest.newBuilder(URI.create(target + postEpPath))
+      .POST(http.HttpRequest.BodyPublishers.ofString(content))
+      .headers(
+        "content-type", MediaType.FORM_DATA.toString,
+        "content-length", content.length.toString //required to set allowRestrictedHeaders
+      )
+
     //Set origin
-    Option(originFn(target)).map(target => headersBuilder.set("Origin", target))
-    
-    //Build headers
-    val headers = headersBuilder.build()
-    
-    //Build request
-    val request = HttpRequest.of(headers, HttpData.ofUtf8(content))
-    
-    //Set response timeout
-    val reqOpts = RequestOptions.builder().responseTimeout(Duration.ofHours(1)).build()
-    
-    val postResp = client.execute(request, reqOpts).aggregate().join()
-    assertNoDiff(postResp.status().codeAsText(), "200")
-    assertNoDiff(postResp.contentUtf8(), "Password Changed")
-    
+    Option(originFn(target)).foreach(target => requestBuilder.header("Origin", target))
+
+    val postResp = http.HttpClient.newBuilder().cookieHandler(cm).connectTimeout(Duration.ofHours(1)).build()
+      .send(requestBuilder.build(), http.HttpResponse.BodyHandlers.ofString())
+    assertEquals(postResp.statusCode(), 200)
+    assertNoDiff(postResp.body(), "Password Changed")
+
+
     server.stop()

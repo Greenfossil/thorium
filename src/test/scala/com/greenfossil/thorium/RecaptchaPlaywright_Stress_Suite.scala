@@ -26,7 +26,7 @@ import scala.util.Random
 class RecaptchaPlaywright_Stress_Suite extends munit.FunSuite:
 
   /**
-   * Before running this testsuite, ensures that Recaptcha Main is running.
+   * Before running this testsuite, ensures that RecaptchaMainTestService is running.
    */
   import com.microsoft.playwright.*
 

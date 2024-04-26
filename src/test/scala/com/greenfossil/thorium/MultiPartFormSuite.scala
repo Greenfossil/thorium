@@ -26,51 +26,48 @@ import java.nio.charset.StandardCharsets
 import java.nio.file.{Files, Paths}
 import scala.sys.process.*
 
-class MultiPartFormSuite extends FunSuite{
-  /*
-   * Please ensure com.greenfossil.webserver.examples.main is started
-   */
-  object FormServices {
-    @Post("/multipart3")
-    def multipartForm3: Action = Action.multipart { implicit request =>
-      val files = request.files
-      Ok(s"Received multipart request with files: ${files.size}")
-    }
-
-    @Post("/multipart-bad-request")
-    def multipartFormBadRequest: Action = Action.multipart { implicit request =>
-      BadRequest("Bad Request")
-    }
-
-    @Post("/multipart-bad-request-2")
-    def multipartForm4: Action = Action.multipart { implicit request =>
-      "Bad Request 2".as(HttpStatus.BAD_REQUEST, MediaType.JSON)
-    }
-
-    @Post("/multipart-internal-server-error")
-    def multipartFormInternalServerError: Action = Action.multipart { implicit request =>
-      InternalServerError("Internal Server Error")
-    }
-
+/*
+ * Please ensure com.greenfossil.webserver.examples.main is started
+ */
+object FormServices {
+  @Post("/multipart3")
+  def multipartForm3: Action = Action.multipart { implicit request =>
+    val files = request.files
+    Ok(s"Received multipart request with files: ${files.size}")
   }
 
+  @Post("/multipart-bad-request")
+  def multipartFormBadRequest: Action = Action.multipart { implicit request =>
+    BadRequest("Bad Request")
+  }
+
+  @Post("/multipart-bad-request-2")
+  def multipartForm4: Action = Action.multipart { implicit request =>
+    "Bad Request 2".as(HttpStatus.BAD_REQUEST, MediaType.JSON)
+  }
+
+  @Post("/multipart-internal-server-error")
+  def multipartFormInternalServerError: Action = Action.multipart { implicit request =>
+    InternalServerError("Internal Server Error")
+  }
+
+}
+
+class MultiPartFormSuite extends FunSuite{
 
   var server: Server = null
 
-  override def beforeAll(): Unit = {
-
+  override def beforeAll(): Unit =
     try{
-      server = Server()
+      server = Server(0)
         .addServices(FormServices)
         .start()
     }catch {
       case ex: Throwable =>
     }
-  }
 
-  override def afterAll(): Unit = {
+  override def afterAll(): Unit =
     server.stop()
-  }
 
   test("POST with file content") {
     Files.write(Paths.get("/tmp/file.txt"), "Hello world".getBytes(StandardCharsets.UTF_8))

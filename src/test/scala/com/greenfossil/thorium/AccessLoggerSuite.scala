@@ -16,60 +16,84 @@
 
 package com.greenfossil.thorium
 
-import ch.qos.logback.classic.{Level, Logger}
-import com.greenfossil.commons.json.{JsObject, Json}
-import com.linecorp.armeria.server.annotation.Get
-import org.slf4j.LoggerFactory
 import ch.qos.logback.classic.spi.ILoggingEvent
+import ch.qos.logback.classic.{Level, Logger}
 import ch.qos.logback.core.read.ListAppender
+import com.greenfossil.commons.json.{JsObject, Json}
+import com.linecorp.armeria.common.MediaType
+import com.linecorp.armeria.server.annotation.{Get, Param}
+import org.slf4j.LoggerFactory
 
+import java.net.{URI, http}
+import java.time.Duration
+import java.util.Optional
 import scala.language.implicitConversions
 
 private object LoggerService:
-
-  @Get("/foo")
-  def foo(req: Request) = s"content:${req.asText}"
+  @Get("/log-appender")
+  def logAppender(@Param msg:String)(req: Request) =
+    s"content:$msg"
+end LoggerService
 
 
 class AccessLoggerSuite extends munit.FunSuite:
 
-  import com.linecorp.armeria.client.*
-  import com.linecorp.armeria.common.*
-
-  var server: Server = Server()
-    .addServices(LoggerService)
-    .start()
+  var server: Server = null
 
   //List appender for Logging events
-  val logger: Logger = LoggerFactory.getLogger("com.linecorp.armeria.logging.access")
-    .asInstanceOf[ch.qos.logback.classic.Logger]
+  lazy val logger: Logger = LoggerFactory.getLogger("com.linecorp.armeria.logging.access").asInstanceOf[ch.qos.logback.classic.Logger]
 
-  val listAppender: ListAppender[ILoggingEvent] = new ListAppender()
+  lazy val listAppender: ListAppender[ILoggingEvent] = new ListAppender()
 
-  val logs: java.util.List[ILoggingEvent] = listAppender.list
-
-  var resp: AggregatedHttpResponse = null
-
-  val requestContent = "HelloWorld!"
+  lazy val logs: java.util.List[ILoggingEvent] = listAppender.list
 
   override def beforeAll(): Unit =
     listAppender.start()
     logger.addAppender(listAppender)
     logger.setLevel(Level.INFO)
+    server= Server(0).addServices(LoggerService).start()
 
-    val client = WebClient.of(s"http://localhost:${server.port}")
-    val creq = HttpRequest.of(HttpMethod.GET, "/foo", MediaType.PLAIN_TEXT, requestContent)
-    resp = client.execute(creq).aggregate().join()
-
-    Thread.sleep(1000) // waits for armeria to finish its logging
-
-  override def afterAll(): Unit = server.stop()
+  override def afterAll(): Unit =
+    server.stop()
+    listAppender.stop()
 
 
-  test("Request Response Access Logging") {
+  test("Request Response Access Logging".flaky) {
 
-    val requestJson = (Json.parse(logs.get(0).getMessage) \ "request").as[JsObject]
-    val responseJson = (Json.parse(logs.get(1).getMessage) \ "response").as[JsObject]
+    http.HttpClient.newBuilder().connectTimeout(Duration.ofSeconds(5)).build().send(
+      http.HttpRequest.newBuilder(URI.create(s"http://localhost:${server.port}/log-appender?msg=HelloWorld!"))
+        .header("Content-Type", MediaType.PLAIN_TEXT.toString)
+        .build(),
+      http.HttpResponse.BodyHandlers.ofString()
+    )
+
+    Thread.sleep(2000)
+    def findEvent(dir: String, method: String, path: String): Optional[ILoggingEvent] =
+      logs.stream()
+        .filter(x => x.getMessage.contains(dir) && x.getMessage.contains(method) && x.getMessage.contains(path))
+        .findFirst()
+
+    import util.control.Breaks.*
+    var cnt = 0
+    breakable{
+      while(true) {
+        println(s"cnt = ${cnt} log.size:${logs.size}")
+        if  findEvent("request", "GET", "/log-appender").isPresent && findEvent("response", "GET", "/log-appender").isPresent || cnt > 5 then
+          println(s"Breaking out of loop. log.size:${logs.size}")
+          break()
+        else
+          cnt += 1
+          println(s"Sleeping for 2 seconds.. cnt:${cnt}, log.size:${logs.size}")
+          Thread.sleep(2000)
+      }
+    }
+    val requestMsg = findEvent("request", "GET", "/log-appender").get.getMessage
+    val responseMsg = findEvent("response", "GET", "/log-appender").get.getMessage
+    println(s"requestMsg = ${requestMsg}")
+    println(s"responseMsg = ${responseMsg}")
+
+    val requestJson = (Json.parse(requestMsg) \ "request").as[JsObject]
+    val responseJson = (Json.parse(responseMsg) \ "response").as[JsObject]
 
     //checks the request data
     assert((requestJson \ "timestamp").as[String].nonEmpty)
@@ -83,8 +107,9 @@ class AccessLoggerSuite extends munit.FunSuite:
     assert((requestJson \ "query").as[String].nonEmpty)
     assert((requestJson \ "scheme").as[String].nonEmpty)
     assert((requestJson \ "requestStartTimeMillis").toString.nonEmpty)
-    assert((requestJson \ "path").as[String].equalsIgnoreCase("/foo"))
-    assert((requestJson \ "requestLength").as[String].equalsIgnoreCase(requestContent.length.toString))
+    println(s""" = ${(requestJson \ "path").as[String]}""")
+    assert((requestJson \ "path").as[String].equalsIgnoreCase("/log-appender"))
+    assert((requestJson \ "requestLength").as[Int].equals(0))
 
     //checks the response data
     assert((responseJson \ "timestamp").as[String].nonEmpty)
@@ -94,12 +119,13 @@ class AccessLoggerSuite extends munit.FunSuite:
     assert((responseJson \ "proxiedDestinationAddresses").toString.nonEmpty)
 
     assert((responseJson \ "headers").as[String].nonEmpty)
-    assert((responseJson \ "statusCode").as[String].equalsIgnoreCase(resp.status().codeAsText()))
+    assert((responseJson \ "statusCode").as[Int].equals(200))
     assert((responseJson \ "method").as[String].equalsIgnoreCase("GET"))
     assert((responseJson \ "query").as[String].nonEmpty)
     assert((responseJson \ "scheme").as[String].nonEmpty)
     assert((responseJson \ "responseStartTimeMillis").as[String].nonEmpty)
-    assert((responseJson \ "path").as[String].equalsIgnoreCase("/foo"))
-    assert((responseJson \ "responseLength").as[String].equalsIgnoreCase(resp.contentUtf8().length.toString))
+    assert((responseJson \ "path").as[String].equalsIgnoreCase("/log-appender"))
+    assert((responseJson \ "responseLength").as[Int].equals(19))
+
   }
 

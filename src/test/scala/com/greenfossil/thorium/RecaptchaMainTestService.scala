@@ -5,7 +5,7 @@ import com.linecorp.armeria.server.ServiceRequestContext
 
 import java.time.Duration
 
-object RecaptchaMain:
+object RecaptchaMainTestService:
 
   def recaptchaPathVerificationFn(path: String, ctx: ServiceRequestContext):Boolean =
       //prone to misconfigurations and not good for refactoring

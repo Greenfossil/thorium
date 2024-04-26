@@ -18,6 +18,7 @@
 package com.greenfossil.thorium
 
 import com.greenfossil.htmltags.*
+import scala.language.implicitConversions
 
 object RecaptchaFormPage:
 

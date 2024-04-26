@@ -63,7 +63,7 @@ object Service2:
 
 class UrlPrefixSuite extends munit.FunSuite {
   test("route patterns"){
-    val server = Server()
+    val server = Server(0)
       .addServices(Service1)
       .addServices(Service2)
       .serverBuilderSetup(sb => {
@@ -93,7 +93,7 @@ class UrlPrefixSuite extends munit.FunSuite {
   }
 
   test("annotatedService with path prefix"){
-    val server = Server()
+    val server = Server(0)
       .addServices(Service1)
       .addServices(Service2)
       .serverBuilderSetup(sb => {
@@ -125,7 +125,7 @@ class UrlPrefixSuite extends munit.FunSuite {
   }
 
   test("prefixUrl2 - with prefix routes"){
-    val server = Server()
+    val server = Server(0)
       .addServices(Service2)
       .serverBuilderSetup(sb => {
         sb.annotatedService("/ext", Service2)
@@ -143,7 +143,7 @@ class UrlPrefixSuite extends munit.FunSuite {
   }
 
   test("prefixUrl2 - favicon route") {
-    val server = Server()
+    val server = Server(0)
       .addServices(Service2)
       .serverBuilderSetup(sb => {
         sb.annotatedService("/ext", Service2)
@@ -156,7 +156,7 @@ class UrlPrefixSuite extends munit.FunSuite {
   }
 
   test("prefixUrl2 - with parameters") {
-    val server = Server()
+    val server = Server(0)
       .addServices(Service2)
       .serverBuilderSetup(sb => {
         sb.annotatedService("/ext", Service2)
@@ -180,7 +180,7 @@ class UrlPrefixSuite extends munit.FunSuite {
 
 
   test("serviceUnder with path prefix".ignore){
-    val server = Server()
+    val server = Server(0)
       .addServices(Service1)
       .addServices(Service2)
       .serverBuilderSetup(sb => {

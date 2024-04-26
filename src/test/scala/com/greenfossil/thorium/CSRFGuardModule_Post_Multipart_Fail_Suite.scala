@@ -39,7 +39,7 @@ class CSRFGuardModule_Post_Multipart_Fail_Suite extends munit.FunSuite:
   def doPost(originFn: String => String)(using loc: munit.Location) =
     val server = Server(0)
       .addServices(CSRFServices)
-      .addCSRFGuard((origin, referer, ctx) => false)
+      .addCSRFGuard((_ /*origin*/, _ /*referer*/, _ /*ctx*/) => false)
       .start()
     val port = server.port
 

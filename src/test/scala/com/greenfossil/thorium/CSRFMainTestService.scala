@@ -18,7 +18,7 @@ package com.greenfossil.thorium
 
 import java.time.Duration
 
-object CSRFMain:
+object CSRFMainTestService:
 
   @main
   def csrfMain =

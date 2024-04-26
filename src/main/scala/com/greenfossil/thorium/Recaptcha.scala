@@ -3,18 +3,17 @@ package com.greenfossil.thorium
 import com.greenfossil.commons.json.*
 import com.greenfossil.data.mapping.Mapping
 import com.greenfossil.data.mapping.Mapping.*
-import com.linecorp.armeria.client.retry.{Backoff, RetryRule, RetryingClient}
-import com.linecorp.armeria.client.WebClient
-import com.linecorp.armeria.common.{HttpData, MediaType}
+import com.linecorp.armeria.common.MediaType
 import org.slf4j.LoggerFactory
 
-import java.net.URLEncoder
+import java.net.{URI, URLEncoder}
+import java.net.http.{HttpClient, HttpRequest, HttpResponse}
 import java.nio.charset.StandardCharsets
-import java.time.Instant
+import java.time.{Duration, Instant}
 import scala.util.Try
 
 object Recaptcha:
-  private val logger = LoggerFactory.getLogger("com.greenfossil.elementum.recaptcha")
+  private val logger = LoggerFactory.getLogger("com.greenfossil.thorium.recaptcha")
 
   def onVerified(using request: Request)(predicate: Recaptcha => Boolean)(result: => ActionResponse): ActionResponse =
     verify.fold(
@@ -40,9 +39,9 @@ object Recaptcha:
         xs => siteVerify(xs, secretKey, request.httpConfiguration.recaptchaConfig.timeout)
       )
 
-  def siteVerify(captchaValues: Seq[String], recaptchaSecret: String, timeout: Int): Try[Recaptcha] =
+  def siteVerify(captchaValues: Seq[String], recaptchaSecret: String, timeoutMSec: Int): Try[Recaptcha] =
     captchaValues.find(_.nonEmpty) match
-      case Some(token) => siteVerify(token, recaptchaSecret, timeout)
+      case Some(token) => siteVerify(token, recaptchaSecret, timeoutMSec)
       case None => Try(throw new IllegalArgumentException("No recaptcha token found"))
 
 
@@ -71,32 +70,33 @@ object Recaptcha:
    *         "error-codes": [...]        // optional
    *         }
    */
-  def siteVerify(recaptchaToken: String, recaptchaSecret: String, timeout: Int): Try[Recaptcha] =
+  def siteVerify(recaptchaToken: String, recaptchaSecret: String, timeoutMSec: Int): Try[Recaptcha] =
     //POST to googleVerifyURL using query-params
     Try:
-      if recaptchaToken == null || recaptchaToken.isBlank then throw IllegalArgumentException("recaptchaToken missing")
+      if recaptchaToken == null || recaptchaToken.isBlank then throw new IllegalArgumentException("recaptchaToken missing")
       else
         val content = s"secret=${URLEncoder.encode(recaptchaSecret, StandardCharsets.UTF_8)}&response=${URLEncoder.encode(recaptchaToken, StandardCharsets.UTF_8)}"
         logger.debug(s"siteVerify content:$content")
 
-        val resp = WebClient.builder()
-          .decorator(RetryingClient.newDecorator(RetryRule.failsafe(Backoff.fibonacci(1000, timeout))))
-          .writeTimeoutMillis(timeout)
-          .responseTimeoutMillis(timeout)
-          .build()
-          .prepare()
-          .post("https://www.google.com/recaptcha/api/siteverify")
-          .content(MediaType.FORM_DATA, HttpData.of(StandardCharsets.UTF_8, content))
-          .execute()
-          .aggregate()
-          .join()
+        val resp = HttpClient.newBuilder().connectTimeout(Duration.ofMillis(timeoutMSec)).build()
+          .send(
+            HttpRequest.newBuilder(URI.create("https://www.google.com/recaptcha/api/siteverify"))
+              .POST(HttpRequest.BodyPublishers.ofString(content))
+              .header("content-type", MediaType.FORM_DATA.toString)
+              .build,
+            HttpResponse.BodyHandlers.ofString()
+          )
 
         /*
          * Json format - success, challenge_ts, hostname, score, action
          */
-        logger.debug(s"siteVerify response - status:${resp.status()}, content-type:${resp.contentType()}, content:${resp.contentUtf8()}")
-        assert(resp.contentType().belongsTo(MediaType.JSON))
-        new Recaptcha(Json.parse(resp.contentUtf8()))
+        if resp.statusCode() != 200 then
+          val msg = s"Recaptcha response error ${resp.statusCode()} -${resp.body}"
+          logger.error(msg)
+          throw IllegalStateException(msg)
+        else
+          logger.debug(s"siteVerify response - status:${resp.statusCode()}, content-type:${resp.headers().firstValue("content-type")}, content:${resp.body()}")
+          new Recaptcha(Json.parse(resp.body()))
 
 case class Recaptcha(jsValue: JsValue):
   def success:Boolean =

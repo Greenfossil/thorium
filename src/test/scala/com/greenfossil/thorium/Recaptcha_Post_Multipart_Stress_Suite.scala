@@ -27,7 +27,7 @@ class Recaptcha_Post_Multipart_Stress_Suite extends munit.FunSuite:
   private def startServer(addRecaptchaGuardModule: Boolean = true): Server =
     val server = Server(0)
       .addServices(RecaptchaServices)
-      .addThreatGuardModule( if !addRecaptchaGuardModule then null else RecaptchaGuardModule(RecaptchaMain.recaptchaPathVerificationFn))
+      .addThreatGuardModule( if !addRecaptchaGuardModule then null else RecaptchaGuardModule(RecaptchaMainTestService.recaptchaPathVerificationFn))
     server.start()
 
   test("/recaptcha/multipart-form with RecaptchaGuardModule"):
