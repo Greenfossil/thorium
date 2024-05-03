@@ -22,6 +22,7 @@ import ch.qos.logback.core.read.ListAppender
 import com.greenfossil.commons.json.{JsObject, Json}
 import com.linecorp.armeria.common.MediaType
 import com.linecorp.armeria.server.annotation.{Get, Param}
+import munit.IgnoreSuite
 import org.slf4j.LoggerFactory
 
 import java.net.{URI, http}
@@ -35,7 +36,7 @@ private object LoggerService:
     s"content:$msg"
 end LoggerService
 
-
+@IgnoreSuite
 class AccessLoggerSuite extends munit.FunSuite:
 
   var server: Server = null

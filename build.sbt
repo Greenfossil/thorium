@@ -7,7 +7,7 @@ lazy val thorium = project
   .settings(
     name := "thorium",
     organization := "com.greenfossil",
-    version := "0.7.20",
+    version := "0.7.21",
 
     scalaVersion := scala3Version,
 
@@ -15,12 +15,12 @@ lazy val thorium = project
 
     libraryDependencies ++= Seq(
       "com.greenfossil" %% "htmltags" % "1.0.6",
-      "com.greenfossil" %% "data-mapping" % "1.0.16",
+      "com.greenfossil" %% "data-mapping" % "1.0.17",
       "com.greenfossil" %% "commons-i18n" % "1.0.9",
       "com.greenfossil" %% "typesafe-config-ext" % "1.0.2",
       "io.projectreactor" % "reactor-core" % "3.5.9",
-      "com.linecorp.armeria" % "armeria" % "1.28.3",
-      "com.linecorp.armeria" % "armeria-logback" % "1.28.3",
+      "com.linecorp.armeria" % "armeria" % "1.28.4",
+      "com.linecorp.armeria" % "armeria-logback" % "1.28.4",
       "org.overviewproject" % "mime-types" % "1.0.4",
       "org.slf4j" % "slf4j-api" % "2.0.10",
       "com.microsoft.playwright" % "playwright" % "1.43.0" % Test,
