@@ -17,12 +17,13 @@
 package com.greenfossil.thorium
 
 import com.greenfossil.commons.json.Json
+import io.github.yskszk63.jnhttpmultipartformdatabodypublisher.MultipartFormDataBodyPublisher
 
+import java.io.ByteArrayInputStream
 import java.net.{CookieManager, URI, http}
 import scala.language.implicitConversions
 
 class AddHttpServiceSuite extends munit.FunSuite{
-  import com.linecorp.armeria.client.*
   import com.linecorp.armeria.common.*
 
   var server: Server = null
@@ -51,7 +52,7 @@ class AddHttpServiceSuite extends munit.FunSuite{
       .addHttpService("/multipart-form", Action { req =>
         req.asMultipartFormData(mpForm => {
           val form = mpForm.asFormUrlEncoded
-          if form.nonEmpty then Ok("Received Text")
+          if form.nonEmpty then Ok(s"Received Text $form")
           else BadRequest("Did not receive the right text")
         })
       })
@@ -109,22 +110,21 @@ class AddHttpServiceSuite extends munit.FunSuite{
   test("Multipart Form") {
     //    val fileURI = getClass.getClassLoader.getResource("sample.png").toURI
     //    val file = new File(fileURI)
-    import com.linecorp.armeria.common.multipart.*
-    val mp = Multipart.of(
-      BodyPart.of(ContentDisposition.of("form-data", "name1"), "hello1"),
-      BodyPart.of(ContentDisposition.of("form-data", "name1"), "hello2"),
-      BodyPart.of(ContentDisposition.of("form-data", "name2", "hello.txt"), "hello1")
-    )
-    val client = WebClient.of(s"http://localhost:${server.port}")
-    val resp = client.execute(mp.toHttpRequest("/multipart-form")).aggregate().join()
-    assertNoDiff(resp.contentUtf8(), "Received Text")
-  }
 
-  test("Armeria Cookie"){
-    val resp = WebClient.of(s"http://localhost:${server.port}").get("/cookie").aggregate().join()
-    val cookies = resp.headers().cookies()
-    assertEquals(cookies.size, 2)
-    assertNoDiff(resp.contentUtf8(), "Here are your cookies")
+    val mpPub = MultipartFormDataBodyPublisher()
+      .add("name1", "hello1")
+      .add("name1", "hello2")
+      .addStream("name2", "hello.txt", () => ByteArrayInputStream("hello1".getBytes))
+    val resp = http.HttpClient.newHttpClient()
+      .send(
+        http.HttpRequest.newBuilder(URI.create(s"http://localhost:${server.port}/multipart-form"))
+          .POST(mpPub)
+          .header("Content-Type", mpPub.contentType())
+          .build(),
+        http.HttpResponse.BodyHandlers.ofString()
+      )
+
+    assertNoDiff(resp.body(), "Received Text FormUrlEndcoded(Map(name2 -> List(hello.txt), name1 -> List(hello1, hello2)))")
   }
 
   test("HttpClient Cookie"){
@@ -134,6 +134,12 @@ class AddHttpServiceSuite extends munit.FunSuite{
       http.HttpResponse.BodyHandlers.ofString()
     )
     assertEquals(cm.getCookieStore.getCookies.size, 2)
+    cm.getCookieStore.getCookies.forEach{c =>
+      c.getName match
+        case "cookie1" => assertNoDiff(c.getValue, "one")
+        case "cookie2" => assertNoDiff(c.getValue, "two")
+        case badCookie => fail(s"Bad cookie $badCookie")
+    }
     assertNoDiff(resp.body(), "Here are your cookies")
   }
 

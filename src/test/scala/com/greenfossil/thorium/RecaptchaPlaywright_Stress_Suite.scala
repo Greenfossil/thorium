@@ -35,7 +35,7 @@ class RecaptchaPlaywright_Stress_Suite extends munit.FunSuite:
   import scala.concurrent.Future
 
   test("playwright test") {
-    val browserType = BrowserType.LaunchOptions().setTimeout(2000) //.setHeadless(false).setSlowMo(2000)
+    val browserType = BrowserType.LaunchOptions() //.setTimeout(2000).setHeadless(false).setSlowMo(2000)
     val browserCnt = 5
     val loop = 2
     val browsersTup2: List[(Browser, Int)] =

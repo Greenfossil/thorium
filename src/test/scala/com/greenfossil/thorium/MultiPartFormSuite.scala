@@ -16,12 +16,13 @@
 
 package com.greenfossil.thorium
 
-import com.linecorp.armeria.client.WebClient
-import com.linecorp.armeria.common.{ContentDisposition, HttpStatus, MediaType}
-import com.linecorp.armeria.common.multipart.{BodyPart, Multipart}
+import com.linecorp.armeria.common.{HttpStatus, MediaType}
 import com.linecorp.armeria.server.annotation.Post
+import io.github.yskszk63.jnhttpmultipartformdatabodypublisher.MultipartFormDataBodyPublisher
 import munit.FunSuite
 
+import java.net.URI
+import java.net.http.{HttpClient, HttpRequest, HttpResponse}
 import java.nio.charset.StandardCharsets
 import java.nio.file.{Files, Paths}
 import scala.sys.process.*
@@ -106,33 +107,46 @@ class MultiPartFormSuite extends FunSuite{
   }
 
   test("POST with bad request") {
-    val mpReq =
-      val bodyPart = BodyPart.of(ContentDisposition.of("form-data", "name"), "homer")
-      Multipart.of(bodyPart)
-        .toHttpRequest(s"http://localhost:${server.port}/multipart-bad-request")
-    val resp = WebClient.of().execute(mpReq).aggregate().join
-    assertEquals(resp.status(), HttpStatus.BAD_REQUEST)
-    assertNoDiff(resp.contentUtf8(), "Bad Request")
+    val mpPub = MultipartFormDataBodyPublisher().add("name", "homer")
+    val resp = HttpClient.newHttpClient()
+      .send(
+        HttpRequest.newBuilder(URI.create(s"http://localhost:${server.port}/multipart-bad-request"))
+          .POST(mpPub)
+          .header("Content-Type", mpPub.contentType())
+          .build(),
+        HttpResponse.BodyHandlers.ofString()
+      )
+    assertEquals(resp.statusCode(), HttpStatus.BAD_REQUEST.code())
+    assertNoDiff(resp.body(), "Bad Request")
   }
 
   test("POST with bad request 2") {
-    val mpReq =
-      val bodyPart = BodyPart.of(ContentDisposition.of("form-data", "name"), "homer")
-      Multipart.of(bodyPart)
-        .toHttpRequest(s"http://localhost:${server.port}/multipart-bad-request-2")
-    val resp = WebClient.of().execute(mpReq).aggregate().join
-    assertEquals(resp.status(), HttpStatus.BAD_REQUEST)
-    assertNoDiff(resp.contentUtf8(), "Bad Request 2")
+    val mpPub = MultipartFormDataBodyPublisher().add("name", "homer")
+    val resp = HttpClient.newHttpClient()
+      .send(
+        HttpRequest.newBuilder(URI.create(s"http://localhost:${server.port}/multipart-bad-request-2"))
+          .POST(mpPub)
+          .header("Content-Type", mpPub.contentType())
+          .build(),
+        HttpResponse.BodyHandlers.ofString()
+      )
+    assertEquals(resp.statusCode(), HttpStatus.BAD_REQUEST.code())
+    assertNoDiff(resp.body(), "Bad Request 2")
   }
 
   test("POST with internal server error") {
-    val mpReq =
-      val bodyPart = BodyPart.of(ContentDisposition.of("form-data", "name"), "homer")
-      Multipart.of(bodyPart)
-        .toHttpRequest(s"http://localhost:${server.port}/multipart-internal-server-error")
-    val resp = WebClient.of().execute(mpReq).aggregate().join
-    assertEquals(resp.status(), HttpStatus.INTERNAL_SERVER_ERROR)
-    assertNoDiff(resp.contentUtf8(), "Internal Server Error")
+    val mpPub = MultipartFormDataBodyPublisher()
+      .add("name", "homer")
+    val resp = HttpClient.newHttpClient()
+      .send(
+        HttpRequest.newBuilder(URI.create(s"http://localhost:${server.port}/multipart-internal-server-error"))
+          .POST(mpPub)
+          .header("Content-Type", mpPub.contentType())
+          .build(),
+        HttpResponse.BodyHandlers.ofString()
+      )
+    assertEquals(resp.statusCode(), HttpStatus.INTERNAL_SERVER_ERROR.code())
+    assertNoDiff(resp.body(), "Internal Server Error")
   }
 
 }

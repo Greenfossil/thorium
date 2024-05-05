@@ -16,7 +16,7 @@
 
 package com.greenfossil.thorium.decorators
 
-import com.greenfossil.thorium.{Configuration, CookieUtil, Flash, RequestAttrs, Session}
+import com.greenfossil.thorium.*
 import com.linecorp.armeria.common.{Cookie, HttpRequest, HttpResponse}
 import com.linecorp.armeria.server.{DecoratingHttpServiceFunction, HttpService, ServiceRequestContext}
 import org.slf4j.LoggerFactory

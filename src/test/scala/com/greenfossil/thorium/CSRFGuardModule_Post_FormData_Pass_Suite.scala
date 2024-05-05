@@ -19,7 +19,7 @@ package com.greenfossil.thorium
 import com.greenfossil.thorium.decorators.CSRFGuardModule
 import com.linecorp.armeria.common.*
 
-import java.net.{CookieManager, HttpCookie, URI, URLEncoder, http}
+import java.net.*
 import java.time.Duration
 
 class CSRFGuardModule_Post_FormData_Pass_Suite extends munit.FunSuite:

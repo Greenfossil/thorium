@@ -24,8 +24,8 @@ import java.security.MessageDigest
 import java.time
 import java.time.Duration
 import java.util.Base64
-import scala.util.*
 import scala.jdk.CollectionConverters.*
+import scala.util.*
 
 type SameSiteCookie = "Strict" | "Lax" | "None"
 

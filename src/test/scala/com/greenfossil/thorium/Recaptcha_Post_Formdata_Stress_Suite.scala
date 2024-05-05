@@ -36,7 +36,7 @@ class Recaptcha_Post_Formdata_Stress_Suite extends munit.FunSuite:
   test("/recaptcha/guarded-form with RecaptchaGuardModule"):
     val server = startServer(addRecaptchaGuardModule = true)
 
-    val n = 10
+    val n = 5
     val client = HttpClient.newBuilder().connectTimeout(Duration.ofSeconds(5)).build()
     val xs = 1 to n map {i =>
       val req = http.HttpRequest.newBuilder(URI.create(s"http://localhost:${server.port}/recaptcha/guarded-form"))
@@ -44,7 +44,7 @@ class Recaptcha_Post_Formdata_Stress_Suite extends munit.FunSuite:
         .header("content-type", MediaType.FORM_DATA.toString)
         .build()
       val resp = client.send(req, HttpResponse.BodyHandlers.ofString())
-      println(s"response i:$i status:${resp.statusCode()}")
+      assertEquals(resp.statusCode(), 401)
       i
     }
 

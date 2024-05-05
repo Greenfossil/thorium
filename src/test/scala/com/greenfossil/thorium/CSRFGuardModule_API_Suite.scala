@@ -25,8 +25,6 @@ class CSRFGuardModule_API_Suite extends munit.FunSuite:
       csrfToken <- CSRFGuardModule.generateCSRFToken("ABCD", "HmacSHA256", "1234")
     } yield
       val verifyResult = CSRFGuardModule.verifyHmac(csrfToken, "ABCD1", "HmacSHA256")
-      println(s"csrfToken = ${csrfToken}")
-      println(s"verifyResult = ${verifyResult}")
       verifyResult
       )
       .fold(
@@ -40,8 +38,6 @@ class CSRFGuardModule_API_Suite extends munit.FunSuite:
       csrfToken <- CSRFGuardModule.generateCSRFToken("ABCD", "HmacSHA256", "1234")
     } yield
       val verifyResult = CSRFGuardModule.verifyHmac(csrfToken, "ABCD", "HmacSHA256")
-      println(s"csrfToken = ${csrfToken}")
-      println(s"verifyResult = ${verifyResult}")
       verifyResult
       )
       .fold(

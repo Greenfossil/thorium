@@ -55,18 +55,15 @@ class InheritedAnnotatedPathSuite extends munit.FunSuite:
 
   test("inherited Impl1.foo"){
     val ep = Sub1.foo.endpoint
-    println(s"ep.url = ${ep.url}")
     assertNoDiff(ep.url, "/sub1/foo")
   }
 
   test("inherited Impl1.toFoo"){
     val redirect1 = Sub1.foobazRedirect
-    println(s"redirect1 = ${redirect1}")
     assertNoDiff(redirect1, "/sub1/foo")
 
 
     val redirect2 = Sub2.foobazRedirect
-    println(s"redirect2 = ${redirect2}")
     assertNoDiff(redirect2, "/base/foo")
   }
 

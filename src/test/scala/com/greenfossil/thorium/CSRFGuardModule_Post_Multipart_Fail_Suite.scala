@@ -16,14 +16,11 @@
 
 package com.greenfossil.thorium
 
-import com.linecorp.armeria.client.*
 import com.linecorp.armeria.common.*
-import com.linecorp.armeria.common.multipart.{BodyPart, Multipart}
-import com.linecorp.armeria.common.stream.StreamMessage
+import io.github.yskszk63.jnhttpmultipartformdatabodypublisher.MultipartFormDataBodyPublisher
 
-import java.nio.charset.StandardCharsets
-import java.nio.file.{Files, Paths}
-import java.time.Duration
+import java.io.ByteArrayInputStream
+import java.net.{URI, http}
 
 class CSRFGuardModule_Post_Multipart_Fail_Suite extends munit.FunSuite:
 
@@ -44,31 +41,29 @@ class CSRFGuardModule_Post_Multipart_Fail_Suite extends munit.FunSuite:
     val port = server.port
 
     val postEpPath = "/csrf/multipart-file"
-    val target = s"http://localhost:${port}"
-    val client = WebClient.of(target)
+    val target = s"http://localhost:$port"
 
-    //Create 3 parts, formPart, csrfPart and filePart
-    val formPart = BodyPart.of(ContentDisposition.of("form-data", "name"), "Homer")
-    val filePath = Files.write(Paths.get("/tmp/file.txt"), "Hello world".getBytes(StandardCharsets.UTF_8))
-    val filePart = BodyPart.of(ContentDisposition.of("form-data", "file", "file.txt"), StreamMessage.of(filePath))
+    val mpPub = MultipartFormDataBodyPublisher()
+      .add("name", "Homer")
+      .addStream("file", "file.txt", () => ByteArrayInputStream("Hello world".getBytes))
 
-    //Create multipart request
-    val multipart = Multipart.of(formPart, filePart)
-    val multipartRequest = multipart.toHttpRequest(postEpPath)
+    val reqBuilder = http.HttpRequest.newBuilder(URI.create( s"$target$postEpPath"))
+      .POST(mpPub)
+      .header("Content-Type", mpPub.contentType())
 
     //Set Origin
-    val csrfMultipartRequest =
-      multipartRequest.mapHeaders{headers =>
-        val headersBuilder = headers.toBuilder
-        Option(originFn(target)).map(target => headersBuilder.set("Origin", target))
-        headersBuilder.build()
-      }
+    Option(originFn(target)).foreach(target => reqBuilder.header("Origin", target))
 
-    //Set response time
-    val reqOpts = RequestOptions.builder().responseTimeout(Duration.ofHours(1)).build()
-    val postResp = client.execute(csrfMultipartRequest, reqOpts).aggregate().join()
-    assertNoDiff(postResp.status().codeAsText(), "401")
-    assertNoDiff(postResp.contentUtf8(), """|<!DOCTYPE html>
+    val resp = http.HttpClient.newHttpClient()
+      .send(
+        reqBuilder
+          .POST(mpPub)
+          .build(),
+        http.HttpResponse.BodyHandlers.ofString()
+      )
+
+    assertEquals(resp.statusCode(), 401)
+    assertNoDiff(resp.body(), """|<!DOCTYPE html>
                                             |<html>
                                             |<head>
                                             |  <title>Unauthorized Access</title>

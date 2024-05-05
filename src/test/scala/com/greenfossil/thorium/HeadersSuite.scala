@@ -19,8 +19,8 @@ package com.greenfossil.thorium
 import com.linecorp.armeria.common.{Cookie, HttpStatus}
 import com.linecorp.armeria.server.annotation.Get
 
-import java.net.{CookieManager, HttpCookie, URI}
 import java.net.http.{HttpClient, HttpRequest, HttpResponse}
+import java.net.{CookieManager, HttpCookie, URI}
 import scala.annotation.nowarn
 
 object HeadersServices:
@@ -51,7 +51,6 @@ class HeadersSuite extends munit.FunSuite {
       val opt = cm.getCookieStore.getCookies.stream().filter(_.getName == name).findFirst()
       opt.orElseGet(() => null)
 
-    resp.headers().map().forEach((k, v) => println(s"k = ${k}, v:${v}"))
     assertNoDiff(resp.headers().firstValue("access-control-allow-origin").get, "*")
     assertNoDiff(resp.headers().firstValue("access-control-allow-headers").get, "Origin, X-Requested-With, Content-Type, Accept")
     assertEquals(resp.statusCode(), HttpStatus.OK.code())

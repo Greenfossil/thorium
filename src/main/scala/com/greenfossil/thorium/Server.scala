@@ -17,7 +17,7 @@
 package com.greenfossil.thorium
 
 import com.greenfossil.commons.json.{JsObject, Json}
-import com.greenfossil.thorium.decorators.{CSRFGuardModule, FirstResponderDecoratingFunction, RecaptchaGuardModule, ThreatGuardModule, ThreatGuardModuleDecoratingFunction}
+import com.greenfossil.thorium.decorators.*
 import com.linecorp.armeria.common.*
 import com.linecorp.armeria.common.logging.RequestLog
 import com.linecorp.armeria.server.annotation.{ExceptionHandlerFunction, RequestConverterFunction, ResponseConverterFunction}
@@ -32,7 +32,6 @@ import java.lang.reflect.ParameterizedType
 import java.net.InetSocketAddress
 import java.time.LocalDateTime
 import java.util.concurrent.CompletableFuture
-import scala.concurrent.Future
 import scala.language.implicitConversions
 
 private [thorium] val serverLogger = LoggerFactory.getLogger("com.greenfossil.thorium.server")
@@ -393,9 +392,11 @@ case class Server(server: AServer,
     serverLogger.info("Server started.")
     copy(server = server)
 
-  def stop(): Future[Void] =
-    import scala.jdk.FutureConverters._
-    server.stop().asScala
+  def stop(): Unit =
+    asyncStop().join()
+    
+  def asyncStop(): CompletableFuture[Void] =
+    server.stop()  
 
   def printRoutes: Server =
     println(s"Service Routes declared: ${serviceRoutes.size}")

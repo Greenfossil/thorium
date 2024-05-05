@@ -17,10 +17,10 @@
 
 package com.greenfossil.thorium
 
-import com.linecorp.armeria.client.WebClient
-import com.linecorp.armeria.common.ContentDisposition
-import com.linecorp.armeria.common.multipart.{BodyPart, Multipart}
+import io.github.yskszk63.jnhttpmultipartformdatabodypublisher.MultipartFormDataBodyPublisher
 
+import java.net.URI
+import java.net.http.{HttpClient, HttpRequest, HttpResponse}
 
 class ThreatGuardModule_Stress_Suite extends munit.FunSuite:
 
@@ -35,15 +35,19 @@ class ThreatGuardModule_Stress_Suite extends munit.FunSuite:
   test("/recaptcha/multipart-form with RecaptchaGuardModule"):
     val server = startServer
 
-    val n = 10
+    val n = 5
     val xs = 1 to n map { i =>
-      val formPart = BodyPart.of(ContentDisposition.of("form-data", tokenName), tokenValue)
-      val multipart = Multipart.of(formPart)
-      val multipartRequest = multipart.toHttpRequest(s"http://localhost:${server.port}/threat-guard/multipart-form")
-      val response = WebClient.of().execute(multipartRequest)
-        .aggregate()
-        .join()
-      println(s"response i:$i status:${response.status()}, ${response.contentUtf8()}")
+      val mpPub = MultipartFormDataBodyPublisher().add(tokenName, tokenValue)
+      val resp = HttpClient.newHttpClient()
+        .send(
+          HttpRequest.newBuilder(URI.create(s"http://localhost:${server.port}/threat-guard/multipart-form"))
+            .POST(mpPub)
+            .header("Content-Type", mpPub.contentType())
+            .build(),
+          HttpResponse.BodyHandlers.ofString()
+        )
+      assertEquals(resp.statusCode(), 200)
+      assertNoDiff(resp.body(), "success FormUrlEndcoded(Map(token-name -> List(token-value)))")
     }
 
     assertEquals(xs.size, n)

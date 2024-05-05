@@ -79,9 +79,7 @@ object RecaptchaServices:
         .fold(
           error => BadRequest("Bad Request"),
           (blog, action) =>
-            val msg = s"Success - request #${blog} action:$action"
-            println(msg)
-            msg
+            s"Success - request #${blog} action:$action"
         )
   }
 
@@ -101,12 +99,9 @@ object RecaptchaServices:
       tuple("blog" -> text, "g-recaptcha-response" ->  seq[String]).bindFromRequest()
         .fold(
           error =>
-            println(s"Form error = ${error}")
             BadRequest("Bad Request " + error),
           (blog, xs) =>
-            val msg = s"Success - request #${blog} g-recaptcha-response:${xs.mkString}"
-            println(msg)
-            msg
+            s"Success - request #${blog} g-recaptcha-response:${xs.mkString}"
         )
     }
   }
@@ -128,7 +123,6 @@ object RecaptchaServices:
    */
   @Post("/recaptcha/guarded-form")
   def postRecaptchaGuardedForm: Action = Action { implicit request =>
-    println(s"request.recaptchaResponse = ${request.recaptchaResponse}")
     Redirect(recaptchaGuardedForm).flashing("success" -> s"Recaptcha response success:[${request.recaptchaResponse}]")
   }
 
@@ -150,6 +144,5 @@ object RecaptchaServices:
    */
   @Post("/recaptcha/multipart-form")
   def postRecaptchaMulitpartForm: Action = Action.multipart { implicit request =>
-    println(s"request.recaptchaResponse = ${request.recaptchaResponse}")
     Redirect(recaptchaMultipartForm).flashing("success" -> s"Recaptcha response success:[${request.recaptchaResponse}]")
   }

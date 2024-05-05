@@ -1,12 +1,12 @@
 package com.greenfossil.thorium
 
 import com.greenfossil.data.mapping.Mapping.*
-import com.linecorp.armeria.client.WebClient
-import com.linecorp.armeria.common.ContentDisposition
-import com.linecorp.armeria.common.multipart.{BodyPart, Multipart, MultipartFile}
-import com.linecorp.armeria.common.stream.StreamMessage
+import com.linecorp.armeria.common.multipart.MultipartFile
 import com.linecorp.armeria.server.annotation.Post
+import io.github.yskszk63.jnhttpmultipartformdatabodypublisher.MultipartFormDataBodyPublisher
 
+import java.net.URI
+import java.net.http.{HttpClient, HttpRequest, HttpResponse}
 import java.nio.file.Paths
 
 class MultipartFileDataBindingSuite extends munit.FunSuite:
@@ -24,16 +24,12 @@ class MultipartFileDataBindingSuite extends munit.FunSuite:
 
       val nameValueOpt = nameField.bindFromRequest().typedValueOpt
       assertNoDiff(nameValueOpt.orNull, "homer")
-      println(s" = ${nameValueOpt}")
 
       //file assertions
       val fileBindForm = fileField.bindFromRequest()
       assertEquals(fileBindForm.errors.size, 2)
-      println(s"Errors ${fileBindForm.errors.size}")
-      fileBindForm.errors foreach println
 
       assert(fileBindForm.typedValueOpt.nonEmpty)
-      println(s"fileBindForm.typedValueOpt = ${fileBindForm.typedValueOpt}")
 
       "Received"
   }
@@ -44,18 +40,20 @@ class MultipartFileDataBindingSuite extends munit.FunSuite:
       .addServices(FormServices)
       .start()
 
-    val namePart = BodyPart.of(ContentDisposition.of("form-data", "name"), "homer")
     val path = Paths.get("src/test/resources/logback-test.xml").toAbsolutePath
-    val filePart = BodyPart.of(ContentDisposition.of("form-data", "file", "logback-test.xml"),
-      StreamMessage.of(path))
-    val multipart = Multipart.of(namePart, filePart)
-    val resp = WebClient.of(s"http://localhost:${server.port}")
-      .execute(multipart.toHttpRequest("multipart"))
-      .aggregate()
-      .get()
-    assertNoDiff(resp.contentUtf8(), "Received")
-
+    val mpPub = MultipartFormDataBodyPublisher()
+      .add("name", "homer")
+      .addFile("file", path)
+    val resp = HttpClient.newHttpClient()
+      .send(
+        HttpRequest.newBuilder(URI.create(s"http://localhost:${server.port}/multipart"))
+          .POST(mpPub)
+          .header("Content-Type", mpPub.contentType())
+          .build(),
+        HttpResponse.BodyHandlers.ofString()
+      )
+    assertNoDiff(resp.body(), "Received")
     //Stop server
-    server.stop().value
+    server.stop()
   }
 

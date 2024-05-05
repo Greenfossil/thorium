@@ -29,7 +29,4 @@ class ThreatGuardTestModule(tokenName: String, tokenValue:String) extends Threat
   override def isSafe(delegate: HttpService, ctx: ServiceRequestContext, req: HttpRequest): CompletableFuture[Boolean] =
     extractTokenValue(ctx, tokenName)
       .thenApply: token =>
-        val isSame = token == tokenValue
-        println(s"token = $token, tokenValue match:$isSame")
-        isSame
-
+        token == tokenValue

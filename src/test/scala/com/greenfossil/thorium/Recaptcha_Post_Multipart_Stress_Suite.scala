@@ -18,9 +18,10 @@
 package com.greenfossil.thorium
 
 import com.greenfossil.thorium.decorators.RecaptchaGuardModule
-import com.linecorp.armeria.client.WebClient
-import com.linecorp.armeria.common.multipart.{BodyPart, Multipart}
-import com.linecorp.armeria.common.ContentDisposition
+import io.github.yskszk63.jnhttpmultipartformdatabodypublisher.MultipartFormDataBodyPublisher
+
+import java.net.URI
+import java.net.http.{HttpClient, HttpRequest, HttpResponse}
 
 class Recaptcha_Post_Multipart_Stress_Suite extends munit.FunSuite:
 
@@ -33,15 +34,28 @@ class Recaptcha_Post_Multipart_Stress_Suite extends munit.FunSuite:
   test("/recaptcha/multipart-form with RecaptchaGuardModule"):
     val server = startServer(addRecaptchaGuardModule = true)
 
-    val n = 10
+    val n = 5
     val xs = 1 to n map { i =>
-      val formPart = BodyPart.of(ContentDisposition.of("form-data", "g-recaptcha-response"), "bad-code")
-      val multipart = Multipart.of(formPart)
-      val multipartRequest = multipart.toHttpRequest(s"http://localhost:${server.port}/recaptcha/multipart-form")
-      val response = WebClient.of().execute(multipartRequest)
-        .aggregate()
-        .join()
-      println(s"response i:$i status:${response.status()}")
+      val mpPub = MultipartFormDataBodyPublisher().add("g-recaptcha-response", "bad-code")
+      val resp = HttpClient.newHttpClient()
+        .send(
+          HttpRequest.newBuilder(URI.create(s"http://localhost:${server.port}/recaptcha/multipart-form"))
+            .POST(mpPub)
+            .header("Content-Type", mpPub.contentType())
+            .build(),
+          HttpResponse.BodyHandlers.ofString()
+        )
+      assertEquals(resp.statusCode(), 401)
+      assertNoDiff(resp.body(),  """|<!DOCTYPE html>
+                                    |<html>
+                                    |<head>
+                                    |  <title>Unauthorized Access</title>
+                                    |</head>
+                                    |<body>
+                                    |  <h1>Access Denied</h1>
+                                    |</body>
+                                    |</html>
+                                    |""".stripMargin)
     }
 
     assertEquals(xs.size, n)

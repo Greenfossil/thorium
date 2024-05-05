@@ -1,4 +1,4 @@
-val scala3Version = "3.3.1"
+val scala3Version = "3.3.3"
 
 scalacOptions ++= Seq("-feature", "-deprecation", "-Wunused:all" )
 
@@ -7,27 +7,33 @@ lazy val thorium = project
   .settings(
     name := "thorium",
     organization := "com.greenfossil",
-    version := "0.7.21",
+    version := "0.7.22",
 
     scalaVersion := scala3Version,
 
     Compile / javacOptions ++= Seq("-source", "17"),
 
     libraryDependencies ++= Seq(
-      "com.greenfossil" %% "htmltags" % "1.0.6",
-      "com.greenfossil" %% "data-mapping" % "1.0.17",
-      "com.greenfossil" %% "commons-i18n" % "1.0.9",
-      "com.greenfossil" %% "typesafe-config-ext" % "1.0.2",
-      "io.projectreactor" % "reactor-core" % "3.5.9",
+      "com.greenfossil" %% "htmltags" % "1.0.7",
+      "com.greenfossil" %% "data-mapping" % "1.0.18",
+      "com.greenfossil" %% "commons-i18n" % "1.0.10",
+      "com.greenfossil" %% "typesafe-config-ext" % "1.0.3",
+      "io.projectreactor" % "reactor-core" % "3.6.5",
       "com.linecorp.armeria" % "armeria" % "1.28.4",
       "com.linecorp.armeria" % "armeria-logback" % "1.28.4",
-      "org.overviewproject" % "mime-types" % "1.0.4",
-      "org.slf4j" % "slf4j-api" % "2.0.10",
+      "org.overviewproject" % "mime-types" % "2.0.0",
+      "io.github.yskszk63" % "jnhttp-multipartformdata-bodypublisher" % "0.0.1",
+      "org.slf4j" % "slf4j-api" % "2.0.12",
       "com.microsoft.playwright" % "playwright" % "1.43.0" % Test,
-      "ch.qos.logback" % "logback-classic" % "1.4.14" % Test,
-      "org.scalameta" %% "munit" % "0.7.29" % Test
+      "ch.qos.logback" % "logback-classic" % "1.5.6" % Test,
+      "org.scalameta" %% "munit" % "1.0.0-RC1" % Test
     )
   )
 
-Test / javacOptions += "-Djdk.httpclient.allowRestrictedHeaders=content-length" //This is required
+//This is required for testcases that submits header content-length explicitly
+javacOptions += "-Djdk.httpclient.allowRestrictedHeaders=content-length"
 
+//Remove logback from test jar
+Test / packageBin / mappings ~= {
+  _.filterNot(_._1.getName.startsWith("logback"))
+}

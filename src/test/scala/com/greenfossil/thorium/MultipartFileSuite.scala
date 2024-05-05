@@ -55,7 +55,6 @@ class MultipartFileSuite extends munit.FunSuite {
     val r = this.getClass.getResource("/logback-test.xml")
     assert(r != null, "Resource not found")
     val mpFile = MultipartFile.of("file", "file", new File(r.getFile))
-    println(s"mpFile.contentType = ${mpFile.contentType}")
     assert(mpFile.contentType.is(MediaType.parse("application/xml")))
   }
 
@@ -66,7 +65,6 @@ class MultipartFileSuite extends munit.FunSuite {
     1 to 5 foreach { i =>
       val is = mpFile.inputStream
       val size = is.available()
-      println(s"i = ${i} ${is.available()}")
       val bytes = is.readAllBytes()
       assertEquals(bytes.length, size)
       assertEquals(is.available(), 0)

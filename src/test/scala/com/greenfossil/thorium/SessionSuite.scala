@@ -35,13 +35,11 @@ object SessionServices {
 
   @Get("/s2")
   def s2 = Action {request =>
-    println(s"S2 request.session = ${request.session}, flash ${request.flash}") //foo->bar
     Redirect("/s3").withSession(request.session + ("baz" -> "foobaz"))
   }
 
   @Get("/s3")
   def s3 = Action {request =>
-    println(s"S3 request.session = ${request.session}, flash ${request.flash}") //foo->bar, "baz" -> foobaz
     Ok(s"S3 reached ${request.session}").withSession(request.session + ("baz" -> "foobaz"))
   }
 }
@@ -63,7 +61,6 @@ class SessionSuite extends munit.FunSuite {
     assert(resp.body().startsWith("S3 reached"))
     assertEquals(cm.getCookieStore.getCookies.size(), 1)
     assertNoDiff(cm.getCookieStore.getCookies.stream().filter(_.getName == "APP_SESSION").findFirst().get.getName, "APP_SESSION")
-    cm.getCookieStore.getCookies.stream().forEach(c => println(s"c = ${c}"))
     server.stop()
   }
 

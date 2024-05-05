@@ -22,6 +22,7 @@ import com.linecorp.armeria.common.{HttpMethod, MediaType}
 import org.overviewproject.mime_types.MimeTypeDetector
 
 import java.io.InputStream
+import java.net.{CookieStore, URI}
 
 
 extension (inline action: EssentialAction)
@@ -60,6 +61,26 @@ extension(mpFile: MultipartFile)
   def contentType: MediaType = MediaType.parse(mimeTypeDetector.detectMimeType(mpFile.path()))
 
   def inputStream: InputStream = mpFile.path().toUri.toURL.openStream()
+
+extension(cs: java.net.CookieStore)
+
+  /**
+   * Add an Armeria cookie to java.net.CookieStore
+   * This is meant for client testing only. Do not suse for production.
+   * @param host
+   * @param cookie
+   */
+  def add(host: String, cookie: com.linecorp.armeria.common.Cookie)  =
+    val uri = URI.create(host)
+    val httpCookie = java.net.HttpCookie(cookie.name(), cookie.value())
+    httpCookie.setSecure(cookie.isSecure)
+    httpCookie.setPath(cookie.path())
+    httpCookie.setHttpOnly(cookie.isHttpOnly)
+    httpCookie.setMaxAge(httpCookie.getMaxAge)
+    if cookie.isHostOnly then httpCookie.setHttpOnly(true)
+    if cookie.domain() != null && !cookie.domain().isBlank then httpCookie.setDomain(cookie.domain())
+
+    cs.add(uri, httpCookie)
 
 extension (l: Long) def humanize: String =
   if l < 1024 then s"$l B"
