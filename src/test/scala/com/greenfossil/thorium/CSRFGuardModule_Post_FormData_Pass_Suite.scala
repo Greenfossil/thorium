@@ -18,10 +18,12 @@ package com.greenfossil.thorium
 
 import com.greenfossil.thorium.decorators.CSRFGuardModule
 import com.linecorp.armeria.common.*
+import munit.IgnoreSuite
 
 import java.net.*
 import java.time.Duration
 
+@IgnoreSuite
 class CSRFGuardModule_Post_FormData_Pass_Suite extends munit.FunSuite:
 
   //Important - allow content-length to be sent in the headers

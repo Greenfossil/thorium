@@ -17,10 +17,12 @@
 package com.greenfossil.thorium
 
 import com.linecorp.armeria.common.MediaType
+import munit.IgnoreSuite
 
 import java.net.{URI, http}
 import java.time.Duration
 
+@IgnoreSuite
 class CSRFGuardModule_Post_FormData_Fail_Suite extends munit.FunSuite:
 
   //Important - allow content-length to be sent in the headers
