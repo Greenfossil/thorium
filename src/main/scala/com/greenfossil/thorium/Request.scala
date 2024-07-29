@@ -58,7 +58,7 @@ trait Request(val requestContext: ServiceRequestContext,
    * Create a CSRFToken, and and set attr RequestAttrs.CSRFToken
    * Every request can have only 1 csrf-token
    */
-  lazy val csrfToken: String =
+  lazy val generateCSRFToken: String =
     val token = CSRFGuardModule.generateCSRFToken(using this)
     requestContext.setAttr(RequestAttrs.CSRFToken, token)
     token

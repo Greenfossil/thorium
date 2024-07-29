@@ -40,7 +40,7 @@ object CSRFServices:
        |<body>
        |    <h1>Change Email</h1>
        |    <form action="http://localhost:8080/csrf/email/change" method="POST">
-       |        <input type="hidden" name="CSRF-TOKEN" value="${request.csrfToken}" />
+       |        <input type="hidden" name="CSRF-TOKEN" value="${request.generateCSRFToken}" />
        |        <input name="email" value="HelloWorld!" />
        |        <input type="submit" value="Confirm">
        |    </form>
