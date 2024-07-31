@@ -41,6 +41,16 @@ object AESUtil:
     gen.init(n)
     gen.generateKey()
 
+  def generateBase64Key(n: 128|192|256, encoder: Base64.Encoder): String =
+    secretKeyToBase64(generateKey(n), encoder)
+
+  def secretKeyToBase64(secretKey: SecretKey, encoder: Base64.Encoder): String =
+    encoder.encodeToString(secretKey.getEncoded)
+
+  def base64ToSecretKey(base64Key: String, decoder: Base64.Decoder): SecretKey =
+    val decodeKey = decoder.decode(base64Key)
+    SecretKeySpec(decodeKey, 0, decodeKey.length, "AES")
+
   def generateKeyPair(algorithm: String, n: Int): KeyPair =
     val keygen = KeyPairGenerator.getInstance(algorithm)
     keygen.initialize(n)

@@ -7,7 +7,7 @@ lazy val thorium = project
   .settings(
     name := "thorium",
     organization := "com.greenfossil",
-    version := "0.7.26",
+    version := "0.7.27-SNAPSHOT",
 
     scalaVersion := scala3Version,
 
@@ -36,7 +36,7 @@ javacOptions += "-Djdk.httpclient.allowRestrictedHeaders=content-length"
 //https://www.scala-sbt.org/1.x/docs/Publishing.html
 ThisBuild / versionScheme := Some("early-semver")
 
-//Remove logback from test jar
+//Remove logback from jar
 Test / packageBin / mappings ~= {
   _.filterNot(_._1.getName.startsWith("logback"))
 }

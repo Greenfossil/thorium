@@ -103,4 +103,18 @@ class AESUtilSuite extends munit.FunSuite {
     assertNoDiff(plainText, input)
   }
 
+  test("SecretKey to Base64 and back conversion") {
+    // Generate a 256-bit key
+    val originalKey = AESUtil.generateKey(256)
+
+    // Convert SecretKey to Base64
+    val base64Key: String = AESUtil.secretKeyToBase64(originalKey, Base64.getEncoder)
+
+    // Convert Base64 back to SecretKey
+    val decodedKey = AESUtil.base64ToSecretKey(base64Key, Base64.getDecoder)
+
+    // Verify the conversion
+    assertEquals(originalKey.getEncoded.toSeq, decodedKey.getEncoded.toSeq)
+  }
+  
 }
