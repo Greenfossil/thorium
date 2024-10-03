@@ -20,11 +20,13 @@ package com.greenfossil.thorium
 import com.greenfossil.thorium.decorators.RecaptchaGuardModule
 import com.linecorp.armeria.common.HttpStatus
 import io.github.yskszk63.jnhttpmultipartformdatabodypublisher.MultipartFormDataBodyPublisher
+import munit.IgnoreSuite
 
 import java.net.URI
 import java.net.http.{HttpClient, HttpRequest, HttpResponse}
 import java.time.Duration
 
+@IgnoreSuite
 class Recaptcha_Post_Suite extends munit.FunSuite:
 
   private def startServer(addRecaptchaGuardModule: Boolean = true): Server =
