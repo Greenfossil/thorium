@@ -158,7 +158,7 @@ class CSRFGuardModule(allowWhiteListPredicate: (String, ServiceRequestContext) =
     val isSameOrigin = verifiedSameOrigin &&  verifiedSameOriginPredicate
     val isAllowWhiteList = allowWhiteListPredicate(origin, ctx)
     val isNonModMethods = !verifyModMethodPredicate(ctx.method.name) //Methods POST, PUT,PATCH and DELETE are mod methods
-    if  isAssetPath(ctx) || isNonModMethods || (allPathPrefixes(ctx)  && isSameOrigin) then
+    if  isAssetPath(ctx) || isNonModMethods || isAllowWhiteList || (allPathPrefixes(ctx)  && isSameOrigin) then
       logger.trace(s"$Request granted - isSameOrigin:$isSameOrigin, isSameOriginPredicate:$verifiedSameOriginPredicate allowWhiteList:$isAllowWhiteList, method:${req.method}, uri:${req.uri}, Origin: $origin, referer:$referer")
       CompletableFuture.completedFuture(true)
     else

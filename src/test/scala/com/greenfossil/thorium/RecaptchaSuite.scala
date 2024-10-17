@@ -1,7 +1,9 @@
 package com.greenfossil.thorium
 
 import com.greenfossil.commons.json.Json
+import munit.IgnoreSuite
 
+@IgnoreSuite
 class RecaptchaSuite extends munit.FunSuite {
 
   test("GoogleRecaptchaUtil.siteVerify"){

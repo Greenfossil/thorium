@@ -22,7 +22,7 @@ import com.linecorp.armeria.common.{HttpMethod, MediaType}
 import org.overviewproject.mime_types.MimeTypeDetector
 
 import java.io.InputStream
-import java.net.{CookieStore, URI}
+import java.net.URI
 
 
 extension (inline action: EssentialAction)
