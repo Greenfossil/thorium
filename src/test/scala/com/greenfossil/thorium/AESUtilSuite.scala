@@ -117,4 +117,18 @@ class AESUtilSuite extends munit.FunSuite {
     assertEquals(originalKey.getEncoded.toSeq, decodedKey.getEncoded.toSeq)
   }
   
+  test("generateBase64Key") {
+    val base64Key = AESUtil.generateBase64Key(256, Base64.getEncoder)
+    println(s"base64Key.length = ${base64Key.length}")
+    println(s"base64Key = ${base64Key}")
+  }
+
+  test("Base64Encoding with and without padding"){
+    val bytes = "".getBytes
+    val paddingEncode = Base64.getEncoder.encodeToString(bytes)
+    val withoutPaddingEncode = Base64.getEncoder.withoutPadding().encodeToString(bytes)
+    println(s"paddingEncode = ${paddingEncode} len:${paddingEncode.length}")
+    println(s"withoutPadding = ${withoutPaddingEncode} len:${withoutPaddingEncode.length}")
+  }
+
 }
