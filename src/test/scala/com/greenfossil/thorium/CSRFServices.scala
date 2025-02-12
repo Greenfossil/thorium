@@ -28,7 +28,7 @@ import java.util.concurrent.TimeUnit
 object CSRFServices:
 
   @Get("/csrf/do-change-email")
-  @RequestTimeout(1, TimeUnit.HOURS)
+  @RequestTimeout(value = 1, unit = TimeUnit.HOURS)
   def startChange = Action { implicit request =>
     s"""<!DOCTYPE html>
        |<html lang="en">
@@ -51,12 +51,12 @@ object CSRFServices:
 
 
   @Post("/csrf/email/change")
-  @RequestTimeout(1, TimeUnit.HOURS)
+  @RequestTimeout(value = 1, unit = TimeUnit.HOURS)
   def changePassword = Action : _ =>
         "Password Changed"
 
   @Get("/csrf/do-delete")
-  @RequestTimeout(1, TimeUnit.HOURS)
+  @RequestTimeout(value  = 1, unit = TimeUnit.HOURS)
   def startDelete = Action { implicit request =>
     s"""<!DOCTYPE html>
        |<html lang="en">
@@ -89,7 +89,7 @@ object CSRFServices:
   @Options
   @Delete("/csrf/delete/:id")
   @CorsDecorator(origins = Array("*"))
-  @RequestTimeout(1, TimeUnit.HOURS)
+  @RequestTimeout(value = 1, unit = TimeUnit.HOURS)
   def deleteResource(@Param id: String) = Action { request =>
     s"Deleted $id"
   }

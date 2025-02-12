@@ -97,13 +97,10 @@ inline def Redirect[A](inline location: A, inline status: HttpStatus): Result =
 import scala.quoted.*
 def RedirectImpl[A: Type](locExpr: Expr[A], statusExpr: Expr[HttpStatus])(using quotes: Quotes): Expr[Result] =
   locExpr match
-    case '{$ea: EssentialAction} =>
-      '{Result.ofRedirect($statusExpr, EndpointMcr($locExpr).url)}
     case '{$ep: Endpoint} =>
       '{Result.ofRedirect($statusExpr, $ep.url)}
-    case '{$ref: AnyRef} =>
-      '{Result.ofRedirect($statusExpr, EndpointMcr($ref).url)}
-
+    case _ =>
+      '{ Result.ofRedirect($statusExpr, EndpointMcr($locExpr).url) }
 
 object Result:
 

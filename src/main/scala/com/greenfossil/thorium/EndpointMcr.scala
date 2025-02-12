@@ -21,7 +21,7 @@ inline def EndpointMcr[A](inline ep: A): Endpoint =
 
 import scala.quoted.*
 def EndpointMcrImpl[A : Type](epExpr: Expr[A])(using Quotes): Expr[Endpoint] =
-  import AnnotatedPathMacroSupport.*
+  import AnnotatedActionMacroSupport.*
 
   computeActionAnnotatedPath(
     epExpr,

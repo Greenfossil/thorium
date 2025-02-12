@@ -23,7 +23,7 @@ import io.netty.util.AsciiString
 import java.io.InputStream
 import java.time.ZonedDateTime
 
-trait Resultable[A]:
+trait Resultable[A <: String | InputStream | Array[Byte] ]:
   extension (a: A)
     def withHeaders(headers: (String | AsciiString, String)*): Result
 
