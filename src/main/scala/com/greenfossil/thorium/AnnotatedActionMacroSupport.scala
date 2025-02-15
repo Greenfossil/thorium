@@ -28,33 +28,32 @@ object AnnotatedActionMacroSupport:
 
   /**
    * Allow only EssentialAction, Function and String as value
-   * @param epExpr
-   * @param q
-   * @tparam A
+   * @param epExpr -
+   * @param q -
+   * @tparam A -
    * @return
    */
-  def verifyActionType[A: Type](epExpr: Expr[A])(using q: Quotes): Expr[A] = {
+  def verifyActionType[A: Type](epExpr: Expr[A])(using q: Quotes): Expr[A] =
     import q.reflect.*
     epExpr match
       case '{ $a: EssentialAction } => ()
-      case '{ $s: String } => () //Allow the use of String di
-      case _ =>
+      case '{ $a: ActionResponse } => ()
+      case other =>
         // Recursively unwrap term to locate the actual lamda term.
         def verifyIsLamda(aTerm: Term): Term = aTerm match
           case Inlined(_, _, underlying) => verifyIsLamda(underlying)
           case Lambda(_, _) => aTerm
           case Apply(_, _) => aTerm
-          case error => report.errorAndAbort(s"Only EssentialAction, String or Function are allowed as value -  type: ${error.show}", epExpr)
+          case errorTerm => report.errorAndAbort(s"Only EssentialAction, ActionResponse or Function are allowed as value - type: ${other.show}", epExpr)
         verifyIsLamda(epExpr.asTerm)
 
     epExpr
-  }
 
   /**
    * Get a flatten list of param values from the a list of list of param values
    *
-   * @param Quotes
-   * @param applyTerm
+   * @param q -
+   * @param applyTerm -
    * @return
    */
   def getFlattenedParamValues(using q:Quotes)(applyTerm: q.reflect.Term): List[q.reflect.Term] =
@@ -66,13 +65,12 @@ object AnnotatedActionMacroSupport:
 
   def extractActionAnnotations[A: Type](epExpr: Expr[A])(using q: Quotes): (List[q.reflect.Term], Map[String, q.reflect.Term] ) = {
     import q.reflect.*
-
     // Recursively unwrap term to locate the actual method symbol.
     def extractMethodTerm(aTerm: Term): Term = aTerm match
       case Inlined(_, _, underlying) => extractMethodTerm(underlying)
       case Lambda(_, body) => extractMethodTerm(body)
-      case Apply(fun, _) => aTerm
-      case Select(select, _) => aTerm
+//      case Apply(fun, _) => aTerm
+//      case Select(select, _) => aTerm
       case _ => aTerm
 
     val methodTerm = extractMethodTerm(epExpr.asTerm)
@@ -122,7 +120,6 @@ object AnnotatedActionMacroSupport:
     extractHttpVerb(methodAnnotations) match
       case None /*String Endpoint*/=>
         successCallback(Expr("Get"), Expr.ofList(List(epExpr)), Expr[List[String]](Nil), Expr.ofList(List.empty[Expr[Any]]), Expr(""))
-
       case Some((method: String, pathPattern: String)) =>
         val (computedPath, queryParamKeys, queryParamValues) = buildPathAndParts(epExpr, paramValueLookup , pathPattern)
 
@@ -134,7 +131,6 @@ object AnnotatedActionMacroSupport:
 
   def extractHttpVerb(using q:Quotes)(methodAnnotationList: List[q.reflect.Term]): Option[(String, String)] =
     import q.reflect.*
-
     def getAnnotationValue(args: List[Term], default: String): String =
       args.headOption.flatMap {
         case NamedArg("value", value) => value.asExprOf[String].value
@@ -162,7 +158,6 @@ object AnnotatedActionMacroSupport:
             if method == "" then acc else (method, getAnnotationValue(args, _pathParams))
           case _ => acc
       }
-
     if httpVerb.isBlank then None else Some(httpVerb -> pathParams)
 
   inline private def urlEncode(str: String): String =
@@ -170,8 +165,8 @@ object AnnotatedActionMacroSupport:
 
   /**
    * URL encode for string value
-   * @param q
-   * @param paramValue
+   * @param q -
+   * @param paramValue -
    * @return
    */
   def urlencodeStringExpr(using q: Quotes)(paramValue: q.reflect.Term): Expr[?] =
@@ -207,12 +202,10 @@ object AnnotatedActionMacroSupport:
   }
 
   //compute Path
-  def computedPathParts(using q: Quotes)(pathPattern: String,  paramAnnotationsLookup: Map[String, q.reflect.Term] ): (List[String], List[Expr[Any]]) = {
+  def computedPathParts(using q: Quotes)(pathPattern: String,  paramAnnotationsLookup: Map[String, q.reflect.Term] ): (List[String], List[Expr[Any]]) =
     import q.reflect.*
-
     //Parameterized Path
     var processedPathParamNames: List[String] = Nil
-
     def getPathParamExpr(name: String): Expr[Any] =
       paramAnnotationsLookup.get(name) match
         case None =>
@@ -224,19 +217,15 @@ object AnnotatedActionMacroSupport:
     val pathParts = convertPathToPathParts(pathPattern).map{part =>
       if part.startsWith(":") then getPathParamExpr(part.drop(1) /*drop ':'*/) else Expr(part)
     }
-
     (processedPathParamNames, pathParts)
-  }
 
   def buildPathAndParts[A: Type](using q:Quotes)(
     actionExpr: Expr[A],
     paramValueLookup: Map[String, q.reflect.Term] ,
     pathPattern: String): (List[Expr[Any]], List[String], List[Expr[Any]]) =
-
     val (processedPathParamNames, pathParts) = computedPathParts(pathPattern, paramValueLookup)
 
     //compute QueryString
     val queryParamKeys = paramValueLookup.keys.toList diff processedPathParamNames
     val queryParamValues = queryParamKeys.flatMap( k => paramValueLookup.get(k).map(urlencodeStringExpr) )
-
     (pathParts, queryParamKeys, queryParamValues)

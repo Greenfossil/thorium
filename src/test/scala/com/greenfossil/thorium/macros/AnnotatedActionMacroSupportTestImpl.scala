@@ -6,8 +6,14 @@ object AnnotatedActionMacroSupportTestImpl:
 
   import quoted.*
 
-  inline def verifyActionTypeMcr[A](inline ep: A): A =
-    ${ AnnotatedActionMacroSupport.verifyActionType( '{ep} )}
+  inline def verifyActionTypeMcr[A](inline ep: A): String =
+    ${ verifyActionTypeImpl( '{ep} )}
+
+  def verifyActionTypeImpl[A: Type](epExpr: Expr[A])(using q: Quotes): Expr[String] =
+    import q.reflect.*
+    AnnotatedActionMacroSupport.verifyActionType(epExpr)
+    val _expr: String = TypeRepr.of[A].show
+    Expr( _expr )
 
   inline def extractActionAnnotationsMcr[A](inline fnExpr: A): (Int, Int) =
     ${ extractActionAnnotationsImpl( '{ fnExpr } ) }

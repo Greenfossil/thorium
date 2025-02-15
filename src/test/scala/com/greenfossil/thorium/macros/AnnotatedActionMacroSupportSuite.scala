@@ -67,22 +67,20 @@ class AnnotatedActionMacroSupportSuite extends munit.FunSuite:
 
   test("verifyActionTypeMcr"){
     val results = List(
-      AnnotatedActionMacroSupportTestImpl.verifyActionTypeMcr(actionEp) -> actionEp,
-      AnnotatedActionMacroSupportTestImpl.verifyActionTypeMcr(reqFuncEp1) -> reqFuncEp1,
-      AnnotatedActionMacroSupportTestImpl.verifyActionTypeMcr(reqFuncEp2) -> reqFuncEp2,
-      AnnotatedActionMacroSupportTestImpl.verifyActionTypeMcr(reqFuncEp3) -> reqFuncEp3,
-      AnnotatedActionMacroSupportTestImpl.verifyActionTypeMcr(reqFuncEp4) -> reqFuncEp4,
-      AnnotatedActionMacroSupportTestImpl.verifyActionTypeMcr(reqFuncEp5) -> reqFuncEp5,
-      AnnotatedActionMacroSupportTestImpl.verifyActionTypeMcr(endpointParams) -> endpointParams,
-      AnnotatedActionMacroSupportTestImpl.verifyActionTypeMcr(fn) -> fn,
-      AnnotatedActionMacroSupportTestImpl.verifyActionTypeMcr(x) -> x,
+      AnnotatedActionMacroSupportTestImpl.verifyActionTypeMcr(actionEp) -> "com.greenfossil.thorium.Action",
+      AnnotatedActionMacroSupportTestImpl.verifyActionTypeMcr(reqFuncEp1) -> "scala.Function1[com.greenfossil.thorium.Request, scala.Predef.String]",
+      AnnotatedActionMacroSupportTestImpl.verifyActionTypeMcr(reqFuncEp2) -> "scala.Function1[scala.Predef.String, scala.Function1[com.greenfossil.thorium.Request, scala.Predef.String]]",
+      AnnotatedActionMacroSupportTestImpl.verifyActionTypeMcr(reqFuncEp3) -> "scala.Function1[scala.Predef.String, scala.Function1[com.greenfossil.thorium.Request, scala.Predef.String]]",
+      AnnotatedActionMacroSupportTestImpl.verifyActionTypeMcr(reqFuncEp4) -> "scala.Function2[scala.Long, scala.Predef.String, com.greenfossil.thorium.Action]",
+      AnnotatedActionMacroSupportTestImpl.verifyActionTypeMcr(reqFuncEp5) -> "scala.Function2[scala.Long, scala.Predef.String, com.greenfossil.thorium.Action]",
+      AnnotatedActionMacroSupportTestImpl.verifyActionTypeMcr(endpointParams) -> "scala.Function1[scala.Int, scala.Function1[scala.Predef.String, java.lang.String]]",
+      AnnotatedActionMacroSupportTestImpl.verifyActionTypeMcr(fn) -> "java.lang.String",
+      AnnotatedActionMacroSupportTestImpl.verifyActionTypeMcr(x) -> "java.lang.String",
     )
 
     results.zipWithIndex.foreach{(x, index) =>
       val (result, expectation) = x
-      expectation match
-        case _: String => assertEquals(result, expectation)
-        case _ => ()
+      assertNoDiff(result, expectation)
     }
   }
 

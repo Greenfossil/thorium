@@ -31,7 +31,7 @@ object TestServices:
     Redirect(sayHello("User"))
 
   @Get("/path")
-  def path(using request: Request): Result =
+  def path(request: Request): Result =
     val url = request.refererOpt.getOrElse("/redirect")
     Redirect(url)
 
