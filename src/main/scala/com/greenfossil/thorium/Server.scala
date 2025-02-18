@@ -135,7 +135,9 @@ case class Server(server: AServer,
   val defaultResponseConverter =
     Server.defaultResponseConverter(responseConverterAttrs, defaultResponseConverterFnOpt)
 
-  def port: Int = server.activeLocalPort()
+  def port: Int =
+    if server == null then throw new IllegalStateException("Server not started")
+    server.activeLocalPort()
 
   def addHttpService(endpoint: String, action: HttpService): Server =
     copy(httpServices = httpServices :+ (endpoint, action))
@@ -253,7 +255,9 @@ case class Server(server: AServer,
 
   import scala.jdk.CollectionConverters.*
 
-  def serviceConfigs: Seq[ServiceConfig] = server.serviceConfigs().asScala.toList
+  def serviceConfigs: Seq[ServiceConfig] =
+    if server == null then throw new IllegalStateException("Server not started")
+    server.serviceConfigs().asScala.toList
 
   def serviceRoutes: Seq[Route] = serviceConfigs.map(_.route()).distinct
 
@@ -377,25 +381,26 @@ case class Server(server: AServer,
     val newSecureServer = buildSecureServer(sessionProtocols*)
     doStartServer(newSecureServer)
 
-  private def doStartServer(server: AServer): Server =
+  private def doStartServer(_aserver: AServer): Server =
     Runtime.getRuntime.addShutdownHook(Thread(
       () => {
         serverLogger.info("Stopping server...")
-        server.stop().join
+        _aserver.stop().join
         serverLogger.info("Server stopped.")
       }
     ))
     println(banner)
     serverLogger.info(s"Starting Server...")
 
-    server.start().join()
+    _aserver.start().join()
     serverLogger.info("Server started.")
-    copy(server = server)
+    copy(server = _aserver)
 
   def stop(): Unit =
     asyncStop().join()
     
   def asyncStop(): CompletableFuture[Void] =
+    if server == null then throw new IllegalStateException("Server not started")
     server.stop()  
 
   def printRoutes: Server =
