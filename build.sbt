@@ -10,18 +10,18 @@ lazy val thorium = project
   .settings(
     name := "thorium",
     organization := "com.greenfossil",
-    version := "0.9.0-RC3",
+    version := "0.9.0-RC4",
 
     scalaVersion := scala3Version,
 
     libraryDependencies ++= Seq(
       "com.greenfossil" %% "htmltags" % "1.2.0",
-      "com.greenfossil" %% "data-mapping" % "1.2.0",
+      "com.greenfossil" %% "data-mapping" % "1.2.1-RC1",
       "com.greenfossil" %% "commons-i18n" % "1.2.0",
       "com.greenfossil" %% "typesafe-config-ext" % "1.2.0",
       "io.projectreactor" % "reactor-core" % "3.7.2",
-      "com.linecorp.armeria" % "armeria" % "1.31.3",
-      "com.linecorp.armeria" % "armeria-logback" % "1.31.3",
+      "com.linecorp.armeria" % "armeria" % "1.32.0",
+      "com.linecorp.armeria" % "armeria-logback" % "1.32.0",
       "org.overviewproject" % "mime-types" % "2.0.0",
       "io.github.yskszk63" % "jnhttp-multipartformdata-bodypublisher" % "0.0.1",
       "org.slf4j" % "slf4j-api" % "2.0.16",
