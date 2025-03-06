@@ -33,7 +33,7 @@
     <logger name="com.linecorp.armeria.internal" level="off"/>
     <logger name="com.linecorp.armeria.logging" level="off"/>
     <logger name="com.linecorp.armeria.client" level="off"/>
-    <logger name="com.greenfossil.thorium.first-responder" level="off"/>
+    <logger name="com.greenfossil.thorium.first-responder" level="trace"/>
     <logger name="com.greenfossil.thorium.csrf" level="off"/>
     <logger name="com.greenfossil.thorium.action" level="off"/>
     <logger name="com.greenfossil.thorium.recaptcha" level="off"/>

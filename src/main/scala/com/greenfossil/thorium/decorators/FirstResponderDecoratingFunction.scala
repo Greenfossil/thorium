@@ -17,14 +17,67 @@
 package com.greenfossil.thorium.decorators
 
 import com.greenfossil.thorium.*
-import com.linecorp.armeria.common.{Cookie, HttpRequest, HttpResponse}
+import com.linecorp.armeria.common.multipart.Multipart
+import com.linecorp.armeria.common.{Cookie, HttpRequest, HttpResponse, MediaType}
 import com.linecorp.armeria.server.{DecoratingHttpServiceFunction, HttpService, ServiceRequestContext}
 import org.slf4j.LoggerFactory
 
 import java.time.ZoneId
+import java.util.concurrent.CompletableFuture
+import java.util.stream.Collectors
 import scala.util.Try
 
-private val firstResponderLogger = LoggerFactory.getLogger("com.greenfossil.thorium.first-responder")
+object FirstResponderDecoratingFunction {
+
+  private val firstResponderLogger = LoggerFactory.getLogger("com.greenfossil.thorium.first-responder")
+
+  private val MaxContentLength = 2048
+
+  private val AcceptableMethods = List("POST", "PUT", "PATCH")
+
+  private val AcceptableMediaTypes = List(MediaType.FORM_DATA, MediaType.JSON, MediaType.PLAIN_TEXT).map(_.subtype())
+
+  protected def dumpFormDataBody(ctx: ServiceRequestContext): CompletableFuture[String] =
+    val mediaType = ctx.request().contentType()
+    val futureResp = new CompletableFuture[String]()
+    if mediaType == null then
+      firstResponderLogger.warn("Dump body - null media type found, dump skip.")
+      futureResp.complete("")
+
+    else if AcceptableMediaTypes.contains(mediaType.subtype()) then
+      ctx.request()
+        .aggregate()
+        .thenAccept: aggReq =>
+          ctx.blockingTaskExecutor().execute(() => {
+            //Extract body content from FormData
+            val body = aggReq.contentUtf8()
+            firstResponderLogger.trace(s"Dump body - ${mediaType.`type`()}/${mediaType.subtype()}, length:${body.length}, body:${body.take(MaxContentLength)}")
+            futureResp.complete(body)
+          })
+    else if mediaType.isMultipart then
+      ctx.request()
+        .aggregate()
+        .thenAccept: aggReg =>
+          ctx.blockingTaskExecutor().execute(() => {
+            //Extract body content from Multipart
+            Multipart.from(aggReg.toHttpRequest.toDuplicator.duplicate())
+              .aggregate()
+              .thenAccept: multipart =>
+                val numParts = multipart.bodyParts().stream()
+                  .filter(part => AcceptableMediaTypes.contains(part.contentType().subtype()))
+                  .collect(Collectors.toList)
+                val mpBody = numParts.stream()
+                  .map(part => s"${part.name}=${part.contentUtf8()}")
+                  .collect(Collectors.joining(";")).take(MaxContentLength)
+                firstResponderLogger.trace(s"Dump body - ${mediaType.`type`()}/${mediaType.subtype()}, parts:${numParts.size()}, partBody:${mpBody}")
+                futureResp.complete(mpBody)
+          })
+    else {
+      firstResponderLogger.info(s"Dump body - unexpected content-type:$mediaType")
+      futureResp.complete("")
+    }
+    futureResp
+}
 
 /**
  * This will be the first/last request within the control of Thorium.
@@ -36,6 +89,8 @@ private val firstResponderLogger = LoggerFactory.getLogger("com.greenfossil.thor
 class FirstResponderDecoratingFunction(val configuration: Configuration,
                                        val ignoreRequestFn: ServiceRequestContext => Boolean = _.request().uri().getPath.startsWith("/assets")
                                       ) extends DecoratingHttpServiceFunction:
+  import FirstResponderDecoratingFunction.*
+
   override def serve(delegate: HttpService, ctx: ServiceRequestContext, req: HttpRequest): HttpResponse =
     firstResponderLogger.debug(s"FirstResponder - remote:${ctx.remoteAddress()} method:${req.method()} request.uri:${req.uri()}")
     if firstResponderLogger.isTraceEnabled() then
@@ -71,6 +126,11 @@ class FirstResponderDecoratingFunction(val configuration: Configuration,
       ctx.setAttr(RequestAttrs.Flash, flash)
 
       firstResponderLogger.debug(s"Injected Configuration and extracted Cookies -TZ: $tz, Session:$session, Flash:$flash")
+
+      //Logs the body of AcceptableMethods and AcceptableMediaTypes, the body content is constrained by MaxContentLength
+      if firstResponderLogger.isTraceEnabled() && AcceptableMethods.contains(req.method().name) then {
+        dumpFormDataBody(ctx).thenAccept(body => ())
+      }
 
       //Invoke delegate
       delegate.serve(ctx, req)
