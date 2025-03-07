@@ -17,12 +17,7 @@ class ContextPathSuite extends munit.FunSuite:
       .and()
       .build()
 
-    println(s"starting server")
     val started = server.start()
     started.get()
-    println(s"server started")
     server.stop()
-    println(s"server stopped")
-
-    println(s"server started = ${server}")
   }

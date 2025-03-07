@@ -23,7 +23,6 @@ import com.linecorp.armeria.server.{DecoratingHttpServiceFunction, HttpService, 
 import org.slf4j.LoggerFactory
 
 import java.time.ZoneId
-import java.util.concurrent.CompletableFuture
 import java.util.stream.Collectors
 import scala.util.Try
 
@@ -31,29 +30,29 @@ object FirstResponderDecoratingFunction {
 
   private val firstResponderLogger = LoggerFactory.getLogger("com.greenfossil.thorium.first-responder")
 
-  private val MaxContentLength = 2048
-
   private val AcceptableMethods = List("POST", "PUT", "PATCH")
 
   private val AcceptableMediaTypes = List(MediaType.FORM_DATA, MediaType.JSON, MediaType.PLAIN_TEXT).map(_.subtype())
 
-  protected def dumpFormDataBody(ctx: ServiceRequestContext): CompletableFuture[String] =
+  protected def dumpFormDataBody(ctx: ServiceRequestContext, maxPlainTextContentLength: Int) =
     val mediaType = ctx.request().contentType()
-    val futureResp = new CompletableFuture[String]()
+    val contentLengthValue = ctx.request().headers().get("Content-Length")
+    val contentLengthOpt = Try(contentLengthValue.toInt).toOption
+
     if mediaType == null then
       firstResponderLogger.warn("Dump body - null media type found, dump skip.")
-      futureResp.complete("")
-
     else if AcceptableMediaTypes.contains(mediaType.subtype()) then
-      ctx.request()
-        .aggregate()
-        .thenAccept: aggReq =>
-          ctx.blockingTaskExecutor().execute(() => {
-            //Extract body content from FormData
-            val body = aggReq.contentUtf8()
-            firstResponderLogger.trace(s"Dump body - ${mediaType.`type`()}/${mediaType.subtype()}, length:${body.length}, body:${body.take(MaxContentLength)}")
-            futureResp.complete(body)
-          })
+      //For Plain_text, need to ensure length is not more that MaxContentLength
+      if mediaType.subtype() != MediaType.PLAIN_TEXT.subtype() || contentLengthOpt.exists(_  <= maxPlainTextContentLength) then
+        ctx.request()
+          .aggregate()
+          .thenAccept: aggReq =>
+            ctx.blockingTaskExecutor().execute(() => {
+              //Extract body content from FormData
+              val body = aggReq.contentUtf8()
+              firstResponderLogger.trace(s"Dump body - content-type:$mediaType, length:$contentLengthValue, body:$body")
+            })
+      else firstResponderLogger.trace(s"Dump body skip - content-type:$mediaType, content-length:$contentLengthValue, text-max-len:$maxPlainTextContentLength")
     else if mediaType.isMultipart then
       ctx.request()
         .aggregate()
@@ -64,19 +63,30 @@ object FirstResponderDecoratingFunction {
               .aggregate()
               .thenAccept: multipart =>
                 val numParts = multipart.bodyParts().stream()
-                  .filter(part => AcceptableMediaTypes.contains(part.contentType().subtype()))
+                  .filter{part =>
+                    //PartContentLen Value if it is null, will use request content-length
+                    val partContentLenValue = Option(part.headers().get("Content-Length")).getOrElse(contentLengthValue)
+                    val partContentLengthOpt = Try(partContentLenValue.toInt).toOption
+                    val withinContentLen = partContentLengthOpt.exists(_ <= maxPlainTextContentLength)
+                    val acceptedType = AcceptableMediaTypes.contains(part.contentType().subtype())
+                    //Log if Plain_text exceeds MaxContentLength
+                    if part.contentType().subtype() == MediaType.PLAIN_TEXT.subtype() && !withinContentLen then
+                      firstResponderLogger.trace(s"Dump body skip - content-type:${part.contentType()}, content-length:$partContentLenValue, text-max-len:$maxPlainTextContentLength")
+
+                    acceptedType && withinContentLen
+                  }
                   .collect(Collectors.toList)
                 val mpBody = numParts.stream()
                   .map(part => s"${part.name}=${part.contentUtf8()}")
-                  .collect(Collectors.joining(";")).take(MaxContentLength)
-                firstResponderLogger.trace(s"Dump body - ${mediaType.`type`()}/${mediaType.subtype()}, parts:${numParts.size()}, partBody:${mpBody}")
-                futureResp.complete(mpBody)
+                  .collect(Collectors.joining(";")).take(maxPlainTextContentLength)
+                if !numParts.isEmpty then
+                  val (partContentType, partContentLen) = numParts.stream().findFirst().map(part => part.contentType() -> part.headers().get("Content-Length")).get()
+                  //PartContentLen Value if it is null, will use request content-length
+                  val partLen = Try(partContentLen.toInt).getOrElse(contentLengthOpt.getOrElse(0))
+                  firstResponderLogger.trace(s"Dump body - part-content-type:$partContentType, content-length:$partLen, parts:${numParts.size()}, partBody:$mpBody")
           })
-    else {
-      firstResponderLogger.info(s"Dump body - unexpected content-type:$mediaType")
-      futureResp.complete("")
-    }
-    futureResp
+    else
+      firstResponderLogger.info(s"Dump body - unexpected content-type:$mediaType content-length:$contentLengthValue")
 }
 
 /**
@@ -87,7 +97,8 @@ object FirstResponderDecoratingFunction {
  * @return
  */
 class FirstResponderDecoratingFunction(val configuration: Configuration,
-                                       val ignoreRequestFn: ServiceRequestContext => Boolean = _.request().uri().getPath.startsWith("/assets")
+                                       val ignoreRequestFn: ServiceRequestContext => Boolean = _.request().uri().getPath.startsWith("/assets"),
+                                       val maxPlainTextContentLength: Int = 2048 
                                       ) extends DecoratingHttpServiceFunction:
   import FirstResponderDecoratingFunction.*
 
@@ -126,10 +137,10 @@ class FirstResponderDecoratingFunction(val configuration: Configuration,
       ctx.setAttr(RequestAttrs.Flash, flash)
 
       firstResponderLogger.debug(s"Injected Configuration and extracted Cookies -TZ: $tz, Session:$session, Flash:$flash")
-
+      val method = ctx.request().method().name()
       //Logs the body of AcceptableMethods and AcceptableMediaTypes, the body content is constrained by MaxContentLength
-      if firstResponderLogger.isTraceEnabled() && AcceptableMethods.contains(req.method().name) then {
-        dumpFormDataBody(ctx).thenAccept(body => ())
+      if firstResponderLogger.isTraceEnabled() && AcceptableMethods.contains(method) then {
+        dumpFormDataBody(ctx, maxPlainTextContentLength)
       }
 
       //Invoke delegate
