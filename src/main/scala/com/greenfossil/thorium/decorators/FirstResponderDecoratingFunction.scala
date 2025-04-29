@@ -67,13 +67,13 @@ object FirstResponderDecoratingFunction {
                     //PartContentLen Value if it is null, will use request content-length
                     val partContentLenValue = Option(part.headers().get("Content-Length")).getOrElse(contentLengthValue)
                     val partContentLengthOpt = Try(partContentLenValue.toInt).toOption
-                    val withinContentLen = partContentLengthOpt.exists(_ <= maxPlainTextContentLength)
+//                    val withinContentLen = partContentLengthOpt.exists(_ <= maxPlainTextContentLength)
                     val acceptedType = AcceptableMediaTypes.contains(part.contentType().subtype())
                     //Log if Plain_text exceeds MaxContentLength
-                    if part.contentType().subtype() == MediaType.PLAIN_TEXT.subtype() && !withinContentLen then
-                      firstResponderLogger.trace(s"Dump body skip - content-type:${part.contentType()}, content-length:$partContentLenValue, text-max-len:$maxPlainTextContentLength")
+                   /* if part.contentType().subtype() == MediaType.PLAIN_TEXT.subtype() && !withinContentLen then
+                      firstResponderLogger.trace(s"Dump body skip - content-type:${part.contentType()}, content-length:$partContentLenValue, text-max-len:$maxPlainTextContentLength")*/
 
-                    acceptedType && withinContentLen
+                    acceptedType /*&& withinContentLen*/
                   }
                   .collect(Collectors.toList)
                 val mpBody = numParts.stream()
