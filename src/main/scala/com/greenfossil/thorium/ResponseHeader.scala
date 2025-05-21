@@ -35,7 +35,7 @@ object ResponseHeader:
       left.compareToIgnoreCase(right)
 
   def apply(headers: Map[String, String], reasonPhrase: String): ResponseHeader =
-    val ciHeaders = TreeMap[String, String]()(CaseInsensitiveOrdered) ++ headers
+    val ciHeaders = TreeMap[String, String]()(using CaseInsensitiveOrdered) ++ headers
     new ResponseHeader(ciHeaders, Option(reasonPhrase))
 
 case class ResponseHeader(headers: TreeMap[String, String], reasonPhrase:Option[String] = None)
