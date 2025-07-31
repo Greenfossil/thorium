@@ -54,9 +54,7 @@ ThisBuild / credentials += {
 }
 
 
-
-lazy val sonatypeStaging = "https://s01.oss.sonatype.org/content/groups/staging/"
-
 ThisBuild / resolvers ++= Seq(
-  "Sonatype Staging" at sonatypeStaging
+  //https://central.sonatype.org/publish/publish-portal-api/#manually-testing-a-deployment-bundle
+  "central.manual.testing" at "https://central.sonatype.com/api/v1/publisher/deployments/download"
 )
