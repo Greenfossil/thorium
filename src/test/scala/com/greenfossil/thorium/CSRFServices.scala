@@ -97,7 +97,9 @@ object CSRFServices:
   @Post("/csrf/multipart-file")
   def multipartFile: Action = Action.multipart { implicit request =>
     val form = request.asFormUrlEncoded
-    val files = request.files
-    Ok(s"Received multipart request with files: ${files.size}, form:$form")
+    request.findFiles((_, _, _, _) => true)
+      .map { files =>
+        Ok(s"Received multipart request with files: ${files.size}, form:$form")
+      }.getOrElse(BadRequest("No file uploaded"))
   }
 

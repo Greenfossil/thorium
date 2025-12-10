@@ -33,8 +33,12 @@ import scala.sys.process.*
 object FormServices {
   @Post("/multipart3")
   def multipartForm3: Action = Action.multipart { implicit request =>
-    val files = request.files
-    Ok(s"Received multipart request with files: ${files.size}")
+    request.findFiles((_, _, _, _) => true)
+      .map{files =>
+        Ok(s"Received multipart request with files: ${files.size}")
+      }.getOrElse(
+        BadRequest(s"Invalid multipart request")
+      )
   }
 
   @Post("/multipart-bad-request")

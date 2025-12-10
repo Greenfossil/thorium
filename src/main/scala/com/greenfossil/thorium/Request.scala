@@ -17,7 +17,7 @@
 package com.greenfossil.thorium
 
 import com.greenfossil.commons.LocaleUtil
-import com.greenfossil.commons.json.{JsValue, Json}
+import com.greenfossil.commons.json.{JsObject, JsValue, Json}
 import com.greenfossil.thorium.decorators.CSRFGuardModule
 import com.linecorp.armeria.common.*
 import com.linecorp.armeria.server.{ProxiedAddresses, ServiceRequestContext}
@@ -145,6 +145,28 @@ trait Request(val requestContext: ServiceRequestContext,
 
   def findCookie(name: String): Option[Cookie] =
     cookies.find(c => c.name() == name)
+
+  /**
+   *
+   * @param baseName - base name of the cookie
+   * @return - all cookies that match the base name or start with baseName-
+   *           e.g. for baseName=session, it will return session, session-0, session-1 etc
+   */
+  def findCookiesStartWith(baseName: String): Option[List[Cookie]] =
+    val cookiesList: List[Cookie] = cookies.filter { c =>
+      val n = c.name()
+      n == baseName || n.startsWith(baseName + "-")
+    }.toList
+    Option.when(cookiesList.nonEmpty)(cookiesList)
+
+  /**
+   *
+   * @param baseName - base name of the cookie
+   * @return - all cookies that match the base name or start with baseName- as JsObject
+   *           e.g. for baseName=session, it will return session, session-0, session-1 etc
+   */
+  def findCookiesStartWithToJson(baseName: String): Option[JsObject] =
+    findCookiesStartWith(baseName).map(CookieUtil.cookiesToJson)
 
   def clientAddress: InetAddress = requestContext.clientAddress()
 

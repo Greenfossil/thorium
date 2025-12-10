@@ -23,7 +23,7 @@ case class User(id: Long, name: String) extends Serializable
 
 class AESUtilSuite extends munit.FunSuite {
 
-  val ALGO = AESUtil.AES_CTR_NOPADDING
+  val ALGO = AESUtil.AES_GCM_NOPADDING
 
   test("Base64 Encrypt then Decrypt using generateKey") {
     val text = "thorium 钍"
@@ -95,7 +95,7 @@ class AESUtilSuite extends munit.FunSuite {
     assertNoDiff(plainText, input)
   }
 
-  test("encrypt/decrypt with Derived Key") {
+  test("encrypt/decrypt with Derived Key explicit algo") {
     val input = "Thorium 钍"
     val key = "thorium"
     val cipherText = AESUtil.encryptWithEmbeddedIV(input, key, AESUtil.AES_GCM_NOPADDING, Base64.getEncoder)

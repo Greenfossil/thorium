@@ -94,14 +94,20 @@ object AESUtil:
     SecureRandom().nextBytes(iv)
     IvParameterSpec(iv)
 
-  def encryptWithEmbeddedIV(plainText: String, key: String, encoder: Base64.Encoder): String =
-    encryptWithEmbeddedIV(plainText, key, AES_CTR_NOPADDING, encoder)
+  def encryptWithEmbeddedIV(plainText: String | Array[Byte], key: String, encoder: Base64.Encoder): String =
+    encryptWithEmbeddedIV(plainText, key, AES_CTR_NOPADDING, "", encoder)
 
   def decryptWithEmbeddedIV(cipherText: String, key: String, decoder: Base64.Decoder): String =
-    decryptWithEmbeddedIV(cipherText, key, AES_CTR_NOPADDING, decoder)
+    decryptWithEmbeddedIV(cipherText, key, AES_CTR_NOPADDING, "", decoder)
 
-  def encryptWithEmbeddedIV(plainText: String, key: String, algorithm: String, encoder: Base64.Encoder): String =
-    encryptWithEmbeddedIV(plainText, key, algorithm, bytes => encoder.encodeToString(bytes))
+  def encryptWithEmbeddedIV(plainText: String | Array[Byte], key: String, algorithm: String, encoder: Base64.Encoder): String =
+    encryptWithEmbeddedIV(plainText, key, algorithm, "", encoder)
+
+  def decryptWithEmbeddedIV(base64CipherText: String, key: String, algorithm: String, decoder: Base64.Decoder): String =
+    decryptWithEmbeddedIV(base64CipherText, key, algorithm, "", decoder)
+
+  def encryptWithEmbeddedIV(plainText: String | Array[Byte], key: String, algorithm: String, aad: String, encoder: Base64.Encoder): String =
+    encryptWithEmbeddedIV(plainText, key, algorithm, aad, bytes => encoder.encodeToString(bytes))
 
   /**
    * Encrypt plaintext with key
@@ -109,10 +115,10 @@ object AESUtil:
    * @param plainText
    * @return
    */
-  def encryptWithEmbeddedIV[A](plainText: String, key: String, algorithm: String, converter: Array[Byte] => A): A =
+  def encryptWithEmbeddedIV[A](plainText: String | Array[Byte], key: String, algorithm: String, aad: String, converter: Array[Byte] => A): A =
     val secretKey = generateDerivedSecretKey(key)
     val iv = generateIV
-    val payload = iv.getIV ++ encrypt(plainText, secretKey, algorithm, iv)
+    val payload = iv.getIV ++ encrypt(plainText, secretKey, algorithm, iv, aad)
     converter(payload)
 
   /**
@@ -121,36 +127,66 @@ object AESUtil:
    * @param base64CipherText
    * @return
    */
-  def decryptWithEmbeddedIV(base64CipherText: String, key: String, algorithm: String, decoder: Base64.Decoder): String =
-    decryptWithEmbeddedIV(decoder.decode(base64CipherText), key, algorithm, bytes => new String(bytes))
+  def decryptWithEmbeddedIV(base64CipherText: String, key: String, algorithm: String, aad: String, decoder: Base64.Decoder): String =
+    decryptWithEmbeddedIV(decoder.decode(base64CipherText), key, algorithm, aad, bytes => new String(bytes))
 
-  def decryptWithEmbeddedIV[A](cipherTextBytes: Array[Byte], key: String, algorithm: String, converter: Array[Byte] => A): A =
+  def decryptWithEmbeddedIV[A](cipherTextBytes: Array[Byte], key: String, algorithm: String, aad: String, converter: Array[Byte] => A): A =
     val iv = IvParameterSpec(cipherTextBytes.take(IV_LENGTH))
     val secretKey = generateDerivedSecretKey(key)
-    val bytes = decrypt(cipherTextBytes.drop(IV_LENGTH), secretKey, algorithm, iv)
+    val bytes = decrypt(cipherTextBytes.drop(IV_LENGTH), secretKey, algorithm, iv, aad)
     converter(bytes)
 
-  def encrypt(plainText: String, key: SecretKey, algorithm: String, iv: IvParameterSpec, encoder: Base64.Encoder): String =
-    encoder.encodeToString(encrypt(plainText, key, algorithm, iv))
+  def encrypt(plainText: String | Array[Byte], key: SecretKey, algorithm: String, iv: IvParameterSpec, encoder: Base64.Encoder): String =
+    encrypt(plainText, key, algorithm, iv, "", encoder)
+
+  def encrypt(plainText: String | Array[Byte], key: SecretKey, algorithm: String, iv: IvParameterSpec, aad: String, encoder: Base64.Encoder): String =
+    encoder.encodeToString(encrypt(plainText, key, algorithm, iv, aad))
 
   def decrypt(cipherText: String, key: SecretKey, algorithm: String, iv: IvParameterSpec, decoder: Base64.Decoder): String =
-    new String(decrypt(decoder.decode(cipherText), key, algorithm, iv))
+    decrypt(cipherText, key, algorithm, iv, "", decoder)
+
+  def decrypt(cipherText: String, key: SecretKey, algorithm: String, iv: IvParameterSpec, aad: String, decoder: Base64.Decoder): String =
+    new String(decrypt(decoder.decode(cipherText), key, algorithm, iv, aad))
 
   private def getParamSpec(algorithm: String, iv: IvParameterSpec): AlgorithmParameterSpec =
     if algorithm.startsWith("AES/GCM")
     then GCMParameterSpec(GCM_TAG_LENGTH * 8, iv.getIV)
     else iv
 
-  def encrypt(plainText: String, key: SecretKey, algorithm: String, iv: IvParameterSpec): Array[Byte] =
+  /**
+   * Encrypt plaintext
+   * @param plainText
+   * @param key
+   * @param algorithm - AES/GCM/NoPadding or AES/CTR/NoPadding
+   * @param iv
+   * @param aad - additional authenticated data, only for GCM mode
+   * @return
+   */
+  def encrypt(plainText: String | Array[Byte], key: SecretKey, algorithm: String, iv: IvParameterSpec, aad: String): Array[Byte] =
     val cipher = Cipher.getInstance(algorithm)
     val paramSpec = getParamSpec(algorithm, iv)
     cipher.init(Cipher.ENCRYPT_MODE, key, paramSpec)
-    cipher.doFinal(plainText.getBytes)
+    if aad != null && aad.nonEmpty && algorithm.startsWith("AES/GCM") then
+      cipher.updateAAD(aad.getBytes)
+    plainText match
+      case bytes: Array[Byte] => cipher.doFinal(bytes)
+      case str: String => cipher.doFinal(str.getBytes)
 
-  def decrypt(bytes: Array[Byte], key: SecretKey, algorithm: String, iv: IvParameterSpec): Array[Byte] =
+  /**
+   *  Decrypt ciphertext
+   * @param bytes
+   * @param key
+   * @param algorithm
+   * @param iv
+   * @param aad
+   * @return
+   */
+  def decrypt(bytes: Array[Byte], key: SecretKey, algorithm: String, iv: IvParameterSpec, aad: String): Array[Byte] =
     val cipher = Cipher.getInstance(algorithm)
     val paramSpec = getParamSpec(algorithm, iv)
     cipher.init(Cipher.DECRYPT_MODE, key, paramSpec)
+    if aad != null && aad.nonEmpty && algorithm.startsWith("AES/GCM") then
+      cipher.updateAAD(aad.getBytes)
     cipher.doFinal(bytes)
 
   def encryptObject(obj: Serializable, key: SecretKey, algorithm: String, iv: IvParameterSpec): SealedObject =

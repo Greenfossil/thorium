@@ -22,7 +22,7 @@ import com.linecorp.armeria.common.multipart.{AggregatedBodyPart, AggregatedMult
 import java.io.{File, InputStream}
 import java.nio.charset.Charset
 import java.nio.file.*
-import scala.util.Try
+import scala.util.{Try, Using}
 
 case class MultipartFormData(aggMultipart: AggregatedMultipart, multipartUploadLocation: Path):
   import scala.jdk.CollectionConverters.*
@@ -46,6 +46,7 @@ case class MultipartFormData(aggMultipart: AggregatedMultipart, multipartUploadL
       (name, content)
     FormUrlEndcoded(xs.groupMap(_._1)(_._2))
 
+  @deprecated("Use getFiles instead")
   private def saveFileTo( part: AggregatedBodyPart): Option[File] =
     Try {
       if !Files.exists(multipartUploadLocation) then multipartUploadLocation.toFile.mkdirs()
@@ -56,6 +57,7 @@ case class MultipartFormData(aggMultipart: AggregatedMultipart, multipartUploadL
       filePath.toFile
     }.toOption
 
+  @deprecated("Use findFiles instead")
   lazy val files: List[MultipartFile] =
     for {
       name <- names
@@ -65,10 +67,53 @@ case class MultipartFormData(aggMultipart: AggregatedMultipart, multipartUploadL
     } yield  MultipartFile.of(name, part.filename(), file)
 
   /**
+   * Save the uploaded file to disk with validation
+   * @param fieldName
+   * @param part
+   * @param validatorFn
+   * @return
+   */
+  private def saveFileTo(fieldName: String, part: AggregatedBodyPart, validatorFn: (fieldName:String, fileName:String, contentType:MediaType, content: InputStream) => Boolean): Try[File] =
+    Try:
+      val is = part.content().toInputStream
+      try
+        if !validatorFn(fieldName, part.filename(), part.contentType(), is) then
+          throw new IllegalArgumentException(s"File ${part.filename()} with content type ${part.contentType()} is not allowed")
+        if !Files.exists(multipartUploadLocation) then multipartUploadLocation.toFile.mkdirs()
+        val filePath = multipartUploadLocation.resolve(part.filename())
+        Files.copy(part.content().toInputStream, filePath, StandardCopyOption.REPLACE_EXISTING)
+        filePath.toFile
+      finally
+        is.close()
+
+  /**
+   * Find the uploaded files with validation. All files must pass the validation or else an exception is returned
+   * @param validatorFn
+   * @return
+   */
+  def findFiles(validatorFn: (fieldName:String, fileName:String, contentType:MediaType, content:InputStream) => Boolean): Try[List[MultipartFile]] =
+    val fileTries: Seq[Try[MultipartFile]] =
+      for {
+        name <- names
+        part <- aggMultipart.fields(name).asScala
+        if part.filename() != null && !part.content().isEmpty
+      } yield saveFileTo(name, part, validatorFn).map(file => MultipartFile.of(name, part.filename(), file))
+    Try(fileTries.map(_.get).toList)
+
+  /**
+   * Find a file using a predicate function
+   * @param predicate
+   * @return
+   */
+  def findFile(predicate: (fieldName:String, fileName:String, contentType:MediaType, content:InputStream) => Boolean ): Try[MultipartFile] =
+    findFiles(predicate).map(_.head)
+
+  /**
    * Find a file using the form name
    * @param formNameRegex - this is the alias of findFileOfFormName
    * @return
    */
+  @deprecated("Use findFile with a predicate function instead")
   def findFile(formNameRegex: String): Option[MultipartFile] =
     findFileOfFormName(formNameRegex)
 
@@ -77,6 +122,7 @@ case class MultipartFormData(aggMultipart: AggregatedMultipart, multipartUploadL
    * @param formNameRegex
    * @return
    */
+  @deprecated("Use findFile with a predicate function instead")
   def findFileOfFormName(formNameRegex: String): Option[MultipartFile] =
     files.find(file => file.name.matches(formNameRegex) && file.file().length() > 0)
 
@@ -85,5 +131,6 @@ case class MultipartFormData(aggMultipart: AggregatedMultipart, multipartUploadL
    * @param fileNameRegex
    * @return
    */
+  @deprecated("Use findFile with a predicate function instead")
   def findFileOfFileName(fileNameRegex: String): Option[MultipartFile] =
     files.find(file => file.filename().matches(fileNameRegex) && file.file().length() > 0)

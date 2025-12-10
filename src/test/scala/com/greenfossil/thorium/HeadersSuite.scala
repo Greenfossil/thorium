@@ -16,23 +16,26 @@
 
 package com.greenfossil.thorium
 
+import com.greenfossil.commons.json.Json
 import com.linecorp.armeria.common.{Cookie, HttpStatus}
 import com.linecorp.armeria.server.annotation.Get
 
 import java.net.http.{HttpClient, HttpRequest, HttpResponse}
 import java.net.{CookieManager, HttpCookie, URI}
+import java.util.Base64
 import scala.annotation.nowarn
 
 object HeadersServices:
   @Get("/headers") @nowarn
-  def headers = Action { request =>
+  def headers = Action { implicit request =>
     Ok("Headers sent")
       .withHeaders(
         "Access-Control-Allow-Origin" -> "*",
         "Access-Control-Allow-Headers" -> "Origin, X-Requested-With, Content-Type, Accept")
       .withSession("session" -> "sessionValue")
       .flashing("flash" -> "flashValue")
-      .withCookies(Cookie.of("Cookie1", "Cookie1Value"), Cookie.of("Cookie2", "Cookie2Value"))
+      .withCookies(Cookie.ofSecure("Cookie1", "Cookie1Value"), Cookie.ofSecure("Cookie2", "Cookie2Value"))
+      .withCookies(CookieUtil.bakeCookies("json-cookie", Json.obj("user" -> "homer"))*)
   }
 end HeadersServices
 
@@ -58,6 +61,7 @@ class HeadersSuite extends munit.FunSuite {
     assertEquals(findCookie("APP_FLASH").getSecure, false)
     assertEquals(findCookie("Cookie1").getValue, "Cookie1Value")
     assertEquals(findCookie("Cookie2").getValue, "Cookie2Value")
+    assertNoDiff(new String(Base64.getDecoder.decode(findCookie("json-cookie").getValue)), """{"user":"homer"}""")
     assertNoDiff(resp.body(), "Headers sent")
     server.stop()
   }

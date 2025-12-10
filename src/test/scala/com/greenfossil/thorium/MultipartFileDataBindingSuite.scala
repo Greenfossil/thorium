@@ -19,7 +19,7 @@ class MultipartFileDataBindingSuite extends munit.FunSuite:
       val nameField = nonEmptyText.name("name")
       val fileField = nonEmptyText.name("file")
         .verifying("File name must be 'logback-test.xml'", _ == "logback-test.xml2")
-        .transform[MultipartFile](name => request.findFileOfFileName(name).orNull, file => file.filename())
+        .transform[MultipartFile](name => request.findFile((fieldName, fileName, _, _) => fileName == name).getOrElse(null), file => file.filename())
         .verifying("File size cannot be more than 10 bytes", f => f.sizeInBytes < 10)
 
       val nameValueOpt = nameField.bindFromRequest().typedValueOpt

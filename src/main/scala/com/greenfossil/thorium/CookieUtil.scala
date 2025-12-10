@@ -16,9 +16,10 @@
 
 package com.greenfossil.thorium
 
-import com.greenfossil.commons.json.Json
+import com.greenfossil.commons.json.{JsObject, Json}
 import com.linecorp.armeria.common.{Cookie, CookieBuilder}
 
+import java.nio.charset.StandardCharsets
 import java.util.Base64
 import scala.util.{Failure, Try}
 
@@ -126,6 +127,9 @@ object CookieUtil:
   def cookieBuilder(name: String, value: String): CookieBuilder =
     cookieBuilder(Configuration.apply().httpConfiguration.cookieConfig, name, value)
 
+  /**
+   * Bake a simple cookie with default configuration using the request's cookie configuration
+   */
   def bakeCookie(name: String, value: String)(using request: Request): Cookie =
     cookieBuilder(request.httpConfiguration.cookieConfig, name, value)
       .build()
@@ -166,6 +170,51 @@ object CookieUtil:
       flashCookieBuilder(request.httpConfiguration.flashConfig, request.httpConfiguration.secretConfig.secret, flash.data)
         .build()
     }
+
+  def bakeCookies(name: String, jsObj: JsObject)(using Request): List[Cookie] =
+    // conservative maximum encoded chunk length per cookie value
+    val MaxEncodedChunkLen = 3800
+    val jsonStr = jsObj.stringify
+    val bytes = jsonStr.getBytes(StandardCharsets.UTF_8)
+    val encoded = Base64.getUrlEncoder.withoutPadding.encodeToString(bytes)
+
+    if encoded.length <= MaxEncodedChunkLen then
+      List(bakeCookie(name, encoded))
+    else
+      encoded
+        .grouped(MaxEncodedChunkLen)
+        .zipWithIndex
+        .map { case (chunk, idx) => bakeCookie(s"${name}-$idx", chunk) }
+        .toList
+
+  def cookiesToJson(cookies: Seq[Cookie]): JsObject =
+    Try {
+      if cookies.isEmpty then JsObject.empty
+      else
+        // if there's exactly one cookie and its name is the base (no suffix), decode directly
+        if cookies.size == 1 && !cookies.head.name().contains("-") then
+          val c = cookies.head
+          val decoded = Base64.getUrlDecoder.decode(c.value())
+          val jsonStr = String(decoded, StandardCharsets.UTF_8)
+          Json.parse(jsonStr).as[JsObject]
+        else
+          // sort by numeric suffix if possible
+          def idxOf(name: String): Option[Int] =
+            val dash = name.lastIndexOf('-')
+            if dash < 0 then None
+            else
+              val s = name.substring(dash + 1)
+              Try(Some(s.toInt)).toOption.flatten
+
+          val sortedCookies = cookies.sortBy { c =>
+            idxOf(c.name()) match
+              case Some(i) => (0, i)
+              case None => (1, c.name().hashCode)
+          }
+          sortedCookies.iterator.map(_.toJson).foldLeft(JsObject.empty) { (accum, jsObj) =>
+            accum ++ jsObj
+          }
+    }.getOrElse(JsObject.empty)
 
   def decryptCookieValue(cookie: Cookie, appSecret: String): Option[Map[String, String]] = Try {
     val cookieValue = AESUtil.decryptWithEmbeddedIV(cookie.value(), appSecret, Base64.getDecoder)

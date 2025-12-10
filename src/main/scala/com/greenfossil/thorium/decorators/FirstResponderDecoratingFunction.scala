@@ -17,6 +17,7 @@
 package com.greenfossil.thorium.decorators
 
 import com.greenfossil.thorium.*
+import com.greenfossil.thorium.decorators.FirstResponderDecoratingFunction.SensitiveFieldConfig
 import com.linecorp.armeria.common.multipart.Multipart
 import com.linecorp.armeria.common.{Cookie, HttpRequest, HttpResponse, MediaType}
 import com.linecorp.armeria.server.{DecoratingHttpServiceFunction, HttpService, ServiceRequestContext}
@@ -34,7 +35,101 @@ object FirstResponderDecoratingFunction {
 
   private val AcceptableMediaTypes = List(MediaType.FORM_DATA, MediaType.JSON, MediaType.PLAIN_TEXT).map(_.subtype())
 
-  protected def dumpFormDataBody(ctx: ServiceRequestContext, maxPlainTextContentLength: Int) =
+  /**
+   * Configuration for masking sensitive fields in logs
+   * @param sensitiveFieldNames Set of field name patterns to mask (case-insensitive substring matching)
+   * @param maskValue The value to use for masking sensitive data
+   * @param partialMaskFields Map of field names to (prefix, suffix) pairs for partial masking
+   */
+  case class SensitiveFieldConfig(
+                                   /**
+                                    * Fields that should be fully masked
+                                    */
+                                   sensitiveFieldNames: Set[String] = Set(
+                                     "password", "passwd", "pwd",
+                                     "secret", "token", "apikey", "api_key",
+                                     "ssn", "social_security",
+                                     "creditcard", "credit_card", "cardnumber", "card_number", "cvv", "cvc",
+                                     "pin", "auth", "authorization"
+                                   ),
+                                   maskValue: String = "***REDACTED***",
+
+
+                                   /**
+                                    * Fields that should be partially masked instead of fully masked.
+                                    * The map key is the field name pattern (case-insensitive substring matching),
+                                    * The value is a tuple of (prefix length to show, suffix length to show)
+                                    */
+                                   partialMaskFields: Map[String, (prefix: Int, suffix: Int)] = Map(
+                                     "email" -> (3, 4),
+                                     "phone" -> (3, 2),
+                                     "mobile" -> (3, 2)
+                                   )
+                                 )
+
+  /**
+   * Masks sensitive field values based on configuration
+   */
+  private def maskSensitiveValue(fieldName: String, value: String, config: SensitiveFieldConfig): String = {
+    val lowerFieldName = fieldName.toLowerCase
+
+    // Check if field should be completely masked
+    if config.sensitiveFieldNames.exists(lowerFieldName.contains) then
+      config.maskValue
+    // Check if field should be partially masked
+    else if config.partialMaskFields.keys.exists(lowerFieldName.contains) then
+      val matchedKey = config.partialMaskFields.keys.find(lowerFieldName.contains).get
+      val (prefix, suffix) = config.partialMaskFields(matchedKey)
+      if value.length <= prefix + suffix then
+        config.maskValue
+      else
+        s"${value.take(prefix)}***${value.takeRight(suffix)}"
+    else
+      value
+  }
+
+  /**
+   * Masks sensitive data in URL-encoded form data (field1=value1&field2=value2)
+   */
+  private def maskFormData(body: String, config: SensitiveFieldConfig): String = {
+    val FormDataPattern = """([^=&]+)=([^&]*)""".r
+    FormDataPattern.replaceAllIn(body, m => {
+      val fieldName = java.net.URLDecoder.decode(m.group(1), "UTF-8")
+      val value = m.group(2)
+      val maskedValue = maskSensitiveValue(fieldName, value, config)
+      s"${m.group(1)}=$maskedValue"
+    })
+  }
+
+  /**
+   * Masks sensitive data in JSON (simple pattern-based approach)
+   */
+  private def maskJsonData(body: String, config: SensitiveFieldConfig): String = {
+    val JsonFieldPattern = """"([^"]+)"\s*:\s*"([^"]*)"""".r
+    JsonFieldPattern.replaceAllIn(body, m => {
+      val fieldName = m.group(1)
+      val value = m.group(2)
+      val maskedValue = maskSensitiveValue(fieldName, value, config)
+      s""""$fieldName":"$maskedValue""""
+    })
+  }
+
+  /**
+   * Masks sensitive data based on content type
+   */
+  private def maskBody(body: String, mediaType: MediaType, config: SensitiveFieldConfig): String = {
+    if mediaType.is(MediaType.JSON) then
+      maskJsonData(body, config)
+    else if mediaType.is(MediaType.FORM_DATA) then
+      maskFormData(body, config)
+    else if mediaType.is(MediaType.PLAIN_TEXT) then
+      // For plain text, apply both form and JSON masking patterns
+      maskJsonData(maskFormData(body, config), config)
+    else
+      body
+  }
+
+  private def dumpFormDataBody(ctx: ServiceRequestContext, maxPlainTextContentLength: Int, sensitiveConfig: SensitiveFieldConfig): Unit =
     val mediaType = ctx.request().contentType()
     val contentLengthValue = ctx.request().headers().get("Content-Length")
     val contentLengthOpt = Try(contentLengthValue.toInt).toOption
@@ -50,7 +145,8 @@ object FirstResponderDecoratingFunction {
             ctx.blockingTaskExecutor().execute(() => {
               //Extract body content from FormData
               val body = aggReq.contentUtf8()
-              firstResponderLogger.trace(s"Dump body - content-type:$mediaType, length:$contentLengthValue, body:$body")
+              val maskedBody = maskBody(body, mediaType, sensitiveConfig)
+              firstResponderLogger.trace(s"Dump body - content-type:$mediaType, length:$contentLengthValue, body:$maskedBody")
             })
       else firstResponderLogger.trace(s"Dump body skip - content-type:$mediaType, content-length:$contentLengthValue, text-max-len:$maxPlainTextContentLength")
     else if mediaType.isMultipart then
@@ -77,7 +173,12 @@ object FirstResponderDecoratingFunction {
                   }
                   .collect(Collectors.toList)
                 val mpBody = numParts.stream()
-                  .map(part => s"${part.name}=${part.contentUtf8()}")
+                  .map { part =>
+                    val fieldName = part.name()
+                    val value = part.contentUtf8()
+                    val maskedValue = maskSensitiveValue(fieldName, value, sensitiveConfig)
+                    s"$fieldName=$maskedValue"
+                  }
                   .collect(Collectors.joining(";")).take(maxPlainTextContentLength)
                 if !numParts.isEmpty then
                   val (partContentType, partContentLen) = numParts.stream().findFirst().map(part => part.contentType() -> part.headers().get("Content-Length")).get()
@@ -93,12 +194,16 @@ object FirstResponderDecoratingFunction {
  * This will be the first/last request within the control of Thorium.
  * This is use to setup Config/Session/Flash attributes which will be useful for all services
  *
- * @param configuration
+ * @param configuration Application configuration for session, flash, and security settings
+ * @param ignoreRequestFn Function to determine if a request should be ignored
+ * @param maxPlainTextContentLength Maximum length for plain text content logging
+ * @param sensitiveFieldConfig Configuration for masking sensitive fields in logs
  * @return
  */
 class FirstResponderDecoratingFunction(val configuration: Configuration,
                                        val ignoreRequestFn: ServiceRequestContext => Boolean = _.request().uri().getPath.startsWith("/assets"),
-                                       val maxPlainTextContentLength: Int = 2048 
+                                       val maxPlainTextContentLength: Int = 2048,
+                                       val sensitiveFieldConfig: SensitiveFieldConfig = SensitiveFieldConfig()
                                       ) extends DecoratingHttpServiceFunction:
   import FirstResponderDecoratingFunction.*
 
@@ -140,7 +245,7 @@ class FirstResponderDecoratingFunction(val configuration: Configuration,
       val method = ctx.request().method().name()
       //Logs the body of AcceptableMethods and AcceptableMediaTypes, the body content is constrained by MaxContentLength
       if firstResponderLogger.isTraceEnabled() && AcceptableMethods.contains(method) then {
-        dumpFormDataBody(ctx, maxPlainTextContentLength)
+        dumpFormDataBody(ctx, maxPlainTextContentLength, sensitiveFieldConfig)
       }
 
       //Invoke delegate

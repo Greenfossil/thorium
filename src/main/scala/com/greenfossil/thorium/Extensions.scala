@@ -16,17 +16,20 @@
 
 package com.greenfossil.thorium
 
+import com.greenfossil.commons.json.{JsObject, Json}
 import com.greenfossil.data.mapping.Mapping
 import com.linecorp.armeria.common.multipart.MultipartFile
-import com.linecorp.armeria.common.{HttpMethod, MediaType}
+import com.linecorp.armeria.common.{Cookie, HttpMethod, MediaType}
 import org.overviewproject.mime_types.MimeTypeDetector
 
 import java.io.InputStream
 import java.net.URI
+import java.nio.charset.StandardCharsets
+import java.util.Base64
+import scala.util.Try
 
 
 extension (inline action: EssentialAction)
-
   inline def absoluteUrl(authority: String, secure: Boolean) =
     EndpointMcr(action).absoluteUrl(authority, secure)
 
@@ -34,6 +37,7 @@ extension (inline action: EssentialAction)
     EndpointMcr(action).absoluteUrl(using request)
 
   inline def endpoint: Endpoint = EndpointMcr(action)
+end extension
 
 extension[A](field: Mapping[A])
   def bindFromRequest()(using request: Request): Mapping[A] =
@@ -49,6 +53,7 @@ extension[A](field: Mapping[A])
             case _ => request.queryParamsList
           }
         field.bind(req.asFormUrlEncoded ++ queryParams.groupMap(_._1)(_._2))
+end extension
 
 val mimeTypeDetector = new MimeTypeDetector()
 
@@ -61,6 +66,7 @@ extension(mpFile: MultipartFile)
   def contentType: MediaType = MediaType.parse(mimeTypeDetector.detectMimeType(mpFile.path()))
 
   def inputStream: InputStream = mpFile.path().toUri.toURL.openStream()
+end extension
 
 extension(cs: java.net.CookieStore)
 
@@ -81,9 +87,21 @@ extension(cs: java.net.CookieStore)
     if cookie.domain() != null && !cookie.domain().isBlank then httpCookie.setDomain(cookie.domain())
 
     cs.add(uri, httpCookie)
+end extension
 
-extension (l: Long) def humanize: String =
-  if l < 1024 then s"$l B"
-  else
-    val z = (63 - java.lang.Long.numberOfLeadingZeros(l)) / 10
-    f"${(l * 1.0) / (1L << (z * 10))}%.1f ${" KMGTPE".charAt(z)}%sB"
+extension (l: Long)
+  def humanize: String =
+    if l < 1024 then s"$l B"
+    else
+      val z = (63 - java.lang.Long.numberOfLeadingZeros(l)) / 10
+      f"${(l * 1.0) / (1L << (z * 10))}%.1f ${" KMGTPE".charAt(z)}%sB"
+end  extension
+
+extension (cookie: Cookie)
+  def toJson: JsObject =
+    Try {
+      val decoded = Base64.getUrlDecoder.decode(cookie.value())
+      val s = String(decoded, StandardCharsets.UTF_8)
+      Json.parse(s).as[JsObject]
+    }.getOrElse(JsObject.empty)
+end extension

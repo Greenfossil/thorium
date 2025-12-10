@@ -22,7 +22,7 @@ class VirtualHostSuite extends munit.FunSuite:
         HttpResponse.BodyHandlers.ofString()
       ).body()
 
-  test("contextPath".fail) {
+  test("contextPath") {
     val server = Server(8080)
       .serverBuilderSetup {
         _.port(8081, SessionProtocol.HTTP)
