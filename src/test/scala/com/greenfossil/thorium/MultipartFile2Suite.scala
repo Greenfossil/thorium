@@ -50,7 +50,10 @@ object FileValidationServices {
     val allowedTypes = Set(
       MediaType.PDF,
       MediaType.JPEG,
-      MediaType.PNG
+      MediaType.PNG,
+      MediaType.MICROSOFT_EXCEL,
+      MediaType.MICROSOFT_WORD,
+      MediaType.MICROSOFT_POWERPOINT
     )
     allowedTypes.exists(ct => contentType.is(ct))
   }
@@ -483,6 +486,31 @@ startxref
     // This test demonstrates the ease of creating custom validators
     val result = s"curl http://localhost:${server.port}/file/always-accept -F document=@$pdfPath".!!.trim
     assertNoDiff(result, "File accepted: test-inline.pdf")
+  }
+
+  // ============ New Tests: Accept Microsoft Office binary formats ============
+  test("findFile: Accept Microsoft Excel (XLS)") {
+    val xlsPath = "/tmp/test-excel.xls"
+    Files.write(Paths.get(xlsPath), "Excel content".getBytes(StandardCharsets.UTF_8))
+
+    val result = s"curl http://localhost:${server.port}/file/validate-format-only -F resourceFile=@$xlsPath;type=application/vnd.ms-excel".!!.trim
+    assertNoDiff(result, "File accepted: test-excel.xls (application/vnd.ms-excel)")
+  }
+
+  test("findFile: Accept Microsoft Word (DOC)") {
+    val docPath = "/tmp/test-word.doc"
+    Files.write(Paths.get(docPath), "Word content".getBytes(StandardCharsets.UTF_8))
+
+    val result = s"curl http://localhost:${server.port}/file/validate-format-only -F resourceFile=@$docPath;type=application/msword".!!.trim
+    assertNoDiff(result, "File accepted: test-word.doc (application/msword)")
+  }
+
+  test("findFile: Accept Microsoft PowerPoint (PPT)") {
+    val pptPath = "/tmp/test-ppt.ppt"
+    Files.write(Paths.get(pptPath), "PowerPoint content".getBytes(StandardCharsets.UTF_8))
+
+    val result = s"curl http://localhost:${server.port}/file/validate-format-only -F resourceFile=@$pptPath;type=application/vnd.ms-powerpoint".!!.trim
+    assertNoDiff(result, "File accepted: test-ppt.ppt (application/vnd.ms-powerpoint)")
   }
 
   // ============ Test: Reject ZIP files (archive attack) ============
