@@ -60,7 +60,10 @@ class CompactTokenUtilSuite extends FunSuite {
       verified <- TokenUtil.verifyCompactToken(token, otherKey, AESUtil.AES_GCM_NOPADDING)
     } yield verified
 
-    assert(res.isFailure)
+    res match {
+      case Failure(ex) => assertNoDiff(ex.getMessage, "Invalid token (authentication failed)")
+      case _ => fail("expected failure")
+    }
   }
 
   test("verify fails for tampered token") {
@@ -74,10 +77,10 @@ class CompactTokenUtilSuite extends FunSuite {
       verified <- TokenUtil.verifyCompactToken(tampered, passwordKey, AESUtil.AES_GCM_NOPADDING)
     } yield verified
 
-    res.fold(
-      ex => assert(true),
-      vt => fail(s"expected failure but got verified token: $vt")
-    )
+    res match {
+      case Failure(ex) => assertNoDiff(ex.getMessage, "Invalid token (authentication failed)")
+      case _ => fail("expected failure")
+    }
 
   }
 
@@ -135,6 +138,23 @@ class CompactTokenUtilSuite extends FunSuite {
     } yield verified
 
     assert(res.isFailure)
+  }
+
+  test("null notBefore treats compact token as valid immediately") {
+    val value = "null-nbf-compact"
+    val duration = 1.hour
+
+    val res = for {
+      token <- TokenUtil.generateCompactToken(value, duration, null, passwordKey, AESUtil.AES_GCM_NOPADDING)
+      verified <- TokenUtil.verifyCompactToken(token, passwordKey, AESUtil.AES_GCM_NOPADDING)
+    } yield verified
+
+    res match {
+      case Success(vt) =>
+        assertEquals(vt.value, value)
+        assertEquals(vt.isExpired, false)
+      case Failure(ex) => fail(s"expected success but failed: $ex")
+    }
   }
 
 }

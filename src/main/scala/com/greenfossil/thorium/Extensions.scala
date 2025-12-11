@@ -58,12 +58,12 @@ end extension
 val mimeTypeDetector = new MimeTypeDetector()
 
 extension(mpFile: MultipartFile)
-  def sizeInGB: Long = mpFile.file().length() / 1024 / 1024 / 1024
-  def sizeInMB: Long = mpFile.file().length() / 1024 / 1024
-  def sizeInKB: Long = mpFile.file().length() / 1024
-  def sizeInBytes: Long = mpFile.file().length()
+  def sizeInGB: Long = if mpFile == null then Long.MaxValue else mpFile.file().length() / 1024 / 1024 / 1024
+  def sizeInMB: Long = if mpFile == null then Long.MaxValue else mpFile.file().length() / 1024 / 1024
+  def sizeInKB: Long = if mpFile == null then Long.MaxValue else mpFile.file().length() / 1024
+  def sizeInBytes: Long = if mpFile == null then Long.MaxValue else mpFile.file().length()
 
-  def contentType: MediaType = MediaType.parse(mimeTypeDetector.detectMimeType(mpFile.path()))
+  def realContentType: MediaType = MediaType.parse(mimeTypeDetector.detectMimeType(mpFile.path()))
 
   def inputStream: InputStream = mpFile.path().toUri.toURL.openStream()
 end extension

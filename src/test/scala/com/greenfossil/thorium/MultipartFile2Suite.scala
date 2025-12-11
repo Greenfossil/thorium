@@ -131,7 +131,7 @@ object FileValidationServices {
     request.findFile(isAllowedFormat)
       .fold(
         th => BadRequest(s"Invalid file format - ${th.getMessage}"),
-        file => Ok(s"File accepted: ${file.filename()} (${file.contentType})")
+        file => Ok(s"File accepted: ${file.filename()} (${file.realContentType})")
       )
   }
 
@@ -229,7 +229,8 @@ class MultipartFile2Suite extends FunSuite {
 
   private def createPdfFile(path: String): Unit = {
     // Minimal PDF file structure
-    val pdfContent = """%PDF-1.4
+    val pdfContent =
+      """%PDF-1.4
 1 0 obj
 << /Type /Catalog /Pages 2 0 R >>
 endobj
@@ -389,7 +390,7 @@ startxref
     createExeFile(exePath)
 
     val result = s"curl http://localhost:${server.port}/file/validate-magic-number -F resourceFile=@$exePath".!!.trim
-    assertNoDiff(result,"Invalid file content detected - File test-malware.exe with content type application/octet-stream is not allowed")
+    assertNoDiff(result, "Invalid file content detected - File test-malware.exe with content type application/octet-stream is not allowed")
   }
 
   // ============ Test: findFile validates file size ============
@@ -404,8 +405,9 @@ startxref
 
     val result = s"curl http://localhost:${server.port}/file/validate-format-and-size -F resourceFile=@$largePath".!!.trim
     println(s"result = ${result}")
-    assertNoDiff(result, """Status: 413
-                           |Description: Request Entity Too Large""".stripMargin)
+    assertNoDiff(result,
+      """Status: 413
+        |Description: Request Entity Too Large""".stripMargin)
   }
 
   // ============ Test: findFile accepts file within size limit ============
@@ -515,5 +517,17 @@ startxref
     assertNoDiff(result, "File accepted: test-content.pdf")
   }
 
-}
+  // ============ Test: findFile rejects when declared MIME type differs from actual content ============
+  test("findFile: Reject when declared MIME type differs from actual content".fail) {
+    val pdfPath = "/tmp/test-mismatch.pdf"
+    createPdfFile(pdfPath)
 
+    // upload while declaring the content type as image/jpeg (mismatch)
+    val result = s"curl http://localhost:${server.port}/file/validate-format-only -F resourceFile=@$pdfPath;type=image/jpeg".!!.trim
+
+    // server wraps the underlying IllegalArgumentException message with the endpoint's prefix
+    val expected = "Invalid file format - File test-mismatch.pdf has content type image/jpeg but actual content type is application/pdf"
+    assertNoDiff(result, expected)
+  }
+
+}

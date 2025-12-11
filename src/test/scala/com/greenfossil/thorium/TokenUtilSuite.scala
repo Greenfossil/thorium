@@ -58,7 +58,10 @@ class TokenUtilSuite extends FunSuite {
       verified <- TokenUtil.verifyToken(token, otherKey, AESUtil.AES_GCM_NOPADDING)
     } yield verified
 
-    assert(res.isFailure)
+    res match {
+      case Failure(ex) => assertNoDiff(ex.getMessage, "Invalid token (authentication failed)")
+      case _ => fail("expected failure")
+    }
   }
 
   test("verify fails for tampered token") {
@@ -72,7 +75,10 @@ class TokenUtilSuite extends FunSuite {
       verified <- TokenUtil.verifyToken(tampered, passwordKey, AESUtil.AES_GCM_NOPADDING)
     } yield verified
 
-    assert(res.isFailure)
+    res match {
+      case Failure(ex) => assertNoDiff(ex.getMessage, "Invalid token (authentication failed)")
+      case _ => fail("expected failure")
+    }
   }
 
   test("token not yet valid (nbf) returns failure with nbf message") {
@@ -129,6 +135,23 @@ class TokenUtilSuite extends FunSuite {
     } yield verified
 
     assert(res.isFailure)
+  }
+
+  test("null notBefore treats token as valid immediately") {
+    val value = "null-nbf"
+    val duration = 1.hour
+
+    val res = for {
+      token <- TokenUtil.generateToken(value, duration, null, passwordKey, AESUtil.AES_GCM_NOPADDING)
+      verified <- TokenUtil.verifyToken(token, passwordKey, AESUtil.AES_GCM_NOPADDING)
+    } yield verified
+
+    res match {
+      case Success(vt) =>
+        assertEquals(vt.value, value)
+        assertEquals(vt.isExpired, false)
+      case Failure(ex) => fail(s"expected success but failed: $ex")
+    }
   }
 
 }

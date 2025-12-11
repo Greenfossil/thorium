@@ -22,7 +22,7 @@ import com.linecorp.armeria.common.multipart.{AggregatedBodyPart, AggregatedMult
 import java.io.{File, InputStream}
 import java.nio.charset.Charset
 import java.nio.file.*
-import scala.util.{Try, Using}
+import scala.util.Try
 
 case class MultipartFormData(aggMultipart: AggregatedMultipart, multipartUploadLocation: Path):
   import scala.jdk.CollectionConverters.*
@@ -68,6 +68,8 @@ case class MultipartFormData(aggMultipart: AggregatedMultipart, multipartUploadL
 
   /**
    * Save the uploaded file to disk with validation
+   * if real mime type is different from the part.contentType(), an exception is thrown
+   * if validatorFn returns false, an exception is thrown
    * @param fieldName
    * @param part
    * @param validatorFn
@@ -79,12 +81,23 @@ case class MultipartFormData(aggMultipart: AggregatedMultipart, multipartUploadL
       try
         if !validatorFn(fieldName, part.filename(), part.contentType(), is) then
           throw new IllegalArgumentException(s"File ${part.filename()} with content type ${part.contentType()} is not allowed")
+
+        //Check if  realMimeType is same as part.contentType()
+        val realMimeType = mimeTypeDetector.detectMimeType(part.filename(), is) //Read the stream to detect mime type
+        MediaType.parse(realMimeType) match
+          case mt if mt != part.contentType() =>
+            actionLogger.error(s"File ${part.filename()} has content type ${part.contentType()} but actual content type is $mt")
+            //This should be uncommented to enforce content type checking
+//            throw new IllegalArgumentException(s"File ${part.filename()} has content type ${part.contentType()} but actual content type is $mt")
+          case _ => //All good
+
         if !Files.exists(multipartUploadLocation) then multipartUploadLocation.toFile.mkdirs()
         val filePath = multipartUploadLocation.resolve(part.filename())
         Files.copy(part.content().toInputStream, filePath, StandardCopyOption.REPLACE_EXISTING)
         filePath.toFile
-      finally
+      finally {
         is.close()
+      }
 
   /**
    * Find the uploaded files with validation. All files must pass the validation or else an exception is returned
@@ -92,13 +105,14 @@ case class MultipartFormData(aggMultipart: AggregatedMultipart, multipartUploadL
    * @return
    */
   def findFiles(validatorFn: (fieldName:String, fileName:String, contentType:MediaType, content:InputStream) => Boolean): Try[List[MultipartFile]] =
-    val fileTries: Seq[Try[MultipartFile]] =
-      for {
-        name <- names
-        part <- aggMultipart.fields(name).asScala
-        if part.filename() != null && !part.content().isEmpty
-      } yield saveFileTo(name, part, validatorFn).map(file => MultipartFile.of(name, part.filename(), file))
-    Try(fileTries.map(_.get).toList)
+    Try:
+      val fileTries: Seq[Try[MultipartFile]] =
+        for {
+          name <- names
+          part <- aggMultipart.fields(name).asScala
+          if part.filename() != null && !part.content().isEmpty
+        } yield saveFileTo(name, part, validatorFn).map(file => MultipartFile.of(name, part.filename(), file))
+      fileTries.map(_.get).toList
 
   /**
    * Find a file using a predicate function

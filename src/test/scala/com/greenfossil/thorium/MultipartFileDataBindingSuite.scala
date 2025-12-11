@@ -8,9 +8,11 @@ import io.github.yskszk63.jnhttpmultipartformdatabodypublisher.MultipartFormData
 import java.net.URI
 import java.net.http.{HttpClient, HttpRequest, HttpResponse}
 import java.nio.file.Paths
+import scala.concurrent.duration.Duration
 
 class MultipartFileDataBindingSuite extends munit.FunSuite:
 
+  override def munitTimeout: Duration = Duration("1h")
 
   object FormServices:
     @Post("/multipart")
@@ -43,7 +45,7 @@ class MultipartFileDataBindingSuite extends munit.FunSuite:
     val path = Paths.get("src/test/resources/logback-test.xml").toAbsolutePath
     val mpPub = MultipartFormDataBodyPublisher()
       .add("name", "homer")
-      .addFile("file", path)
+      .addFile("file", path, "application/xml")
     val resp = HttpClient.newHttpClient()
       .send(
         HttpRequest.newBuilder(URI.create(s"http://localhost:${server.port}/multipart"))

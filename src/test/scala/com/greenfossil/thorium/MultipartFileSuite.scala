@@ -27,8 +27,8 @@ class MultipartFileSuite extends munit.FunSuite {
     val r = this.getClass.getResource("/favicon.png")
     assert(r != null, "Resource not found")
     val mpFile = MultipartFile.of("file", "file",new  File(r.getFile))
-    assert(mpFile.contentType.is(MediaType.ANY_IMAGE_TYPE))
-    assert(mpFile.contentType.is(MediaType.PNG))
+    assert(mpFile.realContentType.is(MediaType.ANY_IMAGE_TYPE))
+    assert(mpFile.realContentType.is(MediaType.PNG))
     assertEquals(mpFile.sizeInBytes, 3711L)
     assertEquals(mpFile.sizeInKB, 3L)
     assertEquals(mpFile.sizeInMB, 0L)
@@ -39,8 +39,8 @@ class MultipartFileSuite extends munit.FunSuite {
     val r = this.getClass.getResource("/image-no-ext")
     assert(r != null, "Resource not found")
     val mpFile = MultipartFile.of("file", "file", new File(r.getFile))
-    assert(mpFile.contentType.is(MediaType.ANY_IMAGE_TYPE))
-    assert(mpFile.contentType.is(MediaType.PNG))
+    assert(mpFile.realContentType.is(MediaType.ANY_IMAGE_TYPE))
+    assert(mpFile.realContentType.is(MediaType.PNG))
     assertEquals(mpFile.sizeInBytes, 3711L)
   }
 
@@ -48,14 +48,14 @@ class MultipartFileSuite extends munit.FunSuite {
     val r = this.getClass.getResource("/logback-test.xml")
     assert(r != null, "Resource not found")
     val mpFile = MultipartFile.of("file", "file", new File(r.getFile))
-    assert(mpFile.contentType.is(MediaType.parse("application/xml")))
+    assert(mpFile.realContentType.is(MediaType.parse("application/xml")))
   }
 
   test("MultipartFile extensions for conf") {
     val r = this.getClass.getResource("/logback-test.xml")
     assert(r != null, "Resource not found")
     val mpFile = MultipartFile.of("file", "file", new File(r.getFile))
-    assert(mpFile.contentType.is(MediaType.parse("application/xml")))
+    assert(mpFile.realContentType.is(MediaType.parse("application/xml")))
   }
 
   test("Multipart inputStream") {

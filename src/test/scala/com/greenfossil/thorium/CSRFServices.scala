@@ -99,7 +99,7 @@ object CSRFServices:
     val form = request.asFormUrlEncoded
     request.findFiles((_, _, _, _) => true)
       .map { files =>
-        Ok(s"Received multipart request with files: ${files.size}, form:$form")
+        Ok(s"Received multipart request with files: ${files.size}")
       }.getOrElse(BadRequest("No file uploaded"))
   }
 

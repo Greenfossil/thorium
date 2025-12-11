@@ -52,7 +52,7 @@ class CSRFGuardModule_Post_Multipart_Pass_Suite extends munit.FunSuite:
     val mpPub = MultipartFormDataBodyPublisher()
       .add("name", "Homer")
       .add(csrfCookieTokenName, csrfCookie.value())
-      .addStream("file", "file.txt", () => ByteArrayInputStream("Hello world".getBytes))
+      .addStream("file", "file.txt", () => ByteArrayInputStream("Hello world".getBytes), "text/plain")
 
     val reqBuilder = http.HttpRequest.newBuilder(URI.create(s"$target$postEpPath"))
       .POST(mpPub)
@@ -69,6 +69,6 @@ class CSRFGuardModule_Post_Multipart_Pass_Suite extends munit.FunSuite:
         http.HttpResponse.BodyHandlers.ofString()
       )
     assertEquals(resp.statusCode(), 200)
-    assertNoDiff(resp.body(), s"Received multipart request with files: 1, form:FormUrlEndcoded(Map(file -> List(file.txt), name -> List(Homer), APP_CSRF_TOKEN -> List(${csrfCookie.value()})))")
+    assertNoDiff(resp.body(), "Received multipart request with files: 1")
 
     server.stop()

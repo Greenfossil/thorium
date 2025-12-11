@@ -26,7 +26,17 @@ object TokenUtil:
     s.replace("\\\"", "\"").replace("\\\\", "\\")
 
   /**
-   *
+   * Token is valid immediately
+   * @param value
+   * @param duration
+   * @param key
+   * @return
+   */
+  def generateToken(value: String, duration: Duration, key: String): Try[String] =
+    generateToken(value, duration, null, key)
+
+  /**
+   * Token is valid from notBefore
    * @param value
    * @param duration
    * @param notBefore
@@ -42,7 +52,7 @@ object TokenUtil:
    *
    * @param value - opaque value to include
    * @param duration - token lifetime
-   * @param notBefore - when token becomes valid
+   * @param notBefore - when token becomes valid if null, valid immediately
    * @return Try of URL-safe base64 token string
    */
   def generateToken(value: String, duration: Duration, notBefore: Instant, key: String, algo: String, aad: String = ""): Try[String] =
@@ -52,9 +62,12 @@ object TokenUtil:
       val jti = UUID.randomUUID().toString
       val exp = issued.plusMillis(duration.toMillis)
 
+      // If notBefore is null treat token as valid immediately (issued)
+      val effectiveNbf = if (notBefore == null) issued else notBefore
+
       // compact JSON; avoid depending on external JSON libs to keep changes minimal
       val payload =
-        s"""{"ver":1,"jti":"${escape(jti)}","v":"${encoder.encodeToString(value.getBytes())}","iat":${issued.toEpochMilli},"nbf":${notBefore.toEpochMilli},"exp":${exp.toEpochMilli}}"""
+        s"""{"ver":1,"jti":"${escape(jti)}","v":"${encoder.encodeToString(value.getBytes())}","iat":${issued.toEpochMilli},"nbf":${effectiveNbf.toEpochMilli},"exp":${exp.toEpochMilli}}"""
 
       // use AES-GCM for authenticated encryption
       AESUtil.encryptWithEmbeddedIV(payload, key, algo, aad, encoder)
@@ -75,7 +88,11 @@ object TokenUtil:
     Try {
       val decoder = Base64.getUrlDecoder
 
-      val json = AESUtil.decryptWithEmbeddedIV(token, key, algo, aad, decoder)
+      val json = try
+        AESUtil.decryptWithEmbeddedIV(token, key, algo, aad, decoder)
+      catch
+        case ise: IllegalStateException => throw ise
+        case _: Throwable => throw new IllegalArgumentException("Invalid token (authentication failed)")
 
       // extract fields individually to be robust against ordering
       def findStrField(name: String): Option[String] =
@@ -118,14 +135,34 @@ object TokenUtil:
 
   private def epochSec(i: Instant): Int = Math.toIntExact(i.getEpochSecond)
 
+  /**
+   * Token is valid immediately
+   * @param value
+   * @param duration
+   * @param key
+   * @return
+   */
+  def generateCompactToken(value: String, duration: Duration, key: String): Try[String] =
+    generateCompactToken(value, duration, null, key)
+
   def generateCompactToken(value: String, duration: Duration, notBefore: Instant, key: String): Try[String] =
     generateCompactToken(value, duration, notBefore, key, AESUtil.AES_GCM_NOPADDING)
 
-  /** Generate compact binary token then AEAD-encrypt and base64url encode without padding. */
+  /**
+   * Token is valid from notBefore
+   * Generate compact binary token then AEAD-encrypt and base64url encode without padding.
+   * @param value - opaque value to include
+   * @param duration - token lifetime
+   * @param notBefore - when token becomes valid if null, valid immediately
+   * @return Try of URL-safe base64 token string
+   */
   def generateCompactToken(value: String, duration: Duration, notBefore: Instant, key: String, algo: String): Try[String] =
     Try {
       val issued = Instant.now()
       val exp = issued.plusMillis(duration.toMillis)
+
+      // If notBefore is null treat token as valid immediately (issued)
+      val effectiveNbf = if (notBefore == null) issued else notBefore
 
       // build compact binary payload
       val baos = new ByteArrayOutputStream()
@@ -141,7 +178,7 @@ object TokenUtil:
 
       // times as 32-bit epoch seconds
       dos.writeInt(epochSec(issued))
-      dos.writeInt(epochSec(notBefore))
+      dos.writeInt(epochSec(effectiveNbf))
       dos.writeInt(epochSec(exp))
 
       // value bytes prefixed by 32-bit length
@@ -168,7 +205,11 @@ object TokenUtil:
   def verifyCompactToken(token: String, key: String, algo: String): Try[VerifiedToken] =
     Try {
       val decoder = Base64.getUrlDecoder
-      val jsonOrBytes = AESUtil.decryptWithEmbeddedIV(token, key, algo, decoder)
+      val jsonOrBytes = try
+        AESUtil.decryptWithEmbeddedIV(token, key, algo, decoder)
+      catch
+        case ise: IllegalStateException => throw ise
+        case _: Throwable => throw new IllegalArgumentException("Invalid token (authentication failed)")
       // AESUtil may return String for previous API; handle both String and binary bytes gracefully:
       val bytes: Array[Byte] = jsonOrBytes match {
         case s: String => s.getBytes("ISO-8859-1") // if AESUtil returned String of raw bytes
