@@ -16,14 +16,11 @@
 
 package com.greenfossil.thorium
 
-import com.linecorp.armeria.common.{HttpStatus, MediaType}
+import com.linecorp.armeria.common.MediaType
 import com.linecorp.armeria.server.annotation.Post
-import io.github.yskszk63.jnhttpmultipartformdatabodypublisher.MultipartFormDataBodyPublisher
 import munit.FunSuite
 
-import java.io.{File, InputStream}
-import java.net.URI
-import java.net.http.{HttpClient, HttpRequest, HttpResponse}
+import java.io.InputStream
 import java.nio.charset.StandardCharsets
 import java.nio.file.{Files, Paths}
 import scala.sys.process.*
@@ -59,7 +56,6 @@ object FileValidationServices {
   }
 
   // ============ Size validator: Max 5MB ============
-  //FIXME - can the content-length be determined without reading the entire stream?
   private def validateFileSize(fieldName: String, fileName: String, contentType: MediaType, content: InputStream): Boolean = {
     val maxSize = 5 * 1024 * 1024 // 5MB
     val buffer = new Array[Byte](8192)
@@ -188,6 +184,28 @@ object FileValidationServices {
     request.findFiles(validateFormatAndSize)
       .fold(
         th => BadRequest(s"Invalid files detected - ${th.getMessage}"),
+        files => Ok(s"All ${files.size} files passed validation")
+      )
+  }
+
+  @Post("/files/empty-content")
+  def emptyContent: Action = Action.multipart { implicit request =>
+    val files = request.findFiles((fieldname, fileName, contentType, content) => fieldname == "file1")
+    println(s"Empty Content - Found files: ${files}")
+    files.fold(
+        th => BadRequest(s"Invalid files detected - ${th.getMessage}"),
+        files => Ok(s"Files uploaded ${files.size}")
+      )
+  }
+
+  @Post("/files/blank-file-name")
+  def blankFileName: Action = Action.multipart { implicit request =>
+    val files = request.findFiles((fieldname, fileName, contentType, content) => fieldname == "file1")
+    println(s"Blank File Name - Found files: ${files}")
+    files.fold(
+        th =>
+          th.printStackTrace()
+          BadRequest(s"Invalid files detected - ${th.getMessage}"),
         files => Ok(s"All ${files.size} files passed validation")
       )
   }
@@ -556,6 +574,24 @@ startxref
     // server wraps the underlying IllegalArgumentException message with the endpoint's prefix
     val expected = "Invalid file format - File test-mismatch.pdf has content type image/jpeg but actual content type is application/pdf"
     assertNoDiff(result, expected)
+  }
+
+  // ============ Test: findFiles rejects zero-length file ============
+  test("findFiles: Reject zero-length file") {
+    val emptyPath = "/tmp/test-empty.pdf"
+    Files.write(Paths.get(emptyPath), Array.emptyByteArray)
+
+    val result = s"curl http://localhost:${server.port}/files/empty-content -F file1=@$emptyPath".!!.trim
+    assertNoDiff(result, "Files uploaded 0")
+  }
+
+  // ============ Test: findFiles rejects file with empty or whitespace filename ============
+  test("findFiles: Reject file with empty or whitespace filename") {
+    val pdfPath = "/tmp/test-blank-name.pdf"
+    createPdfFile(pdfPath)
+
+    val result = s"""curl http://localhost:${server.port}/files/blank-file-name -F "file1=@$pdfPath;filename= " """.!!.trim
+    assertNoDiff(result, "Invalid files detected - Empty or whitespace-only filename not allowed")
   }
 
 }

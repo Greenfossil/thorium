@@ -79,11 +79,27 @@ case class MultipartFormData(aggMultipart: AggregatedMultipart, multipartUploadL
     Try:
       val is = part.content().toInputStream
       try
-        if !validatorFn(fieldName, part.filename(), part.contentType(), is) then
-          throw new IllegalArgumentException(s"File ${part.filename()} with content type ${part.contentType()} is not allowed")
+        // Validate filename: reject null/blank/whitespace-only names and suspicious names
+        val trimmedFilename = Option(part.filename()).map(_.trim).getOrElse("")
+        if trimmedFilename.isBlank then
+          throw new IllegalArgumentException("Empty or whitespace-only filename not allowed")
+        // Prevent obvious path traversal or directory names
+        if trimmedFilename == "." || trimmedFilename == ".." || trimmedFilename.contains(java.io.File.separator) || trimmedFilename.contains("/") || trimmedFilename.contains("\\") then
+          throw new IllegalArgumentException(s"Invalid filename: $trimmedFilename")
+
+        // Ensure target resolves inside the configured upload directory and is not a directory
+        if !Files.exists(multipartUploadLocation) then multipartUploadLocation.toFile.mkdirs()
+        val target = multipartUploadLocation.resolve(trimmedFilename).normalize()
+        if !target.startsWith(multipartUploadLocation.normalize()) then
+          throw new IllegalArgumentException(s"Invalid filename resolves outside upload directory: $trimmedFilename")
+        if Files.exists(target) && Files.isDirectory(target) then
+          throw new IllegalArgumentException(s"Invalid filename resolves to directory: $trimmedFilename")
+
+        if !validatorFn(fieldName, trimmedFilename, part.contentType(), is) then
+          throw new IllegalArgumentException(s"File $trimmedFilename with content type ${part.contentType()} is not allowed")
 
         //Check if  realMimeType is same as part.contentType()
-        val realMimeType = mimeTypeDetector.detectMimeType(part.filename(), is) //Read the stream to detect mime type
+        val realMimeType = mimeTypeDetector.detectMimeType(trimmedFilename, is) //Read the stream to detect mime type
         MediaType.parse(realMimeType) match
           case mt if mt != part.contentType() =>
             actionLogger.error(s"File ${part.filename()} has content type ${part.contentType()} but actual content type is $mt")
@@ -91,8 +107,8 @@ case class MultipartFormData(aggMultipart: AggregatedMultipart, multipartUploadL
 //            throw new IllegalArgumentException(s"File ${part.filename()} has content type ${part.contentType()} but actual content type is $mt")
           case _ => //All good
 
-        if !Files.exists(multipartUploadLocation) then multipartUploadLocation.toFile.mkdirs()
-        val filePath = multipartUploadLocation.resolve(part.filename())
+        // multipartUploadLocation already ensured above
+        val filePath = multipartUploadLocation.resolve(trimmedFilename)
         Files.copy(part.content().toInputStream, filePath, StandardCopyOption.REPLACE_EXISTING)
         filePath.toFile
       finally {
