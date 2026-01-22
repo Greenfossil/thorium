@@ -10,7 +10,7 @@ lazy val thorium = project
   .settings(
     name := "thorium",
     organization := "com.greenfossil",
-    version := "0.10.9",
+    version := "0.10.10",
 
     scalaVersion := scala3Version,
 
