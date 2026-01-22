@@ -211,8 +211,8 @@ case class Result(header: ResponseHeader = ResponseHeader(Map.empty),
    */
   def discardingCookies[A <: String | Cookie](cookies: A*)(using request: Request): Result =
     val _cookies: Seq[Cookie] = cookies.map{
-        case name: String => CookieUtil.bakeCookie(name, "", Option(0L))
-        case c: Cookie => c
+        case name: String => CookieUtil.bakeDiscardCookie(name)
+        case c: Cookie => CookieUtil.bakeDiscardCookie(c.name())
     }
     withCookies(_cookies*)
 
