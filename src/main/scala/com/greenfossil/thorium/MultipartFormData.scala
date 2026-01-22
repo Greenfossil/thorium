@@ -95,17 +95,17 @@ case class MultipartFormData(aggMultipart: AggregatedMultipart, multipartUploadL
         if Files.exists(target) && Files.isDirectory(target) then
           throw new IllegalArgumentException(s"Invalid filename resolves to directory: $trimmedFilename")
 
-        if !validatorFn(fieldName, trimmedFilename, part.contentType(), is) then
-          throw new IllegalArgumentException(s"File $trimmedFilename with content type ${part.contentType()} is not allowed")
-
         //Check if  realMimeType is same as part.contentType()
         val realMimeType = mimeTypeDetector.detectMimeType(trimmedFilename, is) //Read the stream to detect mime type
         MediaType.parse(realMimeType) match
           case mt if mt != part.contentType() =>
             actionLogger.error(s"File ${part.filename()} has content type ${part.contentType()} but actual content type is $mt")
             //This should be uncommented to enforce content type checking
-//            throw new IllegalArgumentException(s"File ${part.filename()} has content type ${part.contentType()} but actual content type is $mt")
+            throw new IllegalArgumentException(s"File ${part.filename()} has content type ${part.contentType()} but actual content type is $mt")
           case _ => //All good
+
+        if !validatorFn(fieldName, trimmedFilename, part.contentType(), is) then
+          throw new IllegalArgumentException(s"File $trimmedFilename with content type ${part.contentType()} is not allowed")
 
         // multipartUploadLocation already ensured above
         val filePath = multipartUploadLocation.resolve(trimmedFilename)

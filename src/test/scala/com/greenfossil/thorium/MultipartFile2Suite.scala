@@ -411,7 +411,26 @@ startxref
     createExeFile(exePath)
 
     val result = s"curl http://localhost:${server.port}/file/validate-magic-number -F resourceFile=@$exePath".!!.trim
-    assertNoDiff(result, "Invalid file content detected - File test-malware.exe with content type application/octet-stream is not allowed")
+    assertNoDiff(result, " Invalid file content detected - File test-malware.exe has content type application/octet-stream but actual content type is application/x-ms-dos-executable")
+  }
+
+  // New tests: upload an .exe but declare MIME type as PDF/JPEG - should be rejected
+  test("findFile: Reject .exe declared as application/pdf") {
+    val exePath = "/tmp/test-declared-pdf.exe"
+    createExeFile(exePath)
+
+    val result = s"curl http://localhost:${server.port}/file/validate-magic-number -F resourceFile=@$exePath;type=application/pdf".!!.trim
+    // Expect the request to be rejected due to executable magic number
+    assert(result.contains("Invalid file content detected - File test-declared-pdf.exe"))
+  }
+
+  test("findFile: Reject .exe declared as image/jpeg") {
+    val exePath = "/tmp/test-declared-jpeg.exe"
+    createExeFile(exePath)
+
+    val result = s"curl http://localhost:${server.port}/file/validate-magic-number -F resourceFile=@$exePath;type=image/jpeg".!!.trim
+    // Expect the request to be rejected due to executable magic number
+    assert(result.contains("Invalid file content detected - File test-declared-jpeg.exe"))
   }
 
   // ============ Test: findFile validates file size ============
@@ -446,7 +465,7 @@ startxref
     Files.write(Paths.get(txtPath), "Just text pretending to be an exe".getBytes(StandardCharsets.UTF_8))
 
     val result = s"curl http://localhost:${server.port}/file/validate-filename -F resourceFile=@$txtPath".!!.trim
-    assertNoDiff(result, "Invalid file name - File test-masked.exe with content type application/octet-stream is not allowed")
+    assertNoDiff(result, "Invalid file name - File test-masked.exe has content type application/octet-stream but actual content type is application/x-ms-dos-executable")
   }
 
   // ============ Test: findFile works with different field names ============
@@ -541,7 +560,7 @@ startxref
     Files.write(Paths.get(zipPath), zipBytes)
 
     val result = s"curl http://localhost:${server.port}/file/validate-magic-number -F resourceFile=@$zipPath".!!.trim
-    assertNoDiff(result, "Invalid file content detected - File test-archive.zip with content type application/octet-stream is not allowed")
+    assertNoDiff(result, "Invalid file content detected - File test-archive.zip has content type application/octet-stream but actual content type is application/zip")
   }
 
   // ============ Test: Error handling with Try ============
@@ -564,16 +583,14 @@ startxref
   }
 
   // ============ Test: findFile rejects when declared MIME type differs from actual content ============
-  test("findFile: Reject when declared MIME type differs from actual content".fail) {
+  test("findFile: Reject when declared MIME type differs from actual content") {
     val pdfPath = "/tmp/test-mismatch.pdf"
     createPdfFile(pdfPath)
 
     // upload while declaring the content type as image/jpeg (mismatch)
     val result = s"curl http://localhost:${server.port}/file/validate-format-only -F resourceFile=@$pdfPath;type=image/jpeg".!!.trim
-
     // server wraps the underlying IllegalArgumentException message with the endpoint's prefix
-    val expected = "Invalid file format - File test-mismatch.pdf has content type image/jpeg but actual content type is application/pdf"
-    assertNoDiff(result, expected)
+    assertNoDiff(result, "Invalid file format - File test-mismatch.pdf has content type image/jpeg but actual content type is application/pdf")
   }
 
   // ============ Test: findFiles rejects zero-length file ============
