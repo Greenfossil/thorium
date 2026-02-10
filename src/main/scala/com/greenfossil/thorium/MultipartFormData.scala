@@ -116,9 +116,11 @@ case class MultipartFormData(aggMultipart: AggregatedMultipart, multipartUploadL
       }
 
   /**
-   * Find the uploaded files with validation. All files must pass the validation or else an exception is returned
-   * @param validatorFn
-   * @return
+   * Find the uploaded files with validation. All files must pass the validation or else an exception is returned.
+   * Note: The field contentType:MediaType is validated such that the uploaded content type and the actual content type will match.
+   * 
+   * @param validatorFn Validation for security. Do not use '(_, _, _, _) => true' as this will bypass the security check
+   * @return If validatorFn returns false, this will return a Failure
    */
   def findFiles(validatorFn: (fieldName:String, fileName:String, contentType:MediaType, content:InputStream) => Boolean): Try[List[MultipartFile]] =
     Try:
@@ -131,12 +133,14 @@ case class MultipartFormData(aggMultipart: AggregatedMultipart, multipartUploadL
       fileTries.map(_.get).toList
 
   /**
-   * Find a file using a predicate function
-   * @param predicate
-   * @return
+   * Find the uploaded file with validation. All files must pass the validation or else an exception is returned.
+   * Note: The field contentType:MediaType is validated such that the uploaded content type and the actual content type will match.
+   * 
+   * @param validatorFn Validation for security. Do not use '(_, _, _, _) => true' as this will bypass the security check
+   * @return If validatorFn returns false, this will return a Failure
    */
-  def findFile(predicate: (fieldName:String, fileName:String, contentType:MediaType, content:InputStream) => Boolean ): Try[MultipartFile] =
-    findFiles(predicate).map(_.head)
+  def findFile(validatorFn: (fieldName:String, fileName:String, contentType:MediaType, content:InputStream) => Boolean ): Try[MultipartFile] =
+    findFiles(validatorFn).map(_.head)
 
   /**
    * Find a file using the form name
