@@ -16,15 +16,26 @@
 
 package com.greenfossil.thorium
 
+import com.linecorp.armeria.common.MediaType
+
 import java.time.Duration
 
-object CSRFMainTestService:
+object PreAuthVerificationMainTestService:
+
+  private val bypassConfig = PreAuthVerificationBypassConfiguration(
+    enabled = true,
+    allowPaths = Seq("/auth/verify-token"),
+    allowMethods = Seq("POST"),
+    requiredContentTypes = Seq(MediaType.JSON.toString),
+    requiredHeaders = Seq("X-Verify-Channel")
+  )
 
   @main
-  def csrfMain(): Unit =
+  def preAuthVerificationMain(): Unit =
     val server = Server(8080)
+      .setPreAuthVerificationBypass(bypassConfig)
       .addServices(CSRFServices)
-      .addCSRFGuard()
+      .addCSRFGuard((_ /*origin*/, _ /*referer*/, _ /*ctx*/) => false)
       .serverBuilderSetup(_.requestTimeout(Duration.ofHours(1)))
       .start()
 
@@ -32,13 +43,11 @@ object CSRFMainTestService:
       println(s"c.route() = ${c.route()}")
     }
     println("Server started...")
-    println("Manual CSRF test examples:")
-    println("- Open in browser: http://localhost:8080/csrf/do-change-email")
-    println("- Open in browser: http://localhost:8080/csrf/do-delete")
+    println("Manual positive test example:")
     println(
-      "- Cross-origin form POST without CSRF token should fail: " +
-        "curl -i -X POST http://localhost:8080/csrf/email/change " +
-        "-H 'Content-Type: application/x-www-form-urlencoded' " +
-        "-H 'Origin: http://another-site' " +
-        "--data 'email=password'"
+      "curl -i -X POST http://localhost:8080/auth/verify-token " +
+        "-H 'Content-Type: application/json' " +
+        "-H 'X-Verify-Channel: internet-client' " +
+        "--data '{\"token\":\"abc\"}'"
     )
+

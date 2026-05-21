@@ -21,7 +21,6 @@ import org.slf4j.{Logger, LoggerFactory}
 
 import java.nio.charset.StandardCharsets
 import java.security.MessageDigest
-import java.time
 import java.time.Duration
 import java.util.Base64
 import scala.jdk.CollectionConverters.*
@@ -73,6 +72,7 @@ val APP_HTTP_CSRF__PATH = "app.http.csrf.path"
 val APP_HTTP_CSRF__SAME_SITE = "app.http.csrf.sameSite"
 val APP_HTTP_CSRF__JWT = "app.http.csrf.jwt"
 val APP_HTTP_CSRF__ALLOW_PATH_PREFIXES = "app.http.csrf.allowPathPrefixes"
+val APP_HTTP_CSRF__PREAUTH_VERIFICATION_BYPASS = "app.http.csrf.preAuthVerificationBypass"
 
 val APP_HTTP_RECAPTCHA__SECRETKEY = "app.http.recaptcha.secretKey"
 val APP_HTTP_RECAPTCHA__SITEKEY = "app.http.recaptcha.siteKey"
@@ -124,7 +124,14 @@ object HttpConfiguration:
         path = config.getString(APP_HTTP_CSRF__PATH),
         sameSite = config.getStringOpt(APP_HTTP_CSRF__SAME_SITE).map(_.asInstanceOf[SameSiteCookie]),
         jwt = JWTConfigurationParser(config, APP_HTTP_CSRF__JWT),
-        allowPathPrefixes = config.getStringList(APP_HTTP_CSRF__ALLOW_PATH_PREFIXES).asScala.toSeq
+        allowPathPrefixes = config.getStringList(APP_HTTP_CSRF__ALLOW_PATH_PREFIXES).asScala.toSeq,
+        preAuthVerificationBypass = PreAuthVerificationBypassConfiguration(
+          enabled = config.getBoolean(s"${APP_HTTP_CSRF__PREAUTH_VERIFICATION_BYPASS}.enabled"),
+          allowPaths = config.getStringList(s"${APP_HTTP_CSRF__PREAUTH_VERIFICATION_BYPASS}.allowPaths").asScala.toSeq,
+          allowMethods = config.getStringList(s"${APP_HTTP_CSRF__PREAUTH_VERIFICATION_BYPASS}.allowMethods").asScala.toSeq,
+          requiredContentTypes = config.getStringList(s"${APP_HTTP_CSRF__PREAUTH_VERIFICATION_BYPASS}.requiredContentTypes").asScala.toSeq,
+          requiredHeaders = config.getStringList(s"${APP_HTTP_CSRF__PREAUTH_VERIFICATION_BYPASS}.requiredHeaders").asScala.toSeq
+        )
       ),
       recaptchaConfig = RecaptchaConfiguration(
         secretKey = config.getString(APP_HTTP_RECAPTCHA__SECRETKEY),
@@ -162,7 +169,13 @@ case class HttpConfiguration(
    recaptchaConfig: RecaptchaConfiguration = RecaptchaConfiguration("change-me","change-me", "g-recaptcha-response", 3000),
    secretConfig: SecretConfiguration = SecretConfiguration(),
    environment: Environment
-)
+) {
+  def setCSRFConfig(csrfConfig: CSRFConfiguration): HttpConfiguration =
+    copy(csrfConfig = csrfConfig)
+
+  def setPreAuthVerificationBypass(preAuthVerificationBypass: PreAuthVerificationBypassConfiguration): HttpConfiguration =
+    copy(csrfConfig = csrfConfig.setPreAuthVerificationBypass(preAuthVerificationBypass))
+}
 
 trait CookieConfigurationLike:
   val secure: Boolean
@@ -255,6 +268,8 @@ case class FlashConfiguration(
  * @param path       The path for which this cookie is valid
  * @param sameSite   The cookie's SameSite attribute
  * @param jwt        The JWT specific information
+ * @param allowPathPrefixes Path prefixes that are allowed when same-origin checks succeed.
+ * @param preAuthVerificationBypass Narrow CSRF bypass rules for an already-implemented pre-auth verification endpoint.
  */
 case class CSRFConfiguration(
                               cookieName: String = "APP_CSRF_TOKEN",
@@ -266,8 +281,33 @@ case class CSRFConfiguration(
                               sameSite: Option[SameSiteCookie] = Some("Strict"),
                               hostOnly: Option[Boolean] = None,
                               jwt: JWTConfiguration = JWTConfiguration(),
-                              allowPathPrefixes: Seq[String] = Nil
-) extends CookieConfigurationLike
+                              allowPathPrefixes: Seq[String] = Nil,
+                              preAuthVerificationBypass: PreAuthVerificationBypassConfiguration = PreAuthVerificationBypassConfiguration()
+) extends CookieConfigurationLike {
+  def setPreAuthVerificationBypass(preAuthVerificationBypass: PreAuthVerificationBypassConfiguration): CSRFConfiguration =
+    copy(preAuthVerificationBypass = preAuthVerificationBypass)
+}
+
+/**
+ * Configuration for a narrowly scoped CSRF bypass that allows requests to reach an
+ * already-implemented pre-auth verification endpoint.
+ *
+ * @param enabled Whether the bypass is enabled.
+ * @param allowPaths Exact request paths eligible for bypass. An empty list means no request path is eligible,
+ *                   so the bypass remains effectively inert even when enabled.
+ * @param allowMethods Exact HTTP methods eligible for bypass.
+ * @param requiredContentTypes Optional request content types required for bypass. An empty list means no
+ *                             content-type restriction is applied.
+ * @param requiredHeaders Optional request headers required for bypass. An empty list means no header-presence
+ *                        restriction is applied.
+ */
+case class PreAuthVerificationBypassConfiguration(
+                                                   enabled: Boolean = false,
+                                                   allowPaths: Seq[String] = Nil,
+                                                   allowMethods: Seq[String] = Seq("POST"),
+                                                   requiredContentTypes: Seq[String] = Nil,
+                                                   requiredHeaders: Seq[String] = Nil
+                                                 )
 
 case class RecaptchaConfiguration(
                                  secretKey: String,

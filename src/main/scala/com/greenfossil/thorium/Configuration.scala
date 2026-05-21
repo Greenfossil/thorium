@@ -51,3 +51,12 @@ case class Configuration(config: Config, environment: Environment, httpConfigura
   def isTest: Boolean = environment.isTest
 
   def mode: Mode = environment.mode
+
+  def setHttpConfiguration(httpConfig: HttpConfiguration): Configuration =
+    copy(httpConfiguration = httpConfig)
+
+  def setCSRFConfig(csrfConfig: CSRFConfiguration): Configuration =
+    copy(httpConfiguration = httpConfiguration.setCSRFConfig(csrfConfig))
+
+  def setPreAuthVerificationBypass(preAuthVerificationBypass: PreAuthVerificationBypassConfiguration): Configuration =
+    copy(httpConfiguration = httpConfiguration.setPreAuthVerificationBypass(preAuthVerificationBypass))

@@ -19,7 +19,7 @@ package com.greenfossil.thorium.decorators
 
 import com.greenfossil.thorium
 import com.greenfossil.thorium.{CookieUtil, *}
-import com.linecorp.armeria.common.{Request as _, *}
+import com.linecorp.armeria.common.*
 import com.linecorp.armeria.server.{DecoratingHttpServiceFunction, HttpService, ServiceRequestContext}
 import org.slf4j.LoggerFactory
 

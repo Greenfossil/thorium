@@ -16,11 +16,11 @@
 
 package com.greenfossil.thorium
 
-import com.linecorp.armeria.server.annotation.{Get, Param, Post}
-import scala.sys.process.*
+import com.linecorp.armeria.server.annotation.Post
 
 import java.net.{URI, http}
 import scala.language.implicitConversions
+import scala.sys.process.*
 
 private object SensitiveDataService:
 

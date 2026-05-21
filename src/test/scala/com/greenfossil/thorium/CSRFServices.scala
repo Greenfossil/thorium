@@ -27,6 +27,11 @@ import java.util.concurrent.TimeUnit
  */
 object CSRFServices:
 
+  @Post("/auth/verify-token")
+  @RequestTimeout(value = 1, unit = TimeUnit.HOURS)
+  def verifyToken = Action : _ =>
+    "Verified"
+
   @Get("/csrf/do-change-email")
   @RequestTimeout(value = 1, unit = TimeUnit.HOURS)
   def startChange = Action { implicit request =>

@@ -24,7 +24,7 @@ import com.linecorp.armeria.common.{Request as _, *}
 import com.linecorp.armeria.server.{HttpService, ServiceRequestContext}
 import org.slf4j.LoggerFactory
 
-import java.util.Base64
+import java.util.{Base64, Locale}
 import java.util.concurrent.CompletableFuture
 import scala.util.Try
 
@@ -39,7 +39,7 @@ object CSRFGuardModule:
   //Methods that does not need a token, HEAD, OPTIONS, TRACE
   private val verificationRequiredMethods = List("POST", "PUT", "DELETE", "PATCH")
 
-  val defaultToVerifyMethodFn = (method: String) => verificationRequiredMethods.contains(method)
+  private val defaultToVerifyMethodFn: String => Boolean = (method: String) => verificationRequiredMethods.contains(method)
 
   /**
    * No white-listing for any origin
@@ -74,8 +74,8 @@ object CSRFGuardModule:
   /**
    *  Allow white-listing of servers by checking the Origin and
    *  Allow further constrainting of SameOrgin - this is invoked only after evaluated isSameOrigin is true
-   * @param allowWhiteListPredicate
-   * @param isSameOriginPredicate
+   * @param allowWhiteListPredicate Predicate that explicitly allows an origin.
+   * @param isSameOriginPredicate Additional predicate used after same-origin evaluation succeeds.
    * @return
    */
   def apply(allowWhiteListPredicate: (String, ServiceRequestContext) => Boolean, isSameOriginPredicate: (String, String, ServiceRequestContext) => Boolean): CSRFGuardModule =
@@ -106,10 +106,10 @@ object CSRFGuardModule:
 
   /**
    *
-   * @param key
-   * @param userId
-   * @param sessionId
-   * @return
+   * @param key Secret key used to sign the token.
+   * @param algorithm HMAC algorithm used for token signing.
+   * @param sessionId Session identifier incorporated into the token message.
+   * @return Signed CSRF token.
    */
   def generateCSRFToken(key: String, algorithm: String, sessionId: String): Try[String] =
     Try:
@@ -120,7 +120,7 @@ object CSRFGuardModule:
       token
 
   def verifyHmac(csrfToken: String, key: String, algorithm: String): Boolean =
-    (Try:
+    Try:
       if csrfToken == null then
         csrfLogger.trace(s"CSRF Token is null")
         false
@@ -131,7 +131,7 @@ object CSRFGuardModule:
         val hmacVerified = constantTimeEquals(tokenHMAC.getBytes("UTF-8"), expectedHMAC.getBytes("UTF-8"))
         if !hmacVerified then csrfLogger.warn(s"HMAC invalid, token: $csrfToken, expected:$expectedHMAC")
         hmacVerified
-      ).getOrElse(false)
+    .getOrElse(false)
 
 end CSRFGuardModule
 
@@ -141,11 +141,13 @@ end CSRFGuardModule
  * @param isSameOriginPredicate - (Request Header Origin, Request Header Referer, ServiceRequestContext) => Allow Same Origin
  *                              this field is to allow further verification for same origin
  *                              Note: this is invoked only after evaluated isSameOrigin is true
- * @param verifyModMethodPredicate
+ * @param verifyModMethodPredicate Predicate used to determine whether a request method requires CSRF verification.
  */
 class CSRFGuardModule(allowWhiteListPredicate: (String, ServiceRequestContext) => Boolean, isSameOriginPredicate: (String,  String, ServiceRequestContext) => Boolean, verifyModMethodPredicate: String => Boolean) extends ThreatGuardModule:
 
-  protected val logger = CSRFGuardModule.csrfLogger
+  protected val logger: org.slf4j.Logger = CSRFGuardModule.csrfLogger
+
+  private case class PreAuthVerificationBypassDecision(isAllowed: Boolean, reasonCode: String, reasonDetail: Option[String], featureEnabled: Boolean)
 
   import CSRFGuardModule.*
   override def isSafe(delegate: HttpService, ctx: ServiceRequestContext, req: HttpRequest): CompletableFuture[Boolean] =
@@ -157,43 +159,90 @@ class CSRFGuardModule(allowWhiteListPredicate: (String, ServiceRequestContext) =
     val verifiedSameOriginPredicate = isSameOriginPredicate(origin, referer, ctx)
     val isSameOrigin = verifiedSameOrigin &&  verifiedSameOriginPredicate
     val isAllowWhiteList = allowWhiteListPredicate(origin, ctx)
+    val preAuthVerificationBypassDecision = evaluatePreAuthVerificationBypass(ctx, req)
+    logPreAuthVerificationBypassDecision(preAuthVerificationBypassDecision, ctx, req)
     val isNonModMethods = !verifyModMethodPredicate(ctx.method.name) //Methods POST, PUT,PATCH and DELETE are mod methods
-    if  isAssetPath(ctx) || isNonModMethods || isAllowWhiteList || (allPathPrefixes(ctx)  && isSameOrigin) then
-      logger.trace(s"$Request granted - isSameOrigin:$isSameOrigin, isSameOriginPredicate:$verifiedSameOriginPredicate allowWhiteList:$isAllowWhiteList, method:${req.method}, uri:${req.uri}, Origin: $origin, referer:$referer")
+    if preAuthVerificationBypassDecision.isAllowed then
       CompletableFuture.completedFuture(true)
     else
-      val config = ctx.attr(RequestAttrs.Config)
-      logger.info(s"Verifying request - isSameOrigin:$isSameOrigin, isSameOriginPredicate:$verifiedSameOriginPredicate, allowWhiteList:$isAllowWhiteList Origin: $origin, referer:$referer, method:${req.method}, uri:${req.uri}, content-type:${req.contentType} ...")
-      headers.forEach((key, value) => logger.debug(s"Header:$key - value:$value"))
+      if  isAssetPath(ctx) || isNonModMethods || isAllowWhiteList || (allPathPrefixes(ctx)  && isSameOrigin) then
+        logger.trace(s"$Request granted - isSameOrigin:$isSameOrigin, isSameOriginPredicate:$verifiedSameOriginPredicate allowWhiteList:$isAllowWhiteList, method:${req.method}, uri:${req.uri}, Origin: $origin, referer:$referer")
+        CompletableFuture.completedFuture(true)
+      else
+        val config = ctx.attr(RequestAttrs.Config)
+        logger.info(s"Verifying request - isSameOrigin:$isSameOrigin, isSameOriginPredicate:$verifiedSameOriginPredicate, allowWhiteList:$isAllowWhiteList Origin: $origin, referer:$referer, method:${req.method}, uri:${req.uri}, content-type:${req.contentType} ...")
+        headers.forEach((key, value) => logger.debug(s"Header:$key - value:$value"))
 
-      val cookies = headers.cookies
-      logger.info(s"Cookies found:${cookies.size}")
-      cookies.forEach(cookie => logger.info(s"Cookie $cookie"))
+        val cookies = headers.cookies
+        logger.info(s"Cookies found:${cookies.size}")
+        cookies.forEach(cookie => logger.info(s"Cookie $cookie"))
 
-      //CrossOrigin validation
-      val csrfCookieName = config.httpConfiguration.csrfConfig.cookieName
-      extractTokenValue(ctx, csrfCookieName)
-        .thenApply: formCSRFToken =>
-          val cookieCSRFToken: String = cookies.stream
-            .filter(csrfCookieName == _.name)
-            .findFirst
-            .map(_.value).orElse(null)
-          val isTokenPairMatched = formCSRFToken != null && formCSRFToken == cookieCSRFToken
-          logger.info(s"CSRFTokenPair matched:$isTokenPairMatched,  FormCSRFToken:[$formCSRFToken], CookieCSRFToken:[$cookieCSRFToken]")
-          //HMAC is verified only when isTokenMatched is true
-          val appSecret = config.httpConfiguration.secretConfig.secret
-          val isHMACVerified = isTokenPairMatched && verifyHmac(cookieCSRFToken, appSecret, config.httpConfiguration.csrfConfig.jwt.signatureAlgorithm)
-          logger.info(s"isTokenMatched:$isTokenPairMatched, isHhmacVerified:$isHMACVerified")
-          //logs request header
-          val isSafe = isHMACVerified || isAllowWhiteList || isSameOrigin   //must also ensure csrf tokens exists and validated
-          val msg = s"Request isSafe:$isSafe, Origin: $origin, isSameOrigin:$isSameOrigin, allowWhistList:$isAllowWhiteList, method:${req.method}, uri:${req.uri} path:${req.path} content-type:${req.contentType}"
-          if isSafe then logger.debug(msg)
-          else
-            logger.warn(msg)
-            req.headers.forEach((key, value) => logger.warn(s"Header:$key value:$value"))
-          isSafe
+        //CrossOrigin validation
+        val csrfCookieName = config.httpConfiguration.csrfConfig.cookieName
+        extractTokenValue(ctx, csrfCookieName)
+          .thenApply: formCSRFToken =>
+            val cookieCSRFToken: String = cookies.stream
+              .filter(csrfCookieName == _.name)
+              .findFirst
+              .map(_.value).orElse(null)
+            val isTokenPairMatched = formCSRFToken != null && formCSRFToken == cookieCSRFToken
+            logger.info(s"CSRFTokenPair matched:$isTokenPairMatched,  FormCSRFToken:[$formCSRFToken], CookieCSRFToken:[$cookieCSRFToken]")
+            //HMAC is verified only when isTokenMatched is true
+            val appSecret = config.httpConfiguration.secretConfig.secret
+            val isHMACVerified = isTokenPairMatched && verifyHmac(cookieCSRFToken, appSecret, config.httpConfiguration.csrfConfig.jwt.signatureAlgorithm)
+            logger.info(s"isTokenMatched:$isTokenPairMatched, isHhmacVerified:$isHMACVerified")
+            //logs request header
+            val isSafe = isHMACVerified || isAllowWhiteList || isSameOrigin   //must also ensure csrf tokens exists and validated
+            val msg = s"Request isSafe:$isSafe, Origin: $origin, isSameOrigin:$isSameOrigin, allowWhistList:$isAllowWhiteList, method:${req.method}, uri:${req.uri} path:${req.path} content-type:${req.contentType}"
+            if isSafe then logger.debug(msg)
+            else
+              logger.warn(msg)
+              req.headers.forEach((key, value) => logger.warn(s"Header:$key value:$value"))
+            isSafe
 
   private def allPathPrefixes(ctx: ServiceRequestContext): Boolean =
     val requestPath = ctx.request.path
     val allowPathPrefixes = ctx.attr(RequestAttrs.Config).httpConfiguration.csrfConfig.allowPathPrefixes
     allowPathPrefixes.exists(prefix => requestPath.startsWith(prefix))
+
+  private def evaluatePreAuthVerificationBypass(ctx: ServiceRequestContext, req: HttpRequest): PreAuthVerificationBypassDecision =
+    val bypassConfig = ctx.attr(RequestAttrs.Config).httpConfiguration.csrfConfig.preAuthVerificationBypass
+    if !bypassConfig.enabled then PreAuthVerificationBypassDecision(false, "disabled", None, featureEnabled = false)
+    else
+      val requestPath = ctx.request.path
+      // Path matching is the primary route gate. If allowPaths is empty or the path is absent from the list,
+      // the bypass does not activate and the request falls back to the normal CSRF flow.
+      if !bypassConfig.allowPaths.contains(requestPath) then
+        PreAuthVerificationBypassDecision(false, "path-not-allowed", Some(requestPath), featureEnabled = true)
+      else
+        val method = ctx.method.name
+        if !bypassConfig.allowMethods.exists(_.equalsIgnoreCase(method)) then
+          PreAuthVerificationBypassDecision(false, "method-not-allowed", Some(method), featureEnabled = true)
+        else if !hasRequiredContentType(req, bypassConfig.requiredContentTypes) then
+          PreAuthVerificationBypassDecision(false, "content-type-not-allowed", Option(req.contentType).map(_.toString).orElse(Some("<missing>")), featureEnabled = true)
+        else
+          val missingHeaders = bypassConfig.requiredHeaders.filter(headerName => req.headers.get(headerName) == null)
+          if missingHeaders.nonEmpty then
+            PreAuthVerificationBypassDecision(false, "missing-required-headers", Some(missingHeaders.mkString(",")), featureEnabled = true)
+          else PreAuthVerificationBypassDecision(true, "matched", None, featureEnabled = true)
+
+  private def hasRequiredContentType(req: HttpRequest, requiredContentTypes: Seq[String]): Boolean =
+    if requiredContentTypes.isEmpty then true
+    else
+      // A missing Content-Type cannot satisfy a configured content-type constraint, so the bypass fails closed
+      // and evaluation returns to the normal CSRF checks.
+      Option(req.contentType)
+        .exists: mediaType =>
+          val requestContentType = mediaType.toString.toLowerCase(Locale.ROOT)
+          requiredContentTypes.exists: requiredContentType =>
+            val normalizedRequired = requiredContentType.toLowerCase(Locale.ROOT)
+            requestContentType == normalizedRequired || requestContentType.startsWith(s"$normalizedRequired;")
+
+  private def logPreAuthVerificationBypassDecision(decision: PreAuthVerificationBypassDecision, ctx: ServiceRequestContext, req: HttpRequest): Unit =
+    val detailFragment = decision.reasonDetail.fold("")(detail => s" reasonDetail=$detail")
+    val logMessage = s"event=csrf_preauth_verification_bypass decision=${if decision.isAllowed then "allow" else "skip"} reason=${decision.reasonCode}$detailFragment featureEnabled=${decision.featureEnabled} method=${ctx.method.name} path=${req.path} contentType=${Option(req.contentType).map(_.toString).getOrElse("<missing>")}"
+    if decision.isAllowed then logger.info(logMessage)
+    else if decision.featureEnabled then logger.debug(logMessage)
+    else logger.trace(logMessage)
+
+

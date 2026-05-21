@@ -1,10 +1,10 @@
 package com.greenfossil.thorium
 
 import java.io.{ByteArrayInputStream, ByteArrayOutputStream, DataInputStream, DataOutputStream}
-import java.time.{Instant, Duration as _}
+import java.time.Instant
 import java.util.{Base64, UUID}
-import scala.util.{Failure, Random, Success, Try}
 import scala.concurrent.duration.Duration
+import scala.util.{Failure, Random, Try}
 
 final case class VerifiedToken(
   value: String,

@@ -23,10 +23,9 @@ import com.linecorp.armeria.server.annotation.Get
 import java.net.http.{HttpClient, HttpRequest, HttpResponse}
 import java.net.{CookieManager, HttpCookie, URI}
 import java.util.Base64
-import scala.annotation.nowarn
 
 object HeadersServices:
-  @Get("/headers") @nowarn
+  @Get("/headers")
   def headers = Action { implicit request =>
     Ok("Headers sent")
       .withHeaders(

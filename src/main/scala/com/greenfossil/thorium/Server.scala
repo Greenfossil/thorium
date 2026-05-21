@@ -29,7 +29,6 @@ import io.netty.util.AttributeKey
 import org.slf4j.LoggerFactory
 
 import java.lang.reflect.ParameterizedType
-import java.net.InetSocketAddress
 import java.time.LocalDateTime
 import java.util.concurrent.CompletableFuture
 import scala.language.implicitConversions
@@ -150,6 +149,15 @@ case class Server(server: AServer,
 
   def addRoute(route: ServiceBindingBuilder => Unit): Server =
     copy(routeFnList = routeFnList :+ route)
+
+  def setConfiguration(newConfig: Configuration): Server =
+    copy(configuration = newConfig)
+
+  def setCSRFConfig(csrfConfig: CSRFConfiguration): Server =
+    setConfiguration(configuration.setCSRFConfig(csrfConfig))
+
+  def setPreAuthVerificationBypass(preAuthVerificationBypass: PreAuthVerificationBypassConfiguration): Server =
+    setConfiguration(configuration.setPreAuthVerificationBypass(preAuthVerificationBypass))
 
   /**
    * Add CSRFGuard

@@ -1,6 +1,5 @@
 package com.greenfossil.thorium
 
-import com.linecorp.armeria.common
 import com.linecorp.armeria.common.SessionProtocol
 
 import java.net.URI

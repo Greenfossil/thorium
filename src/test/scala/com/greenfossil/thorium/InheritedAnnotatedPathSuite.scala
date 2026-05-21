@@ -16,7 +16,6 @@
 
 package com.greenfossil.thorium
 
-import com.greenfossil.thorium.Sub2.foo
 import com.linecorp.armeria.server.annotation.Get
 
 trait Base:
