@@ -4,17 +4,14 @@ scalacOptions ++= Seq(
 //  "-Xprint:postInlining", "-Xmax-inlines:100000",
 )
 
-val scala3Version = "3.8.3"
-val armeriaVersion = "1.39.0"
 
 lazy val thorium = project
   .in(file("."))
   .settings(
     name := "thorium",
     organization := "com.greenfossil",
-    version := "0.11.0",
-
-    scalaVersion := scala3Version,
+    version := "0.11.1-RC1",
+    scalaVersion := "3.8.3",
 
     libraryDependencies ++= Seq(
       "com.greenfossil" %% "htmltags" % "1.4.0",
@@ -22,8 +19,8 @@ lazy val thorium = project
       "com.greenfossil" %% "commons-i18n" % "1.4.0",
       "com.greenfossil" %% "typesafe-config-ext" % "1.4.0",
       "io.projectreactor" % "reactor-core" % "3.8.5",
-      "com.linecorp.armeria" % "armeria" % armeriaVersion,
-      "com.linecorp.armeria" % "armeria-logback" % armeriaVersion,
+      "com.linecorp.armeria" % "armeria" % "1.36.0",
+      "com.linecorp.armeria" % "armeria-logback" % "1.36.0",
       "org.overviewproject" % "mime-types" % "2.0.0",
       "io.github.yskszk63" % "jnhttp-multipartformdata-bodypublisher" % "0.0.1",
       "org.slf4j" % "slf4j-api" % "2.0.18",
