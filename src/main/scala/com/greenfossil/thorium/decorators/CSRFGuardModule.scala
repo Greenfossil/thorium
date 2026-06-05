@@ -150,6 +150,7 @@ class CSRFGuardModule(allowWhiteListPredicate: (String, ServiceRequestContext) =
   private case class PreAuthVerificationBypassDecision(isAllowed: Boolean, reasonCode: String, reasonDetail: Option[String], featureEnabled: Boolean)
 
   import CSRFGuardModule.*
+
   override def isSafe(delegate: HttpService, ctx: ServiceRequestContext, req: HttpRequest): CompletableFuture[Boolean] =
     val headers = req.headers
     val origin = headers.get(HttpHeaderNames.ORIGIN)
@@ -159,13 +160,16 @@ class CSRFGuardModule(allowWhiteListPredicate: (String, ServiceRequestContext) =
     val verifiedSameOriginPredicate = isSameOriginPredicate(origin, referer, ctx)
     val isSameOrigin = verifiedSameOrigin &&  verifiedSameOriginPredicate
     val isAllowWhiteList = allowWhiteListPredicate(origin, ctx)
-    val preAuthVerificationBypassDecision = evaluatePreAuthVerificationBypass(ctx, req)
-    logPreAuthVerificationBypassDecision(preAuthVerificationBypassDecision, ctx, req)
     val isNonModMethods = !verifyModMethodPredicate(ctx.method.name) //Methods POST, PUT,PATCH and DELETE are mod methods
-    if preAuthVerificationBypassDecision.isAllowed then
+    // Non-modifying methods (GET, HEAD, OPTIONS, TRACE) are safe regardless of bypass — check them first
+    if isAssetPath(ctx) || isNonModMethods then
       CompletableFuture.completedFuture(true)
     else
-      if  isAssetPath(ctx) || isNonModMethods || isAllowWhiteList || (allPathPrefixes(ctx)  && isSameOrigin) then
+      val preAuthVerificationBypassDecision = evaluatePreAuthVerificationBypass(ctx, req)
+      logPreAuthVerificationBypassDecision(preAuthVerificationBypassDecision, ctx, req)
+      if preAuthVerificationBypassDecision.isAllowed then
+        CompletableFuture.completedFuture(true)
+      else if isAllowWhiteList || (allPathPrefixes(ctx)  && isSameOrigin) then
         logger.trace(s"$Request granted - isSameOrigin:$isSameOrigin, isSameOriginPredicate:$verifiedSameOriginPredicate allowWhiteList:$isAllowWhiteList, method:${req.method}, uri:${req.uri}, Origin: $origin, referer:$referer")
         CompletableFuture.completedFuture(true)
       else
@@ -205,15 +209,19 @@ class CSRFGuardModule(allowWhiteListPredicate: (String, ServiceRequestContext) =
     val allowPathPrefixes = ctx.attr(RequestAttrs.Config).httpConfiguration.csrfConfig.allowPathPrefixes
     allowPathPrefixes.exists(prefix => requestPath.startsWith(prefix))
 
+  private def normalizePath(path: String): String =
+    val normalized = if path.length > 1 && path.endsWith("/") then path.init else path
+    normalized
+
   private def evaluatePreAuthVerificationBypass(ctx: ServiceRequestContext, req: HttpRequest): PreAuthVerificationBypassDecision =
     val bypassConfig = ctx.attr(RequestAttrs.Config).httpConfiguration.csrfConfig.preAuthVerificationBypass
     if !bypassConfig.enabled then PreAuthVerificationBypassDecision(false, "disabled", None, featureEnabled = false)
     else
-      val requestPath = ctx.request.path
+      val requestPath = normalizePath(ctx.request.path)
       // Path matching is the primary route gate. If allowPaths is empty or the path is absent from the list,
       // the bypass does not activate and the request falls back to the normal CSRF flow.
-      if !bypassConfig.allowPaths.contains(requestPath) then
-        PreAuthVerificationBypassDecision(false, "path-not-allowed", Some(requestPath), featureEnabled = true)
+      if !bypassConfig.allowPaths.map(normalizePath).contains(requestPath) then
+        PreAuthVerificationBypassDecision(false, "path-not-allowed", Some(ctx.request.path), featureEnabled = true)
       else
         val method = ctx.method.name
         if !bypassConfig.allowMethods.exists(_.equalsIgnoreCase(method)) then
@@ -224,7 +232,15 @@ class CSRFGuardModule(allowWhiteListPredicate: (String, ServiceRequestContext) =
           val missingHeaders = bypassConfig.requiredHeaders.filter(headerName => req.headers.get(headerName) == null)
           if missingHeaders.nonEmpty then
             PreAuthVerificationBypassDecision(false, "missing-required-headers", Some(missingHeaders.mkString(",")), featureEnabled = true)
-          else PreAuthVerificationBypassDecision(true, "matched", None, featureEnabled = true)
+          else
+            val headerValueMismatch = bypassConfig.requiredHeaderValues.exists { case (name, expectedValue) =>
+              val actualValue = req.headers.get(name)
+              actualValue == null || !actualValue.equals(expectedValue)
+            }
+            if headerValueMismatch then
+              PreAuthVerificationBypassDecision(false, "header-values-mismatch",
+                Some(bypassConfig.requiredHeaderValues.keys.mkString(",")), featureEnabled = true)
+            else PreAuthVerificationBypassDecision(true, "matched", None, featureEnabled = true)
 
   private def hasRequiredContentType(req: HttpRequest, requiredContentTypes: Seq[String]): Boolean =
     if requiredContentTypes.isEmpty then true
@@ -238,9 +254,19 @@ class CSRFGuardModule(allowWhiteListPredicate: (String, ServiceRequestContext) =
             val normalizedRequired = requiredContentType.toLowerCase(Locale.ROOT)
             requestContentType == normalizedRequired || requestContentType.startsWith(s"$normalizedRequired;")
 
+  private def sanitizeLogValue(value: String): String =
+    if value == null then "<null>"
+    else value.replaceAll("[\r\n\t]", "_")
+
   private def logPreAuthVerificationBypassDecision(decision: PreAuthVerificationBypassDecision, ctx: ServiceRequestContext, req: HttpRequest): Unit =
-    val detailFragment = decision.reasonDetail.fold("")(detail => s" reasonDetail=$detail")
-    val logMessage = s"event=csrf_preauth_verification_bypass decision=${if decision.isAllowed then "allow" else "skip"} reason=${decision.reasonCode}$detailFragment featureEnabled=${decision.featureEnabled} method=${ctx.method.name} path=${req.path} contentType=${Option(req.contentType).map(_.toString).getOrElse("<missing>")}"
+    val detailFragment = decision.reasonDetail.fold("")(detail => s" reasonDetail=${sanitizeLogValue(detail)}")
+    val logMessage = s"event=csrf_preauth_verification_bypass " +
+      s"decision=${if decision.isAllowed then "allow" else "skip"} " +
+      s"reason=${decision.reasonCode}$detailFragment " +
+      s"featureEnabled=${decision.featureEnabled} " +
+      s"method=${sanitizeLogValue(ctx.method.name)} " +
+      s"path=${sanitizeLogValue(req.path)} " +
+      s"contentType=${sanitizeLogValue(Option(req.contentType).map(_.toString).getOrElse("<missing>"))}"
     if decision.isAllowed then logger.info(logMessage)
     else if decision.featureEnabled then logger.debug(logMessage)
     else logger.trace(logMessage)

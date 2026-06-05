@@ -73,6 +73,7 @@ val APP_HTTP_CSRF__SAME_SITE = "app.http.csrf.sameSite"
 val APP_HTTP_CSRF__JWT = "app.http.csrf.jwt"
 val APP_HTTP_CSRF__ALLOW_PATH_PREFIXES = "app.http.csrf.allowPathPrefixes"
 val APP_HTTP_CSRF__PREAUTH_VERIFICATION_BYPASS = "app.http.csrf.preAuthVerificationBypass"
+val APP_HTTP_CSRF__PREAUTH_VERIFICATION_BYPASS__HEADER_VALUES = "app.http.csrf.preAuthVerificationBypass.requiredHeaderValues"
 
 val APP_HTTP_RECAPTCHA__SECRETKEY = "app.http.recaptcha.secretKey"
 val APP_HTTP_RECAPTCHA__SITEKEY = "app.http.recaptcha.siteKey"
@@ -81,6 +82,32 @@ val APP_HTTP_RECAPTCHA__TIMEOUT = "app.http.recaptcha.timeout"
 
 object HttpConfiguration:
   def from(config: Config, environment: Environment): HttpConfiguration = 
+    val preAuthBypassConfig =
+      val enabled = config.getBoolean(s"${APP_HTTP_CSRF__PREAUTH_VERIFICATION_BYPASS}.enabled")
+      val allowPaths = config.getStringList(s"${APP_HTTP_CSRF__PREAUTH_VERIFICATION_BYPASS}.allowPaths").asScala.toSeq
+      val allowMethods = config.getStringList(s"${APP_HTTP_CSRF__PREAUTH_VERIFICATION_BYPASS}.allowMethods").asScala.toSeq
+      val requiredContentTypes = config.getStringList(s"${APP_HTTP_CSRF__PREAUTH_VERIFICATION_BYPASS}.requiredContentTypes").asScala.toSeq
+      val requiredHeaders = config.getStringList(s"${APP_HTTP_CSRF__PREAUTH_VERIFICATION_BYPASS}.requiredHeaders").asScala.toSeq
+      val requiredHeaderValues =
+        if config.hasPath(APP_HTTP_CSRF__PREAUTH_VERIFICATION_BYPASS__HEADER_VALUES) then
+          config.getObject(APP_HTTP_CSRF__PREAUTH_VERIFICATION_BYPASS__HEADER_VALUES).asScala.map {
+            case (key, value) => key -> value.unwrapped().toString
+          }.toMap
+        else Map.empty
+      if enabled && requiredContentTypes.isEmpty && requiredHeaders.isEmpty && requiredHeaderValues.isEmpty then
+        configurationLogger.warn(
+          "CSRF pre-auth verification bypass is enabled with no content-type, header-presence, or header-value constraints. " +
+          "The bypass endpoint is not protected by CSRF — ensure it has its own rate-limiting, abuse detection, and authentication."
+        )
+      PreAuthVerificationBypassConfiguration(
+        enabled = enabled,
+        allowPaths = allowPaths,
+        allowMethods = allowMethods,
+        requiredContentTypes = requiredContentTypes,
+        requiredHeaders = requiredHeaders,
+        requiredHeaderValues = requiredHeaderValues
+      )
+
     HttpConfiguration(
       context = config.getString(APP_HTTP__CONTEXT),
       httpPort = config.getInt(APP_HTTP__PORT),
@@ -125,13 +152,7 @@ object HttpConfiguration:
         sameSite = config.getStringOpt(APP_HTTP_CSRF__SAME_SITE).map(_.asInstanceOf[SameSiteCookie]),
         jwt = JWTConfigurationParser(config, APP_HTTP_CSRF__JWT),
         allowPathPrefixes = config.getStringList(APP_HTTP_CSRF__ALLOW_PATH_PREFIXES).asScala.toSeq,
-        preAuthVerificationBypass = PreAuthVerificationBypassConfiguration(
-          enabled = config.getBoolean(s"${APP_HTTP_CSRF__PREAUTH_VERIFICATION_BYPASS}.enabled"),
-          allowPaths = config.getStringList(s"${APP_HTTP_CSRF__PREAUTH_VERIFICATION_BYPASS}.allowPaths").asScala.toSeq,
-          allowMethods = config.getStringList(s"${APP_HTTP_CSRF__PREAUTH_VERIFICATION_BYPASS}.allowMethods").asScala.toSeq,
-          requiredContentTypes = config.getStringList(s"${APP_HTTP_CSRF__PREAUTH_VERIFICATION_BYPASS}.requiredContentTypes").asScala.toSeq,
-          requiredHeaders = config.getStringList(s"${APP_HTTP_CSRF__PREAUTH_VERIFICATION_BYPASS}.requiredHeaders").asScala.toSeq
-        )
+        preAuthVerificationBypass = preAuthBypassConfig
       ),
       recaptchaConfig = RecaptchaConfiguration(
         secretKey = config.getString(APP_HTTP_RECAPTCHA__SECRETKEY),
@@ -300,13 +321,18 @@ case class CSRFConfiguration(
  *                             content-type restriction is applied.
  * @param requiredHeaders Optional request headers required for bypass. An empty list means no header-presence
  *                        restriction is applied.
+ * @param requiredHeaderValues Optional header name-value pairs required for bypass. Each entry must match
+ *                             both the name and value of a request header. This is a stronger constraint
+ *                             than `requiredHeaders` (which checks presence only) and should be preferred
+ *                             when a trusted upstream (gateway, ingress) sets a known header value.
  */
 case class PreAuthVerificationBypassConfiguration(
                                                    enabled: Boolean = false,
                                                    allowPaths: Seq[String] = Nil,
                                                    allowMethods: Seq[String] = Seq("POST"),
                                                    requiredContentTypes: Seq[String] = Nil,
-                                                   requiredHeaders: Seq[String] = Nil
+                                                   requiredHeaders: Seq[String] = Nil,
+                                                   requiredHeaderValues: Map[String, String] = Map.empty
                                                  )
 
 case class RecaptchaConfiguration(

@@ -34,6 +34,9 @@ class CSRFGuardModule_PreAuthVerificationBypass_Suite extends munit.FunSuite:
           |  allowMethods = ["POST"]
           |  requiredContentTypes = ["application/json"]
           |  requiredHeaders = ["X-Verify-Channel"]
+          |  requiredHeaderValues = {
+          |    "X-Verify-Channel": "internet-client"
+          |  }
           |}
           |""".stripMargin
       )
@@ -47,6 +50,7 @@ class CSRFGuardModule_PreAuthVerificationBypass_Suite extends munit.FunSuite:
     assertEquals(bypass.allowMethods, Seq("POST"))
     assertEquals(bypass.requiredContentTypes, Seq("application/json"))
     assertEquals(bypass.requiredHeaders, Seq("X-Verify-Channel"))
+    assertEquals(bypass.requiredHeaderValues, Map("X-Verify-Channel" -> "internet-client"))
   }
 
   test("pre-auth verification bypass disabled blocks verify route") {
@@ -126,10 +130,87 @@ class CSRFGuardModule_PreAuthVerificationBypass_Suite extends munit.FunSuite:
     assertEquals(response.statusCode(), 401)
   }
 
+  test("pre-auth verification bypass with requiredHeaderValues value match succeeds") {
+    val response = doVerifyPost(
+      PreAuthVerificationBypassConfiguration(
+        enabled = true,
+        allowPaths = Seq("/auth/verify-token"),
+        allowMethods = Seq("POST"),
+        requiredContentTypes = Seq("application/json"),
+        requiredHeaders = Seq("X-Verify-Channel"),
+        requiredHeaderValues = Map("X-Verify-Channel" -> "internet-client")
+      ),
+      additionalHeaders = Seq("X-Verify-Channel" -> "internet-client")
+    )
+
+    assertEquals(response.statusCode(), 200)
+    assertNoDiff(response.body(), "Verified")
+  }
+
+  test("pre-auth verification bypass with requiredHeaderValues mismatch fails closed") {
+    val response = doVerifyPost(
+      PreAuthVerificationBypassConfiguration(
+        enabled = true,
+        allowPaths = Seq("/auth/verify-token"),
+        allowMethods = Seq("POST"),
+        requiredContentTypes = Seq("application/json"),
+        requiredHeaders = Seq("X-Verify-Channel"),
+        requiredHeaderValues = Map("X-Verify-Channel" -> "expected-value")
+      ),
+      additionalHeaders = Seq("X-Verify-Channel" -> "wrong-value")
+    )
+
+    assertEquals(response.statusCode(), 401)
+  }
+
+  test("pre-auth verification bypass trailing slash in config path normalization") {
+    val response = doVerifyPost(
+      PreAuthVerificationBypassConfiguration(
+        enabled = true,
+        allowPaths = Seq("/auth/verify-token/"), // config has trailing slash
+        allowMethods = Seq("POST"),
+        requiredContentTypes = Seq("application/json"),
+        requiredHeaders = Seq("X-Verify-Channel")
+      ),
+      additionalHeaders = Seq("X-Verify-Channel" -> "internet-client")
+    )
+
+    assertEquals(response.statusCode(), 200)
+    assertNoDiff(response.body(), "Verified")
+  }
+
+  test("pre-auth verification bypass case-sensitive path does not match different case") {
+    val response = doVerifyPost(
+      PreAuthVerificationBypassConfiguration(
+        enabled = true,
+        allowPaths = Seq("/auth/verify-token"),
+        allowMethods = Seq("POST"),
+        requiredContentTypes = Seq("application/json")
+      ),
+      requestPath = "/Auth/Verify-Token"
+    )
+
+    assertEquals(response.statusCode(), 401)
+  }
+
+  test("pre-auth verification bypass with minimal config (path + method only) succeeds") {
+    val response = doVerifyPost(
+      PreAuthVerificationBypassConfiguration(
+        enabled = true,
+        allowPaths = Seq("/auth/verify-token"),
+        allowMethods = Seq("POST")
+      )
+    )
+
+    assertEquals(response.statusCode(), 200)
+    assertNoDiff(response.body(), "Verified")
+  }
+
   private def doVerifyPost(
     bypassConfig: PreAuthVerificationBypassConfiguration,
     contentType: String = MediaType.JSON.toString,
-    additionalHeaders: Seq[(String, String)] = Nil
+    additionalHeaders: Seq[(String, String)] = Nil,
+    requestPath: String = "/auth/verify-token"
   )(using loc: munit.Location): http.HttpResponse[String] =
     val server = Server(0)
       .setPreAuthVerificationBypass(bypassConfig)
@@ -140,7 +221,7 @@ class CSRFGuardModule_PreAuthVerificationBypass_Suite extends munit.FunSuite:
     try
       val target = s"http://localhost:${server.port}"
       val requestBuilder = http.HttpRequest
-        .newBuilder(URI.create(s"$target/auth/verify-token"))
+        .newBuilder(URI.create(s"$target$requestPath"))
         .timeout(Duration.ofSeconds(30))
         .POST(http.HttpRequest.BodyPublishers.ofString("""{"token":"abc"}"""))
         .header("Content-Type", contentType)
