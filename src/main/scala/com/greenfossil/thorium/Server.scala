@@ -97,14 +97,14 @@ object Server:
                 val httpResp = HttpResponseConverter.convertActionResponseToHttpResponse(req, actionResp)
                 futureResp.complete(httpResp)
               })
-          HttpResponse.of(futureResp)
+            HttpResponse.of(futureResp)
 
         case _ =>
           ResponseConverterFunction.fallthrough()
 
 case class Server(server: AServer,
-                  httpServices: Seq[(String, HttpService)],
-                  annotatedServices: Seq[AnyRef] = Nil,
+                   httpServices: Seq[(String, HttpService)],
+                   annotatedServices: Seq[AnyRef] = Nil,
                   routeFnList: Seq[ServiceBindingBuilder => Unit] = Nil,
                   errorHandlerOpt: Option[ServerErrorHandler],
                   configuration: Configuration,

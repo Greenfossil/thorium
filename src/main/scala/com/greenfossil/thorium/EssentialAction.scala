@@ -31,13 +31,18 @@ type SimpleResponse = String | Array[Byte] | InputStream | HttpResponse
 type ActionResponse = SimpleResponse | Result
 
 /**
- * The async variant of [[ActionResponse]]. An action block may return either
- * a synchronous `ActionResponse` or a `Future[ActionResponse]`. The framework
- * detects which and handles it accordingly — sync responses are converted
- * directly; futures are wired to the Armeria response pipeline without blocking.
+ * The return type of an action block. An action may return either:
+ *   - a synchronous `ActionResponse` (String, Result, JsValue via Conversion, etc.)
+ *   - a `Future[ActionResponse]` for async operations
  *
- * Note: returning a `Future` from an action block requires an `ExecutionContext`.
- * Use [[Action.async]] which captures the given `ExecutionContext` at call site.
+ * The framework's `serve()` unifies both via `Future(apply(req)).flatMap`:
+ *   - Sync returns are wrapped in `Future.successful(ar)` — zero scheduling overhead.
+ *   - Async returns (Future) are chained directly — the blocking-pool thread is freed
+ *     immediately after construction, and completion fires on the Future's own thread.
+ *
+ * This means `Action.async { req => "hello" }` works (sync return in an async factory)
+ * and `Action { req => Future(Ok("hello")) }` also works (async return in a sync factory).
+ * `Action.async` is a semantic marker — the pipeline handles both identically.
  */
 type AsyncActionResponse = ActionResponse | Future[ActionResponse]
 
@@ -46,10 +51,10 @@ private[thorium] val actionLogger = LoggerFactory.getLogger("com.greenfossil.tho
 trait EssentialAction extends HttpService :
 
   /**
-   * An EssentialAction is an Request => ActionResponse
-   * All subclasses must implements this function signature
+   * An EssentialAction is a `Request => AsyncActionResponse`.
+   * All subclasses must implement this function signature.
    *
-   * This method will be invoked by EssentialAction.serve
+   * This method will be invoked by [[EssentialAction.serve]].
    *
    * @param request
    * @return
@@ -57,7 +62,18 @@ trait EssentialAction extends HttpService :
   protected def apply(request: Request): AsyncActionResponse
 
   /**
-   * Armeria invocation during an incoming request
+   * Armeria invocation during an incoming request.
+   *
+   * Unified pipeline:
+   *   1. Aggregate the request body (on the event loop).
+   *   2. `Future(apply(req))` — run the action body on the blocking-pool executor.
+   *      For sync actions, the blocking pool holds for the full duration (may block on JDBC/HTTP).
+   *      For async actions, the blocking pool holds only for Future construction (microseconds).
+   *   3. `.flatMap` — sync `ActionResponse` → `Future.successful(ar)` (already completed, no overhead);
+   *      `Future[ActionResponse]` → chain the inner Future directly (blocking pool thread freed).
+   *   4. `.onComplete` (with `ExecutionContext.parasitic`) — fires on whatever thread completes
+   *      the Future. Converts the `ActionResponse` to an `HttpResponse` and completes the
+   *      Armeria `CompletableFuture`. `futureResp.complete(...)` is thread-safe.
    *
    * @param svcRequestContext
    * @param httpRequest
@@ -70,40 +86,27 @@ trait EssentialAction extends HttpService :
       .request()
       .aggregate()
       .thenAccept { aggregateRequest =>
-        actionLogger.debug("Setting up blockingTaskExecutor()")
-        svcRequestContext.blockingTaskExecutor().execute(() => {
-          val ctxCl = Thread.currentThread().getContextClassLoader
-          if ctxCl == null then {
-            val cl = this.getClass.getClassLoader
-            actionLogger.debug(s"Async setContextClassloader:${cl}")
-            Thread.currentThread().setContextClassLoader(cl)
+        val req = new Request(svcRequestContext, aggregateRequest) {}
+        given ec: ExecutionContext = ExecutionContext.fromExecutorService(svcRequestContext.blockingTaskExecutor())
+
+        // Unified pipeline: both sync and async go through the same path.
+        // Future(apply(req)) runs apply(req) on the blocking pool.
+        // .flatMap: sync → Future.successful (already completed); async → chain inner Future.
+        // .onComplete (parasitic): convert + complete futureResp on the completing thread.
+        Future(apply(req))
+          .flatMap {
+            case f: Future[ActionResponse] @unchecked => f
+            case ar: ActionResponse => Future.successful(ar)
           }
-          try
-            val req = new Request(svcRequestContext, aggregateRequest) {}
-            actionLogger.debug(s"Invoke EssentialAction.apply. cl:$ctxCl, req:${req.hashCode()}")
-            val resp = apply(req)
-            actionLogger.debug("Response from EssentialAction.apply")
-            resp match
-              case future: Future[ActionResponse] @unchecked =>
-                // Async path: wire Future completion to the response CompletableFuture
-                // without blocking the blockingTaskExecutor thread.
-                future.onComplete {
-                  case Success(actionResp) =>
-                    val httpResp = HttpResponseConverter.convertActionResponseToHttpResponse(req, actionResp)
-                    futureResp.complete(httpResp)
-                  case Failure(ex) =>
-                    actionLogger.debug(s"Async action Future failed.", ex)
-                    futureResp.complete(HttpResponse.ofFailure(ex))
-                }(using ExecutionContext.parasitic)
-              case actionResp: ActionResponse =>
-                // Sync path: convert and complete immediately
-                val httpResp = HttpResponseConverter.convertActionResponseToHttpResponse(req, actionResp)
-                futureResp.complete(httpResp)
-          catch
-            case t =>
-              actionLogger.debug(s"Exception raised in EssentialAction.apply.", t)
-              futureResp.complete(HttpResponse.ofFailure(t))
-        })
+          .onComplete {
+            case Success(ar) =>
+              futureResp.complete(
+                HttpResponseConverter.convertActionResponseToHttpResponse(req, ar)
+              )
+            case Failure(ex) =>
+              actionLogger.debug(s"Action failed.", ex)
+              futureResp.complete(HttpResponse.ofFailure(ex))
+          }(using ExecutionContext.parasitic)
       }
     HttpResponse.of(futureResp)
 
@@ -114,20 +117,22 @@ trait Action extends EssentialAction
 object Action:
 
   /**
-   * AnyContent request
+   * Creates a synchronous action. The action body may return any `AsyncActionResponse`
+   * (including `Future[ActionResponse]` — the pipeline handles both).
    *
-   * @param actionResponder
-   * @return
+   * @param fn the action body
+   * @return an [[Action]]
    */
   def apply(fn: Request => AsyncActionResponse): Action =
     actionLogger.debug(s"Processing Action...")
     (request: Request) => fn(request)
 
   /**
-   * Multipart form request
+   * Multipart form request. The action body receives a [[MultipartRequest]]
+   * and may return any `AsyncActionResponse`.
    *
-   * @param actionResponder
-   * @return
+   * @param fn the action body
+   * @return an [[Action]]
    */
   def multipart(fn: MultipartRequest => AsyncActionResponse): Action =
     actionLogger.debug("Processing Multipart Action...")
@@ -166,19 +171,18 @@ object Action:
       fn(request)
 
   /**
-   * Creates an async action that returns a `Future[ActionResponse]`.
+   * Creates an async action. The action body may return:
+   *   - A `Future[ActionResponse]` for genuinely async work (DB calls, HTTP requests, etc.)
+   *   - A synchronous `ActionResponse` (String, Result, Option, Try, Either, JsValue, etc.)
+   *     — the framework wraps it in `Future.successful` internally.
    *
-   * The action body runs on the `blockingTaskExecutor` as usual, but instead
-   * of returning a synchronous `ActionResponse`, it returns a `Future`. The
-   * framework wires the `Future`'s completion to the Armeria response pipeline
-   * without blocking the executor thread.
+   * This is a semantic marker — the pipeline handles both sync and async returns
+   * identically. The user does not need to wrap sync returns in `Future(...)`.
    *
-   * This eliminates the need for `Await.result` in controllers that perform
-   * async operations (DB calls, HTTP requests, LLM streaming, etc.).
-   *
-   * The `ExecutionContext` is captured from the implicit scope at the call site.
-   * Typically `given ExecutionContext = ExecutionContext.global` is declared at
-   * the controller object level.
+   * The user's `Future` body runs on the user's own `ExecutionContext` (typically
+   * `given ExecutionContext = ExecutionContext.global` declared at the controller level).
+   * The framework does not require or capture an `ExecutionContext` — completion
+   * is wired via `ExecutionContext.parasitic` inside `serve()`.
    *
    * Example:
    * {{{
@@ -188,24 +192,28 @@ object Action:
    * def search: Action = Action.async { req =>
    *   db.findUser(req.queryParam("q")).map(Ok(_))   // Future[Result]
    * }
+   *
+   * @Get("/sync-in-async")
+   * def syncInAsync: Action = Action.async { req =>
+   *   "hello"   // String — wrapped in Future.successful internally
+   * }
    * }}}
    *
-   * @param fn the action body returning a `Future[ActionResponse]`
-   * @param ec the ExecutionContext for the Future (implicit)
-   * @return an [[Action]] whose response is async
+   * @param fn the action body returning `AsyncActionResponse`
+   * @return an [[Action]]
    */
-  def async(fn: Request => Future[ActionResponse])(using ExecutionContext): Action =
+  def async(fn: Request => AsyncActionResponse): Action =
     actionLogger.debug(s"Processing Async Action...")
     (request: Request) => fn(request)
 
   /**
-   * Multipart form request with async response.
+   * Multipart form request with async support. Same semantics as [[async]] —
+   * the action body may return sync or async values.
    *
-   * @param fn the action body returning a `Future[ActionResponse]`
-   * @param ec the ExecutionContext for the Future (implicit)
-   * @return an [[Action]] whose response is async
+   * @param fn the action body returning `AsyncActionResponse`
+   * @return an [[Action]]
    */
-  def multipartAsync(fn: MultipartRequest => Future[ActionResponse])(using ExecutionContext): Action =
+  def multipartAsync(fn: MultipartRequest => AsyncActionResponse): Action =
     actionLogger.debug("Processing Multipart Async Action...")
     (request: Request) => request.asMultipartFormData { form =>
       fn(MultipartRequest(form, request.requestContext, request.aggregatedHttpRequest))

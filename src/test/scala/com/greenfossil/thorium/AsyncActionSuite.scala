@@ -17,7 +17,7 @@
 package com.greenfossil.thorium
 
 import com.greenfossil.commons.json.Json
-import com.linecorp.armeria.common.MediaType
+import com.linecorp.armeria.common.{HttpStatus, MediaType}
 import com.linecorp.armeria.server.annotation.Get
 
 import java.net.{URI, http}
@@ -27,98 +27,198 @@ import scala.concurrent.{ExecutionContext, Future}
 import scala.util.{Failure, Success}
 
 /**
- * Tests for Action.async / Future[ActionResponse] support.
+ * Tests for the unified serve() pipeline — Action.async and Future[ActionResponse] support.
  *
- * Verifies that:
- * 1. Action.async returns Future[Result] without blocking
- * 2. Future[String] works (wraps as OK via Result.apply)
- * 3. Future[Result] works (returned as-is)
- * 4. Future failures → 500 (via re-throw → ServerErrorHandler)
- * 5. Action.async + noTimeout / timeout compose correctly
- * 6. Sync actions still work alongside async actions
+ * The unified pipeline uses `Future(apply(req)).flatMap` to handle both sync and async:
+ *   - Sync returns (String, Result, Option, Try, Either, JsValue, etc.) are wrapped in
+ *     `Future.successful` — zero scheduling overhead.
+ *   - Async returns (Future[ActionResponse]) are chained directly — the blocking-pool
+ *     thread is freed immediately after construction.
+ *
+ * Key ergonomics tested:
+ *   - `Action.async { req => "hello" }` — sync return in async factory (no Future wrapping needed)
+ *   - `Action.async { req => Ok("hello") }` — Result return
+ *   - `Action.async { req => Redirect("/x") }` — redirect
+ *   - `Action.async { req => Some("found") }` — Option conversion
+ *   - `Action.async { req => "text".as(400, MediaType.JSON) }` — Resultable extension
+ *   - `Action.async { req => Future(Ok("hello")) }` — Future return
+ *   - `Action { req => Future(Ok("hello")) }` — Future return in sync factory (also works)
+ *   - `Action.noTimeout { req => Future(Ok("hello")) }` — Future + noTimeout
  */
 object AsyncActionServices:
   given ExecutionContext = ExecutionContext.global
 
-  // --- Async: Future[Result] ---
+  // ===========================================================================
+  // Action.async with sync returns (no Future wrapping needed)
+  // ===========================================================================
 
-  @Get("/async-result")
-  def asyncResult: Action = Action.async { _ =>
-    Future(Ok("async-result-ok"))
+  @Get("/async-string-sync")
+  def asyncStringSync: Action = Action.async { _ =>
+    "hello-async"                        // String → 200 OK
   }
 
-  // --- Async: Future[String] (natural type, no Ok wrapper) ---
-
-  @Get("/async-string")
-  def asyncString: Action = Action.async { _ =>
-    Future("hello-async")
+  @Get("/async-result-sync")
+  def asyncResultSync: Action = Action.async { _ =>
+    Ok("async-result-ok")               // Result → 200 OK
   }
 
-  // --- Async: Future[JsValue] ---
-
-  @Get("/async-json")
-  def asyncJson: Action = Action.async { _ =>
-    Future(Json.obj("status" -> "ok"))
+  @Get("/async-redirect-sync")
+  def asyncRedirectSync: Action = Action.async { _ =>
+    Redirect("/new-path")               // Result → 303 Redirect
   }
 
-  // --- Async: Future failure → 500 ---
-
-  @Get("/async-failure")
-  def asyncFailure: Action = Action.async { _ =>
-    Future.failed(new RuntimeException("async-boom"))
+  @Get("/async-accept-sync")
+  def asyncAcceptSync: Action = Action.async { _ =>
+    Accepted("job submitted")           // Result → 202 Accepted
   }
 
-  // --- Async: Future[Option[String]] — Option conversion inside Future ---
-
-  @Get("/async-some")
-  def asyncSome: Action = Action.async { _ =>
-    Future(Some("found-async"))
+  @Get("/async-service-unavailable-sync")
+  def asyncServiceUnavailableSync: Action = Action.async { _ =>
+    ServiceUnavailable("temporarily down") // Result → 503
   }
 
-  @Get("/async-none")
-  def asyncNone: Action = Action.async { _ =>
-    Future(None: Option[String])
+  @Get("/async-option-some-sync")
+  def asyncOptionSomeSync: Action = Action.async { _ =>
+    Some("found-async")                 // Option[String] → 200 OK
   }
 
-  // --- Async: Future[Try[String]] — Try conversion inside Future ---
-
-  @Get("/async-try-success")
-  def asyncTrySuccess: Action = Action.async { _ =>
-    Future(Success("try-async-ok"))
+  @Get("/async-option-none-sync")
+  def asyncOptionNoneSync: Action = Action.async { _ =>
+    None: Option[String]                // Option[String] → 404
   }
 
-  @Get("/async-try-failure")
-  def asyncTryFailure: Action = Action.async { _ =>
-    Future(Failure(new RuntimeException("try-async-boom")))
+  @Get("/async-try-success-sync")
+  def asyncTrySuccessSync: Action = Action.async { _ =>
+    Success("try-async-ok")            // Try[String] → 200 OK
   }
 
-  // --- Async: Future[Either[String, String]] ---
-
-  @Get("/async-either-right")
-  def asyncEitherRight: Action = Action.async { _ =>
-    Future(Right("either-async-ok"))
+  @Get("/async-try-failure-sync")
+  def asyncTryFailureSync: Action = Action.async { _ =>
+    Failure(new RuntimeException("try-async-boom"))  // Try → re-throw → 500
   }
 
-  @Get("/async-either-left")
-  def asyncEitherLeft: Action = Action.async { _ =>
-    Future(Left("validation-async-failed"))
+  @Get("/async-either-right-sync")
+  def asyncEitherRightSync: Action = Action.async { _ =>
+    Right("either-async-ok")           // Either[String, String] → 200 OK
   }
 
-  // --- Async + noTimeout ---
-
-  @Get("/async-no-timeout")
-  def asyncNoTimeout: Action = Action.noTimeout { req =>
-    Future(Ok("async-no-timeout-ok"))
+  @Get("/async-either-left-sync")
+  def asyncEitherLeftSync: Action = Action.async { _ =>
+    Left("validation-async-failed")    // Either[String, String] → 400
   }
 
-  // --- Async + timeout ---
-
-  @Get("/async-timeout")
-  def asyncTimeout: Action = Action.timeout(Duration.ofSeconds(30)) { req =>
-    Future(Ok("async-timeout-ok"))
+  @Get("/async-json-sync")
+  def asyncJsonSync: Action = Action.async { _ =>
+    Json.obj("status" -> "ok")         // JsValue → 200 JSON
   }
 
-  // --- Sync actions (must still work alongside async) ---
+  // --- Resultable extension in async ---
+
+  @Get("/async-resultable-as")
+  def asyncResultableAs: Action = Action.async { _ =>
+    "Bad Request 2".as(HttpStatus.BAD_REQUEST, MediaType.JSON)  // String → Result via Resultable
+  }
+
+  @Get("/async-resultable-withheaders")
+  def asyncResultableWithHeaders: Action = Action.async { _ =>
+    "plain text".withHeaders("X-Custom" -> "yes")  // String → Result via Resultable
+  }
+
+  // ===========================================================================
+  // Action.async with Future returns
+  // ===========================================================================
+
+  @Get("/async-future-result")
+  def asyncFutureResult: Action = Action.async { _ =>
+    Future(Ok("async-future-ok"))        // Future[Result] → 200
+  }
+
+  @Get("/async-future-string")
+  def asyncFutureString: Action = Action.async { _ =>
+    Future("hello-future")              // Future[String] → 200
+  }
+
+  @Get("/async-future-json")
+  def asyncFutureJson: Action = Action.async { _ =>
+    Future(Json.obj("status" -> "ok"))  // Future[JsValue] → 200 JSON
+  }
+
+  @Get("/async-future-failure")
+  def asyncFutureFailure: Action = Action.async { _ =>
+    Future.failed(new RuntimeException("async-boom"))  // Future.failed → 500
+  }
+
+  @Get("/async-future-option-some")
+  def asyncFutureOptionSome: Action = Action.async { _ =>
+    Future(Some("found-future"))        // Future[Some] → 200
+  }
+
+  @Get("/async-future-option-none")
+  def asyncFutureOptionNone: Action = Action.async { _ =>
+    Future(None: Option[String])        // Future[None] → 404
+  }
+
+  @Get("/async-future-try-success")
+  def asyncFutureTrySuccess: Action = Action.async { _ =>
+    Future(Success("try-future-ok"))   // Future[Success] → 200
+  }
+
+  @Get("/async-future-try-failure")
+  def asyncFutureTryFailure: Action = Action.async { _ =>
+    Future(Failure(new RuntimeException("try-future-boom")))  // Future[Failure] → 500
+  }
+
+  @Get("/async-future-either-right")
+  def asyncFutureEitherRight: Action = Action.async { _ =>
+    Future(Right("either-future-ok"))  // Future[Right] → 200
+  }
+
+  @Get("/async-future-either-left")
+  def asyncFutureEitherLeft: Action = Action.async { _ =>
+    Future(Left("validation-future-failed"))  // Future[Left] → 400
+  }
+
+  // ===========================================================================
+  // Action (sync factory) returning Future — also works via unified pipeline
+  // ===========================================================================
+
+  @Get("/sync-factory-future")
+  def syncFactoryFuture: Action = Action { _ =>
+    Future(Ok("sync-factory-future-ok"))  // Future[Result] from sync factory
+  }
+
+  @Get("/sync-factory-string")
+  def syncFactoryString: Action = Action { _ =>
+    "sync-factory-string-ok"             // String from sync factory
+  }
+
+  // ===========================================================================
+  // Action.async + noTimeout / timeout
+  // ===========================================================================
+
+  @Get("/async-no-timeout-future")
+  def asyncNoTimeoutFuture: Action = Action.noTimeout { req =>
+    Future(Ok("async-no-timeout-future-ok"))
+  }
+
+  @Get("/async-no-timeout-sync")
+  def asyncNoTimeoutSync: Action = Action.noTimeout { req =>
+    "async-no-timeout-sync-ok"
+  }
+
+  @Get("/async-timeout-future")
+  def asyncTimeoutFuture: Action = Action.timeout(Duration.ofSeconds(30)) { req =>
+    Future(Ok("async-timeout-future-ok"))
+  }
+
+  @Get("/async-timeout-sync")
+  def asyncTimeoutSync: Action = Action.timeout(Duration.ofSeconds(30)) { req =>
+    "async-timeout-sync-ok"
+  }
+
+  // ===========================================================================
+  // Sync actions (must still work)
+  // ===========================================================================
 
   @Get("/sync-string")
   def syncString: Action = Action { _ =>
@@ -130,7 +230,24 @@ object AsyncActionServices:
     Ok("sync-result-ok")
   }
 
-  // --- Async: simulated I/O delay ---
+  @Get("/sync-option")
+  def syncOption: Action = Action { _ =>
+    Some("sync-option-ok")
+  }
+
+  @Get("/sync-try")
+  def syncTry: Action = Action { _ =>
+    Success("sync-try-ok")
+  }
+
+  @Get("/sync-either")
+  def syncEither: Action = Action { _ =>
+    Right("sync-either-ok")
+  }
+
+  // ===========================================================================
+  // Async with simulated I/O delay
+  // ===========================================================================
 
   @Get("/async-delayed")
   def asyncDelayed: Action = Action.async { _ =>
@@ -174,118 +291,220 @@ class AsyncActionSuite extends munit.FunSuite:
     (resp.statusCode(), resp.body())
 
   // ===========================================================================
-  // 1. Basic async: Future[Result]
+  // 1. Action.async with sync returns — no Future wrapping needed
   // ===========================================================================
 
-  test("Action.async with Future[Result] returns the result") {
-    val body = getBody("/async-result")
-    assertNoDiff(body, "async-result-ok")
-  }
-
-  // ===========================================================================
-  // 2. Async: Future[String] (natural type)
-  // ===========================================================================
-
-  test("Action.async with Future[String] returns the string as OK") {
-    val body = getBody("/async-string")
+  test("Action.async with String return → 200 OK") {
+    val body = getBody("/async-string-sync")
     assertNoDiff(body, "hello-async")
   }
 
-  // ===========================================================================
-  // 3. Async: Future[JsValue]
-  // ===========================================================================
+  test("Action.async with Ok Result return → 200 OK") {
+    val body = getBody("/async-result-sync")
+    assertNoDiff(body, "async-result-ok")
+  }
 
-  test("Action.async with Future[JsValue] returns JSON") {
-    val resp = get("/async-json")
+  test("Action.async with Redirect return → 303") {
+    val resp = get("/async-redirect-sync")
+    assertEquals(resp.statusCode(), 303, "Redirect should → 303")
+    assertEquals(resp.headers().firstValue("location").orElse(""), "/new-path")
+  }
+
+  test("Action.async with Accept return → 202") {
+    val resp = get("/async-accept-sync")
+    assertEquals(resp.statusCode(), 202, "Accept should → 202")
+    assert(resp.body().contains("job submitted"))
+  }
+
+  test("Action.async with ServiceUnavailable return → 503") {
+    val resp = get("/async-service-unavailable-sync")
+    assertEquals(resp.statusCode(), 503, "ServiceUnavailable should → 503")
+  }
+
+  test("Action.async with Some return → 200") {
+    val body = getBody("/async-option-some-sync")
+    assertNoDiff(body, "found-async")
+  }
+
+  test("Action.async with None return → 404") {
+    val (status, _) = getWithStatus("/async-option-none-sync")
+    assertEquals(status, 404, "None should → 404")
+  }
+
+  test("Action.async with Success return → 200") {
+    val body = getBody("/async-try-success-sync")
+    assertNoDiff(body, "try-async-ok")
+  }
+
+  test("Action.async with Failure return → 500") {
+    val (status, _) = getWithStatus("/async-try-failure-sync")
+    assertEquals(status, 500, "Failure should re-throw → 500")
+  }
+
+  test("Action.async with Right return → 200") {
+    val body = getBody("/async-either-right-sync")
+    assertNoDiff(body, "either-async-ok")
+  }
+
+  test("Action.async with Left return → 400") {
+    val (status, body) = getWithStatus("/async-either-left-sync")
+    assertEquals(status, 400, "Left should → 400")
+    assert(body.contains("validation-async-failed"))
+  }
+
+  test("Action.async with JsValue return → 200 JSON") {
+    val resp = get("/async-json-sync")
     assertEquals(resp.statusCode(), 200, "Expected 200")
     assert(resp.body().contains("\"status\":\"ok\""))
   }
 
   // ===========================================================================
-  // 4. Async: Future failure → 500
+  // 2. Resultable extensions in Action.async
   // ===========================================================================
 
-  test("Action.async with Future.failed → 500") {
-    val (status, _) = getWithStatus("/async-failure")
-    assertEquals(status, 500, "Failed Future should → 500")
+  test("Action.async with .as(status, contentType) → 400 JSON") {
+    val resp = get("/async-resultable-as")
+    assertEquals(resp.statusCode(), 400, ".as(BAD_REQUEST, JSON) should → 400")
+    val ct = resp.headers().firstValue("content-type").orElse("")
+    assert(ct.contains("application/json"), s"Expected JSON content-type, got: $ct")
+    assert(resp.body().contains("Bad Request 2"))
+  }
+
+  test("Action.async with .withHeaders → 200 with custom header") {
+    val resp = get("/async-resultable-withheaders")
+    assertEquals(resp.statusCode(), 200, "Expected 200")
+    assertEquals(resp.headers().firstValue("x-custom").orElse(""), "yes")
+    assertNoDiff(resp.body(), "plain text")
   }
 
   // ===========================================================================
-  // 5. Async + Option conversion inside Future
+  // 3. Action.async with Future returns
   // ===========================================================================
 
-  test("Action.async with Future[Some[String]] returns the string") {
-    val body = getBody("/async-some")
-    assertNoDiff(body, "found-async")
+  test("Action.async with Future[Result] → 200") {
+    val body = getBody("/async-future-result")
+    assertNoDiff(body, "async-future-ok")
+  }
+
+  test("Action.async with Future[String] → 200") {
+    val body = getBody("/async-future-string")
+    assertNoDiff(body, "hello-future")
+  }
+
+  test("Action.async with Future[JsValue] → 200 JSON") {
+    val resp = get("/async-future-json")
+    assertEquals(resp.statusCode(), 200, "Expected 200")
+    assert(resp.body().contains("\"status\":\"ok\""))
+  }
+
+  test("Action.async with Future.failed → 500") {
+    val (status, _) = getWithStatus("/async-future-failure")
+    assertEquals(status, 500, "Future.failed should → 500")
+  }
+
+  test("Action.async with Future[Some] → 200") {
+    val body = getBody("/async-future-option-some")
+    assertNoDiff(body, "found-future")
   }
 
   test("Action.async with Future[None] → 404") {
-    val (status, _) = getWithStatus("/async-none")
+    val (status, _) = getWithStatus("/async-future-option-none")
     assertEquals(status, 404, "Future(None) should → 404")
   }
 
-  // ===========================================================================
-  // 6. Async + Try conversion inside Future
-  // ===========================================================================
-
-  test("Action.async with Future[Success[String]] returns the string") {
-    val body = getBody("/async-try-success")
-    assertNoDiff(body, "try-async-ok")
+  test("Action.async with Future[Success] → 200") {
+    val body = getBody("/async-future-try-success")
+    assertNoDiff(body, "try-future-ok")
   }
 
   test("Action.async with Future[Failure] → 500") {
-    val (status, _) = getWithStatus("/async-try-failure")
+    val (status, _) = getWithStatus("/async-future-try-failure")
     assertEquals(status, 500, "Future(Failure) should → 500")
   }
 
-  // ===========================================================================
-  // 7. Async + Either conversion inside Future
-  // ===========================================================================
-
-  test("Action.async with Future[Right[String]] returns the string") {
-    val body = getBody("/async-either-right")
-    assertNoDiff(body, "either-async-ok")
+  test("Action.async with Future[Right] → 200") {
+    val body = getBody("/async-future-either-right")
+    assertNoDiff(body, "either-future-ok")
   }
 
-  test("Action.async with Future[Left[String]] → 400") {
-    val (status, body) = getWithStatus("/async-either-left")
+  test("Action.async with Future[Left] → 400") {
+    val (status, body) = getWithStatus("/async-future-either-left")
     assertEquals(status, 400, "Future(Left) should → 400")
-    assert(body.contains("validation-async-failed"))
+    assert(body.contains("validation-future-failed"))
   }
 
   // ===========================================================================
-  // 8. Async + noTimeout / timeout
+  // 4. Sync factory returning Future — also works via unified pipeline
   // ===========================================================================
 
-  test("Action.noTimeout with Future returns the result") {
-    val body = getBody("/async-no-timeout")
-    assertNoDiff(body, "async-no-timeout-ok")
+  test("Action (sync factory) returning Future[Result] → 200") {
+    val body = getBody("/sync-factory-future")
+    assertNoDiff(body, "sync-factory-future-ok")
   }
 
-  test("Action.timeout with Future returns the result") {
-    val body = getBody("/async-timeout")
-    assertNoDiff(body, "async-timeout-ok")
+  test("Action (sync factory) returning String → 200") {
+    val body = getBody("/sync-factory-string")
+    assertNoDiff(body, "sync-factory-string-ok")
   }
 
   // ===========================================================================
-  // 9. Sync actions still work
+  // 5. Action.async + noTimeout / timeout (with both sync and Future returns)
   // ===========================================================================
 
-  test("Sync Action returning String still works") {
+  test("Action.noTimeout with Future return → 200") {
+    val body = getBody("/async-no-timeout-future")
+    assertNoDiff(body, "async-no-timeout-future-ok")
+  }
+
+  test("Action.noTimeout with sync return → 200") {
+    val body = getBody("/async-no-timeout-sync")
+    assertNoDiff(body, "async-no-timeout-sync-ok")
+  }
+
+  test("Action.timeout with Future return → 200") {
+    val body = getBody("/async-timeout-future")
+    assertNoDiff(body, "async-timeout-future-ok")
+  }
+
+  test("Action.timeout with sync return → 200") {
+    val body = getBody("/async-timeout-sync")
+    assertNoDiff(body, "async-timeout-sync-ok")
+  }
+
+  // ===========================================================================
+  // 6. Sync actions still work
+  // ===========================================================================
+
+  test("Sync Action returning String → 200") {
     val body = getBody("/sync-string")
     assertNoDiff(body, "sync-ok")
   }
 
-  test("Sync Action returning Result still works") {
+  test("Sync Action returning Result → 200") {
     val body = getBody("/sync-result")
     assertNoDiff(body, "sync-result-ok")
   }
 
+  test("Sync Action returning Option → 200") {
+    val body = getBody("/sync-option")
+    assertNoDiff(body, "sync-option-ok")
+  }
+
+  test("Sync Action returning Try → 200") {
+    val body = getBody("/sync-try")
+    assertNoDiff(body, "sync-try-ok")
+  }
+
+  test("Sync Action returning Either → 200") {
+    val body = getBody("/sync-either")
+    assertNoDiff(body, "sync-either-ok")
+  }
+
   // ===========================================================================
-  // 10. Async with simulated I/O delay
+  // 7. Async with simulated I/O delay
   // ===========================================================================
 
-  test("Action.async with delayed Future returns successfully") {
+  test("Action.async with delayed Future → 200") {
     val body = getBody("/async-delayed")
     assertNoDiff(body, "delayed-ok")
   }
