@@ -214,7 +214,7 @@ trait Request(val requestContext: ServiceRequestContext,
         MultipartFormData(mp, requestContext.config().multipartUploadsLocation())
       )
     
-  def asMultipartFormData(fn: MultipartFormData => ActionResponse): ActionResponse =
+  def asMultipartFormData(fn: MultipartFormData => AsyncActionResponse): AsyncActionResponse =
     actionLogger.debug(s"Processing asMultipartFormData.")
     val resp = asMultipartFormData.thenApply(fn(_)).get
     actionLogger.debug(s"Return action response:$resp")
