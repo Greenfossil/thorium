@@ -25,6 +25,7 @@ import java.time.Duration
 import scala.compiletime.uninitialized
 import scala.concurrent.{ExecutionContext, Future}
 import scala.util.{Failure, Success}
+import scala.language.implicitConversions
 
 /**
  * Tests for the unified serve() pipeline — Action.async and Future[ActionResponse] support.

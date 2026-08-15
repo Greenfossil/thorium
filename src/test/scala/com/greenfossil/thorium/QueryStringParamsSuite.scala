@@ -16,11 +16,10 @@
 
 package com.greenfossil.thorium
 
-import com.linecorp.armeria.server.annotation.{Get, Param}
 import com.linecorp.armeria.common.MediaType
+import com.linecorp.armeria.server.annotation.{Get, Param}
 
 import java.net.{URI, http}
-import java.nio.charset.StandardCharsets
 import scala.compiletime.uninitialized
 
 /**

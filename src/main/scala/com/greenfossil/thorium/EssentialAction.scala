@@ -35,14 +35,14 @@ type ActionResponse = SimpleResponse | Result
  *   - a synchronous `ActionResponse` (String, Result, JsValue via Conversion, etc.)
  *   - a `Future[ActionResponse]` for async operations
  *
- * The framework's `serve()` unifies both via `Future(apply(req)).flatMap`:
- *   - Sync returns are wrapped in `Future.successful(ar)` — zero scheduling overhead.
- *   - Async returns (Future) are chained directly — the blocking-pool thread is freed
- *     immediately after construction, and completion fires on the Future's own thread.
+ * The framework's `serve()` handles both:
+ *   - Sync returns are converted to `HttpResponse` directly on the blocking pool.
+ *   - Async returns (Future) are bridged to `CompletableFuture` and chained —
+ *     the blocking-pool thread is freed immediately after construction.
  *
- * This means `Action.async { req => "hello" }` works (sync return in an async factory)
- * and `Action { req => Future(Ok("hello")) }` also works (async return in a sync factory).
- * `Action.async` is a semantic marker — the pipeline handles both identically.
+ * `Action.async` is a semantic marker — the pipeline handles both sync and async
+ * returns identically. Users can write `Action.async { req => "hello" }` without
+ * wrapping in `Future(...)`.
  */
 type AsyncActionResponse = ActionResponse | Future[ActionResponse]
 
@@ -64,16 +64,21 @@ trait EssentialAction extends HttpService :
   /**
    * Armeria invocation during an incoming request.
    *
-   * Unified pipeline:
-   *   1. Aggregate the request body (on the event loop).
-   *   2. `Future(apply(req))` — run the action body on the blocking-pool executor.
-   *      For sync actions, the blocking pool holds for the full duration (may block on JDBC/HTTP).
-   *      For async actions, the blocking pool holds only for Future construction (microseconds).
-   *   3. `.flatMap` — sync `ActionResponse` → `Future.successful(ar)` (already completed, no overhead);
-   *      `Future[ActionResponse]` → chain the inner Future directly (blocking pool thread freed).
-   *   4. `.onComplete` (with `ExecutionContext.parasitic`) — fires on whatever thread completes
-   *      the Future. Converts the `ActionResponse` to an `HttpResponse` and completes the
-   *      Armeria `CompletableFuture`. `futureResp.complete(...)` is thread-safe.
+   * Pipeline (stays in Java CompletableFuture at the low level):
+   *   1. `aggregate()` — Armeria aggregates the request body on the event loop.
+   *   2. `thenAccept` — on the event loop: construct `Request`, then hop to the
+   *      blocking-pool executor to run `apply(req)`.
+   *   3. `apply(req)` returns `AsyncActionResponse`:
+   *      - Sync `ActionResponse` → convert to `HttpResponse` directly, complete
+   *        the Armeria `CompletableFuture` on the blocking pool.
+   *      - `Future[ActionResponse]` → bridge to `CompletableFuture` using the
+   *        blocking-pool `ExecutionContext` (not `parasitic`), chain via
+   *        `thenAccept` to convert + complete. The blocking-pool thread is freed
+   *        immediately after the bridge is registered.
+   *
+   * No `ExecutionContext.parasitic` is used — completion callbacks run on the
+   * blocking-pool executor, which is a proper bounded thread pool, not the
+   * completing thread. This avoids thread starvation and stack-overflow risks.
    *
    * @param svcRequestContext
    * @param httpRequest
@@ -82,31 +87,44 @@ trait EssentialAction extends HttpService :
   override def serve(svcRequestContext: ServiceRequestContext, httpRequest: HttpRequest): HttpResponse =
     actionLogger.debug(s"Processing EssentialAction.serve - method:${svcRequestContext.method()}, content-type:${httpRequest.contentType()}, path:${httpRequest.uri}")
     val futureResp = new CompletableFuture[HttpResponse]()
+
     svcRequestContext
       .request()
       .aggregate()
       .thenAccept { aggregateRequest =>
+        // On the event loop — construct Request, then hop to blocking pool
         val req = new Request(svcRequestContext, aggregateRequest) {}
-        given ec: ExecutionContext = ExecutionContext.fromExecutorService(svcRequestContext.blockingTaskExecutor())
+        val blockingEC = ExecutionContext.fromExecutorService(svcRequestContext.blockingTaskExecutor())
 
-        // Unified pipeline: both sync and async go through the same path.
-        // Future(apply(req)) runs apply(req) on the blocking pool.
-        // .flatMap: sync → Future.successful (already completed); async → chain inner Future.
-        // .onComplete (parasitic): convert + complete futureResp on the completing thread.
-        Future(apply(req))
-          .flatMap {
-            case f: Future[ActionResponse] @unchecked => f
-            case ar: ActionResponse => Future.successful(ar)
-          }
-          .onComplete {
-            case Success(ar) =>
-              futureResp.complete(
-                HttpResponseConverter.convertActionResponseToHttpResponse(req, ar)
-              )
-            case Failure(ex) =>
-              actionLogger.debug(s"Action failed.", ex)
-              futureResp.complete(HttpResponse.ofFailure(ex))
-          }(using ExecutionContext.parasitic)
+        svcRequestContext.blockingTaskExecutor().execute(() => {
+          try
+            actionLogger.debug(s"Invoke EssentialAction.apply. req:${req.hashCode()}")
+            val resp = apply(req)
+            actionLogger.debug("Response from EssentialAction.apply")
+            resp match
+              case f: Future[ActionResponse] @unchecked =>
+                // Async: bridge Scala Future → CompletableFuture using the blocking-pool EC.
+                // The blocking-pool thread is freed here; the onComplete callback
+                // runs on the blocking pool when the Future completes.
+                f.onComplete {
+                  case Success(ar) =>
+                    futureResp.complete(
+                      HttpResponseConverter.convertActionResponseToHttpResponse(req, ar)
+                    )
+                  case Failure(ex) =>
+                    actionLogger.debug(s"Async action Future failed.", ex)
+                    futureResp.complete(HttpResponse.ofFailure(ex))
+                }(using blockingEC)
+              case ar: ActionResponse =>
+                // Sync: convert and complete immediately on the blocking pool
+                futureResp.complete(
+                  HttpResponseConverter.convertActionResponseToHttpResponse(req, ar)
+                )
+          catch
+            case t =>
+              actionLogger.debug(s"Exception raised in EssentialAction.apply.", t)
+              futureResp.complete(HttpResponse.ofFailure(t))
+        })
       }
     HttpResponse.of(futureResp)
 
@@ -174,7 +192,7 @@ object Action:
    * Creates an async action. The action body may return:
    *   - A `Future[ActionResponse]` for genuinely async work (DB calls, HTTP requests, etc.)
    *   - A synchronous `ActionResponse` (String, Result, Option, Try, Either, JsValue, etc.)
-   *     — the framework wraps it in `Future.successful` internally.
+   *     — the framework handles it without wrapping in `Future(...)`.
    *
    * This is a semantic marker — the pipeline handles both sync and async returns
    * identically. The user does not need to wrap sync returns in `Future(...)`.
@@ -182,7 +200,7 @@ object Action:
    * The user's `Future` body runs on the user's own `ExecutionContext` (typically
    * `given ExecutionContext = ExecutionContext.global` declared at the controller level).
    * The framework does not require or capture an `ExecutionContext` — completion
-   * is wired via `ExecutionContext.parasitic` inside `serve()`.
+   * is wired via the blocking-pool executor inside `serve()`.
    *
    * Example:
    * {{{
@@ -195,7 +213,7 @@ object Action:
    *
    * @Get("/sync-in-async")
    * def syncInAsync: Action = Action.async { req =>
-   *   "hello"   // String — wrapped in Future.successful internally
+   *   "hello"   // String — handled directly, no Future wrapping
    * }
    * }}}
    *

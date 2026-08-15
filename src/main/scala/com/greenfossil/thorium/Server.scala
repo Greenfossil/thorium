@@ -289,6 +289,17 @@ case class Server(server: AServer,
     //Setup Protocol and ensure at least one of it is either Https or Http
     sb.port(port, sessionProtocols*)
 
+    // Virtual-thread blocking task executor (Java 21+).
+    // Each blocking action runs on its own virtual thread — eliminating the
+    // 200-thread cap of the default platform-thread pool. Virtual threads are
+    // ideal for blocking I/O (JDBC, HTTP clients, Await.result) — the carrier
+    // platform thread is freed when the virtual thread blocks.
+    // On Java < 21, falls back to Armeria's default blockingTaskExecutor.
+    if Runtime.version().feature() >= 21 then
+      val vtExecutor = VirtualThreadBlockingExecutor("thorium-vt-")
+      sb.blockingTaskExecutor(vtExecutor, true)
+      serverLogger.info("Virtual-thread blocking task executor enabled.")
+
     sb.maxRequestLength(configuration.maxRequestLength)
     configuration.maxNumConnectionOpt.foreach(maxConn => sb.maxNumConnections(maxConn))
     sb.requestTimeout(configuration.requestTimeout)

@@ -28,6 +28,8 @@ import java.util.Locale
 import java.util.Locale.LanguageRange
 import java.util.concurrent.CompletableFuture
 import java.util.stream.Collectors
+import scala.concurrent.{ExecutionContext, Future}
+import scala.util.{Failure, Success}
 import scala.util.Try
 
 private[thorium] val requestLogger = LoggerFactory.getLogger("http.request")
@@ -213,12 +215,41 @@ trait Request(val requestContext: ServiceRequestContext,
         actionLogger.debug(s"Getting Multipart Response.")
         MultipartFormData(mp, requestContext.config().multipartUploadsLocation())
       )
-    
-  def asMultipartFormData(fn: MultipartFormData => AsyncActionResponse): AsyncActionResponse =
+
+  /**
+   * Parses the multipart form data and applies the given function to it.
+   *
+   * Returns a `Future[ActionResponse]` — the multipart parsing happens
+   * asynchronously via Armeria's `Multipart.aggregate()` (a Java
+   * `CompletableFuture`). If `fn` returns a `Future[ActionResponse]` (async
+   * action), the two futures are chained. If `fn` returns a sync
+   * `ActionResponse`, it's wrapped in `Future.successful`.
+   *
+   * This fixes the previous `.get()` blocking bug where the calling thread
+   * was held during multipart parsing. The bridge uses the blocking-pool
+   * `ExecutionContext` (not `parasitic`) for the Scala `Future.onComplete`
+   * callback — completion runs on a proper bounded thread pool.
+   *
+   * Note: `fn` runs on whichever thread completes the multipart aggregate
+   * (typically the event loop). If `fn` performs blocking work, it should
+   * return a `Future` so the blocking happens on the user's `ExecutionContext`.
+   */
+  def asMultipartFormData(fn: MultipartFormData => AsyncActionResponse): Future[ActionResponse] =
     actionLogger.debug(s"Processing asMultipartFormData.")
-    val resp = asMultipartFormData.thenApply(fn(_)).get
-    actionLogger.debug(s"Return action response:$resp")
-    resp
+    val p = scala.concurrent.Promise[ActionResponse]()
+    asMultipartFormData
+      .thenApplyAsync(fn(_), requestContext.blockingTaskExecutor())
+      .whenComplete { (resp, ex) =>
+        if ex != null then p.failure(ex)
+        else resp match
+          case f: Future[ActionResponse] @unchecked =>
+            f.onComplete {
+              case Success(ar) => p.success(ar)
+              case Failure(e) => p.failure(e)
+            }(using ExecutionContext.fromExecutorService(requestContext.blockingTaskExecutor()))
+          case ar: ActionResponse => p.success(ar)
+      }
+    p.future
 
   //Raw Buffer - TODO - testcase needed and check for conformance
   def asRaw: HttpData = aggregatedHttpRequest.content()
