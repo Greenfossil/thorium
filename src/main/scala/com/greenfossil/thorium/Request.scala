@@ -246,23 +246,28 @@ trait Request(val requestContext: ServiceRequestContext,
   /**
    * Parses the multipart form data and applies the given function to it.
    *
-   * Returns a `Future[ActionResponse]` — the multipart parsing happens
-   * asynchronously via Armeria's `Multipart.aggregate()` (a Java
-   * `CompletableFuture`). If `fn` returns a `Future[ActionResponse]` (async
-   * action), the two futures are chained. If `fn` returns a sync
-   * `ActionResponse`, it's wrapped in `Future.successful`.
-   *
-   * This fixes the previous `.get()` blocking bug where the calling thread
-   * was held during multipart parsing. The bridge uses the blocking-pool
-   * `ExecutionContext` (not `parasitic`) for the Scala `Future.onComplete`
-   * callback — completion runs on a proper bounded thread pool.
-   *
-   * Note: `fn` runs on whichever thread completes the multipart aggregate
-   * (typically the event loop). If `fn` performs blocking work, it should
-   * return a `Future` so the blocking happens on the user's `ExecutionContext`.
+   * `fn` runs on the blocking-pool executor via `thenApplyAsync` — not on
+   * the event loop. The calling thread blocks via `.get()` until multipart
+   * parsing and `fn` are complete. This is acceptable because the calling
+   * thread is the blocking-pool thread (inside `serve()`).
    */
-  def asMultipartFormData(fn: MultipartFormData => AsyncActionResponse): Future[ActionResponse] =
+  def asMultipartFormData(fn: MultipartFormData => ActionResponse): ActionResponse =
     actionLogger.debug(s"Processing asMultipartFormData.")
+    asMultipartFormData
+      .thenApplyAsync(fn(_), requestContext.blockingTaskExecutor())
+      .get()
+
+  /**
+   * Async variant of [[asMultipartFormData]]. Returns a `Future[ActionResponse]`
+   * instead of blocking. The multipart parsing and `fn` run on the blocking-pool
+   * executor. If `fn` itself returns a `Future[ActionResponse]`, the two futures
+   * are chained.
+   *
+   * Use this from `Action.multipartAsync` or any context where blocking is
+   * undesirable.
+   */
+  def asMultipartFormDataAsync(fn: MultipartFormData => AsyncActionResponse): Future[ActionResponse] =
+    actionLogger.debug(s"Processing asMultipartFormDataAsync.")
     val p = scala.concurrent.Promise[ActionResponse]()
     asMultipartFormData
       .thenApplyAsync(fn(_), requestContext.blockingTaskExecutor())

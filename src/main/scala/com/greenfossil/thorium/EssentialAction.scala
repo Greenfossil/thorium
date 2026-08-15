@@ -121,20 +121,38 @@ trait EssentialAction extends HttpService :
               futureResp.complete(HttpResponse.ofFailure(t))
         })
       }
-    // Close all resources registered via req.manageResource after the response completes.
-    futureResp.whenComplete { (_, _) =>
-      val list = svcRequestContext.attr(RequestAttrs.ManagedResources)
-      if list != null then
-        val it = list.iterator()
-        val toClose = new java.util.ArrayList[AutoCloseable]()
-        while it.hasNext do toClose.add(it.next())
-        // Close in LIFO order (reverse)
-        var i = toClose.size() - 1
-        while i >= 0 do
-          try toClose.get(i).close() catch case _: Throwable => ()
-          i -= 1
+    // Close all resources registered via req.manageResource after the response
+    // is fully written to the client. For InputStream returns, the actual
+    // streaming (transferTo) happens AFTER futureResp completes, so we must
+    // hook into the HttpResponse's completion future, not futureResp's.
+    val resourceScope = svcRequestContext
+    futureResp.whenComplete { (httpResp, ex) =>
+      if httpResp != null then
+        // HttpResponse.whenComplete() returns a CompletableFuture[Void] that
+        // completes after all bytes are written to the client (or on error).
+        val responseDone = httpResp.whenComplete()
+        responseDone.thenRun(() => closeManagedResources(resourceScope))
+      else
+        // futureResp completed exceptionally — no HttpResponse to stream
+        closeManagedResources(resourceScope)
     }
     HttpResponse.of(futureResp)
+
+  /**
+   * Closes all resources registered via `req.manageResource` on the given
+   * `ServiceRequestContext`. Resources are closed in LIFO (reverse
+   * registration) order. Exceptions during close are swallowed.
+   */
+  private def closeManagedResources(ctx: ServiceRequestContext): Unit =
+    val list = ctx.attr(RequestAttrs.ManagedResources)
+    if list != null then
+      val it = list.iterator()
+      val toClose = new java.util.ArrayList[AutoCloseable]()
+      while it.hasNext do toClose.add(it.next())
+      var i = toClose.size() - 1
+      while i >= 0 do
+        try toClose.get(i).close() catch case _: Throwable => ()
+        i -= 1
 
 end EssentialAction
 
@@ -155,12 +173,12 @@ object Action:
 
   /**
    * Multipart form request. The action body receives a [[MultipartRequest]]
-   * and may return any `AsyncActionResponse`.
+   * and returns an `ActionResponse`.
    *
    * @param fn the action body
    * @return an [[Action]]
    */
-  def multipart(fn: MultipartRequest => AsyncActionResponse): Action =
+  def multipart(fn: MultipartRequest => ActionResponse): Action =
     actionLogger.debug("Processing Multipart Action...")
     (request: Request) => request.asMultipartFormData { form =>
       fn(MultipartRequest(form, request.requestContext, request.aggregatedHttpRequest))
@@ -233,14 +251,15 @@ object Action:
     (request: Request) => fn(request)
 
   /**
-   * Multipart form request with async support. Same semantics as [[async]] —
-   * the action body may return sync or async values.
+   * Multipart form request with async support. The action body may return
+   * sync `ActionResponse` or `Future[ActionResponse]`. Uses
+   * `asMultipartFormDataAsync` — non-blocking, returns a `Future`.
    *
    * @param fn the action body returning `AsyncActionResponse`
    * @return an [[Action]]
    */
   def multipartAsync(fn: MultipartRequest => AsyncActionResponse): Action =
     actionLogger.debug("Processing Multipart Async Action...")
-    (request: Request) => request.asMultipartFormData { form =>
+    (request: Request) => request.asMultipartFormDataAsync { form =>
       fn(MultipartRequest(form, request.requestContext, request.aggregatedHttpRequest))
     }

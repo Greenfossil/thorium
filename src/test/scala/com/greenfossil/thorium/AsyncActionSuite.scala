@@ -18,9 +18,12 @@ package com.greenfossil.thorium
 
 import com.greenfossil.commons.json.Json
 import com.linecorp.armeria.common.{HttpStatus, MediaType}
-import com.linecorp.armeria.server.annotation.Get
+import com.linecorp.armeria.server.annotation.{Get, Post}
+import io.github.yskszk63.jnhttpmultipartformdatabodypublisher.MultipartFormDataBodyPublisher
 
 import java.net.{URI, http}
+import java.nio.file.{Files, Paths}
+import java.nio.charset.StandardCharsets
 import java.time.Duration
 import scala.compiletime.uninitialized
 import scala.concurrent.{ExecutionContext, Future}
@@ -258,6 +261,39 @@ object AsyncActionServices:
     }
   }
 
+  // ===========================================================================
+  // Action.multipartAsync — async multipart with Future returns
+  // ===========================================================================
+
+  @Post("/multipart-async-sync-return")
+  def multipartAsyncSyncReturn: Action = Action.multipartAsync { mpReq =>
+    // Sync return (String) from multipartAsync — wrapped in Future.successful internally
+    s"files:${mpReq.multipartFormData.names.size}"
+  }
+
+  @Post("/multipart-async-future-return")
+  def multipartAsyncFutureReturn: Action = Action.multipartAsync { mpReq =>
+    // Future return — non-blocking
+    Future(s"async-files:${mpReq.multipartFormData.names.size}")
+  }
+
+  @Post("/multipart-async-result")
+  def multipartAsyncResult: Action = Action.multipartAsync { mpReq =>
+    Ok(s"result-files:${mpReq.multipartFormData.names.size}")
+  }
+
+  @Post("/multipart-async-find-files")
+  def multipartAsyncFindFiles: Action = Action.multipartAsync { mpReq =>
+    mpReq.findFiles((_, _, _, _) => true)
+      .map(files => Ok(s"found:${files.size}"))
+      .getOrElse(BadRequest("no files"))
+  }
+
+  @Post("/multipart-async-failure")
+  def multipartAsyncFailure: Action = Action.multipartAsync { _ =>
+    Future.failed(new RuntimeException("multipart-async-boom"))
+  }
+
 end AsyncActionServices
 
 class AsyncActionSuite extends munit.FunSuite:
@@ -289,6 +325,24 @@ class AsyncActionSuite extends munit.FunSuite:
 
   private def getWithStatus(path: String): (Int, String) =
     val resp = get(path)
+    (resp.statusCode(), resp.body())
+
+  private def postMultipart(path: String, mpPub: MultipartFormDataBodyPublisher): http.HttpResponse[String] =
+    http.HttpClient.newHttpClient().send(
+      http.HttpRequest.newBuilder(URI.create(s"http://localhost:${server.port}$path"))
+        .POST(mpPub)
+        .header("Content-Type", mpPub.contentType())
+        .build(),
+      http.HttpResponse.BodyHandlers.ofString()
+    )
+
+  private def postMultipartBody(path: String, mpPub: MultipartFormDataBodyPublisher): String =
+    val resp = postMultipart(path, mpPub)
+    assertEquals(resp.statusCode(), 200, s"Expected 200 for $path but got ${resp.statusCode()}: ${resp.body()}")
+    resp.body()
+
+  private def postMultipartWithStatus(path: String, mpPub: MultipartFormDataBodyPublisher): (Int, String) =
+    val resp = postMultipart(path, mpPub)
     (resp.statusCode(), resp.body())
 
   // ===========================================================================
@@ -508,6 +562,42 @@ class AsyncActionSuite extends munit.FunSuite:
   test("Action.async with delayed Future → 200") {
     val body = getBody("/async-delayed")
     assertNoDiff(body, "delayed-ok")
+  }
+
+  // ===========================================================================
+  // 8. Action.multipartAsync — async multipart with Future returns
+  // ===========================================================================
+
+  test("Action.multipartAsync with sync String return → 200") {
+    val mpPub = MultipartFormDataBodyPublisher().add("name", "homer")
+    val body = postMultipartBody("/multipart-async-sync-return", mpPub)
+    assert(body.contains("files:1"), s"Expected files:1, got: $body")
+  }
+
+  test("Action.multipartAsync with Future return → 200") {
+    val mpPub = MultipartFormDataBodyPublisher().add("name", "homer")
+    val body = postMultipartBody("/multipart-async-future-return", mpPub)
+    assert(body.contains("async-files:1"), s"Expected async-files:1, got: $body")
+  }
+
+  test("Action.multipartAsync with Ok Result return → 200") {
+    val mpPub = MultipartFormDataBodyPublisher().add("name", "homer")
+    val body = postMultipartBody("/multipart-async-result", mpPub)
+    assert(body.contains("result-files:1"), s"Expected result-files:1, got: $body")
+  }
+
+  test("Action.multipartAsync with findFiles → 200") {
+    Files.write(Paths.get("/tmp/async-multipart-test.txt"), "test data".getBytes(StandardCharsets.UTF_8))
+    val mpPub = MultipartFormDataBodyPublisher()
+      .addFile("resourceFile", Paths.get("/tmp/async-multipart-test.txt"), "text/plain")
+    val body = postMultipartBody("/multipart-async-find-files", mpPub)
+    assert(body.contains("found:1"), s"Expected found:1, got: $body")
+  }
+
+  test("Action.multipartAsync with Future.failed → 500") {
+    val mpPub = MultipartFormDataBodyPublisher().add("name", "homer")
+    val (status, _) = postMultipartWithStatus("/multipart-async-failure", mpPub)
+    assertEquals(status, 500, "Future.failed should → 500")
   }
 
 end AsyncActionSuite
