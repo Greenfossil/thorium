@@ -63,16 +63,12 @@ class MultiPartFormSuite extends FunSuite{
   var server: Server = null
 
   override def beforeAll(): Unit =
-    try{
-      server = Server(0)
-        .addServices(FormServices)
-        .start()
-    }catch {
-      case ex: Throwable =>
-    }
+    server = Server(0)
+      .addServices(FormServices)
+      .start()
 
   override def afterAll(): Unit =
-    server.stop()
+    if server != null then server.stop()
 
   test("POST with file content") {
     Files.write(Paths.get("/tmp/file.txt"), "Hello world".getBytes(StandardCharsets.UTF_8))

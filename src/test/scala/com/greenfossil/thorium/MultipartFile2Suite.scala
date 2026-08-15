@@ -329,21 +329,14 @@ class MultipartFile2Suite extends FunSuite {
   val testUploadDir: java.nio.file.Path = Paths.get("/tmp/thorium-multipart-test")
 
   override def beforeAll(): Unit = {
-    try {
-      // Clean and create test upload directory
-      if (Files.exists(testUploadDir)) {
-        testUploadDir.toFile.listFiles().foreach(_.delete())
-      }
-      Files.createDirectories(testUploadDir)
+    // Clean and create test upload directory
+    if Files.exists(testUploadDir) then
+      testUploadDir.toFile.listFiles().foreach(_.delete())
+    Files.createDirectories(testUploadDir)
 
-      server = Server(0)
-        .addServices(FileValidationServices)
-        .start()
-    } catch {
-      case ex: Throwable =>
-        println(s"Error starting server: ${ex.getMessage}")
-        ex.printStackTrace()
-    }
+    server = Server(0)
+      .addServices(FileValidationServices)
+      .start()
   }
 
   override def afterAll(): Unit = {
