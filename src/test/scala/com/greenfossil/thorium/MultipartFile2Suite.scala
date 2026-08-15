@@ -210,6 +210,115 @@ object FileValidationServices {
       )
   }
 
+  // ============ New API endpoints: UploadContext + allowedExtensions + StorageNameMode ============
+
+  /**
+   * Uses the new UploadContext API to reject contradictions:
+   * e.g. evil.scala detected as application/x-php.
+   */
+  @Post("/file/upload-context-reject-contradiction")
+  def uploadContextRejectContradiction: Action = Action.multipart { implicit request =>
+    request.findFile(
+      allowedExtensions = Set("scala", "java", "txt"),
+      validatorFn = (ctx: UploadContext) =>
+        // Reject if the detected type is a known dangerous type
+        val detected = ctx.detectedType
+        !detected.is(MediaType.parse("application/x-php")) &&
+        !detected.is(MediaType.parse("application/x-ms-dos-executable")) &&
+        !detected.is(MediaType.parse("application/zip"))
+    ).fold(
+      th => BadRequest(s"Invalid file - ${th.getMessage}"),
+      file => Ok(s"File accepted: ${file.filename()} (detected: ${file.realContentType})")
+    )
+  }
+
+  /**
+   * Uses the new UploadContext API to verify the content stream is readable
+   * (the InputStream fix). The validator reads magic bytes and checks them.
+   */
+  @Post("/file/upload-context-magic-bytes")
+  def uploadContextMagicBytes: Action = Action.multipart { implicit request =>
+    request.findFile(
+      allowedExtensions = Set("pdf", "jpg", "png", "scala", "txt"),
+      validatorFn = (ctx: UploadContext) => {
+        val magic = new Array[Byte](4)
+        val n = ctx.content.read(magic)
+        if n < 2 then false
+        else
+          val b1 = magic(0) & 0xFF
+          val b2 = magic(1) & 0xFF
+          // Reject EXE: MZ (4D 5A)
+          if b1 == 0x4D && b2 == 0x5A then false
+          // Reject ZIP: PK (50 4B)
+          else if b1 == 0x50 && b2 == 0x4B then false
+          // PDF: %PDF
+          else if b1 == 0x25 && b2 == 0x50 then true
+          // JPEG: FF D8
+          else if b1 == 0xFF && b2 == 0xD8 then true
+          // PNG: 89 50
+          else if b1 == 0x89 && b2 == 0x50 then true
+          // Text (Scala source starts with letters, not magic bytes — accept if readable ASCII)
+          else if b1 >= 0x20 && b1 <= 0x7E && b2 >= 0x20 && b2 <= 0x7E then true
+          else false
+      }
+    ).fold(
+      th => BadRequest(s"Invalid file content - ${th.getMessage}"),
+      file => Ok(s"File accepted: ${file.filename()}")
+    )
+  }
+
+  /**
+   * Uses StorageNameMode.PureToken to generate a server-side filename.
+   * The on-disk name should differ from the original but the original
+   * is preserved in MultipartFile.filename().
+   */
+  @Post("/file/upload-pure-token")
+  def uploadPureToken: Action = Action.multipart { implicit request =>
+    request.findFile(
+      allowedExtensions = Set("scala", "java", "txt", "pdf"),
+      storageNameMode = StorageNameMode.PureToken,
+      validatorFn = (_: UploadContext) => true
+    ).fold(
+      th => BadRequest(s"Upload failed - ${th.getMessage}"),
+      file =>
+        val onDiskName = file.file().getName
+        Ok(s"Original: ${file.filename()}, Stored: $onDiskName")
+    )
+  }
+
+  /**
+   * Uses StorageNameMode.PrefixedToken for traceable server-side filenames.
+   * The on-disk name should start with a slug derived from the original.
+   */
+  @Post("/file/upload-prefixed-token")
+  def uploadPrefixedToken: Action = Action.multipart { implicit request =>
+    request.findFile(
+      allowedExtensions = Set("scala", "java", "txt", "pdf"),
+      storageNameMode = StorageNameMode.PrefixedToken,
+      validatorFn = (_: UploadContext) => true
+    ).fold(
+      th => BadRequest(s"Upload failed - ${th.getMessage}"),
+      file =>
+        val onDiskName = file.file().getName
+        Ok(s"Original: ${file.filename()}, Stored: $onDiskName")
+    )
+  }
+
+  /**
+   * Uses allowedExtensions to reject files with disallowed extensions
+   * before the validatorFn runs.
+   */
+  @Post("/file/upload-extension-allowlist")
+  def uploadExtensionAllowlist: Action = Action.multipart { implicit request =>
+    request.findFile(
+      allowedExtensions = Set("scala", "java", "txt"),
+      validatorFn = (_: UploadContext) => true
+    ).fold(
+      th => BadRequest(s"Rejected - ${th.getMessage}"),
+      file => Ok(s"File accepted: ${file.filename()}")
+    )
+  }
+
 }
 
 import scala.compiletime.uninitialized
@@ -411,7 +520,10 @@ startxref
     createExeFile(exePath)
 
     val result = s"curl http://localhost:${server.port}/file/validate-magic-number -F resourceFile=@$exePath".!!.trim
-    assertNoDiff(result, " Invalid file content detected - File test-malware.exe has content type application/octet-stream but actual content type is application/x-ms-dos-executable")
+    // The validator reads magic bytes (MZ) and returns false; the framework
+    // no longer throws on MIME mismatch (OWASP: declared MIME != detected MIME
+    // is not a security violation). The validatorFn is the authority.
+    assertNoDiff(result, "Invalid file content detected - File test-malware.exe with content type application/octet-stream is not allowed")
   }
 
   // New tests: upload an .exe but declare MIME type as PDF/JPEG - should be rejected
@@ -465,7 +577,9 @@ startxref
     Files.write(Paths.get(txtPath), "Just text pretending to be an exe".getBytes(StandardCharsets.UTF_8))
 
     val result = s"curl http://localhost:${server.port}/file/validate-filename -F resourceFile=@$txtPath".!!.trim
-    assertNoDiff(result, "Invalid file name - File test-masked.exe has content type application/octet-stream but actual content type is application/x-ms-dos-executable")
+    // The validator blocks .exe extensions; the framework no longer throws on
+    // MIME mismatch (the validatorFn is the authority).
+    assertNoDiff(result, "Invalid file name - File test-masked.exe with content type application/octet-stream is not allowed")
   }
 
   // ============ Test: findFile works with different field names ============
@@ -560,7 +674,9 @@ startxref
     Files.write(Paths.get(zipPath), zipBytes)
 
     val result = s"curl http://localhost:${server.port}/file/validate-magic-number -F resourceFile=@$zipPath".!!.trim
-    assertNoDiff(result, "Invalid file content detected - File test-archive.zip has content type application/octet-stream but actual content type is application/zip")
+    // The validator reads magic bytes (PK) and returns false; the framework
+    // no longer throws on MIME mismatch.
+    assertNoDiff(result, "Invalid file content detected - File test-archive.zip with content type application/octet-stream is not allowed")
   }
 
   // ============ Test: Error handling with Try ============
@@ -583,14 +699,22 @@ startxref
   }
 
   // ============ Test: findFile rejects when declared MIME type differs from actual content ============
-  test("findFile: Reject when declared MIME type differs from actual content") {
+  test("findFile: Accept PDF declared as image/jpeg (validator checks declared type only)") {
     val pdfPath = "/tmp/test-mismatch.pdf"
     createPdfFile(pdfPath)
 
-    // upload while declaring the content type as image/jpeg (mismatch)
+    // Upload while declaring the content type as image/jpeg (mismatch).
+    // The isAllowedFormat validator only checks the *declared* type (image/jpeg
+    // is in the allowlist), so the file is accepted. The framework no longer
+    // throws on declared-vs-detected MIME mismatch (OWASP File Upload Cheat
+    // Sheet: HTTP Content-Type is untrusted metadata, the validatorFn is the
+    // authority). The detected type (application/pdf) is available to the
+    // validator via UploadContext but this legacy 4-arg validator doesn't see it.
     val result = s"curl http://localhost:${server.port}/file/validate-format-only -F resourceFile=@$pdfPath;type=image/jpeg".!!.trim
-    // server wraps the underlying IllegalArgumentException message with the endpoint's prefix
-    assertNoDiff(result, "Invalid file format - File test-mismatch.pdf has content type image/jpeg but actual content type is application/pdf")
+    // The endpoint displays file.realContentType (server-detected), not the
+    // declared type. The file is accepted because isAllowedFormat checks the
+    // declared type (image/jpeg is in the allowlist).
+    assertNoDiff(result, "File accepted: test-mismatch.pdf (application/pdf)")
   }
 
   // ============ Test: findFiles rejects zero-length file ============
@@ -609,6 +733,127 @@ startxref
 
     val result = s"""curl http://localhost:${server.port}/files/blank-file-name -F "file1=@$pdfPath;filename= " """.!!.trim
     assertNoDiff(result, "Invalid files detected - Empty or whitespace-only filename not allowed")
+  }
+
+  // ===========================================================================
+  // New API tests: UploadContext, allowedExtensions, StorageNameMode
+  // ===========================================================================
+
+  // ============ Test: Scala source upload (application/octet-stream) is accepted ============
+  test("UploadContext: Accept Scala source file (octet-stream declared, text/x-scala detected)") {
+    val scalaPath = "/tmp/test-source.scala"
+    Files.write(Paths.get(scalaPath),
+      """object Hello:
+        |  def main(args: Array[String]): Unit = println("Hello")
+        |""".stripMargin.getBytes(StandardCharsets.UTF_8))
+
+    // Browsers send application/octet-stream for .scala files.
+    // The allowedExtensions gate passes (.scala is allowed).
+    // The validator reads magic bytes and accepts text content.
+    val result = s"curl http://localhost:${server.port}/file/upload-context-magic-bytes -F resourceFile=@$scalaPath".!!.trim
+    assertNoDiff(result, "File accepted: test-source.scala")
+  }
+
+  // ============ Test: UploadContext detects contradictions (EXE disguised as Scala) ============
+  test("UploadContext: Reject EXE disguised as .scala (content-based detection via validator)") {
+    // Create a file with EXE magic bytes (MZ) but .scala extension
+    val exePath = "/tmp/test-evil-disguise.scala"
+    createExeFile(exePath)
+
+    // The extension .scala is in the allowlist, so the extension gate passes.
+    // The MIME detector may report text/x-scala (extension-based), but the
+    // validator reads the content stream (fresh InputStream) and detects MZ
+    // magic bytes, rejecting it. This demonstrates the key value of the
+    // UploadContext API: the validator gets a fresh InputStream to do
+    // content-level validation, which the old 4-arg API's exhausted stream
+    // could not support.
+    val result = s"curl http://localhost:${server.port}/file/upload-context-magic-bytes -F resourceFile=@$exePath".!!.trim
+    assert(result.startsWith("Invalid file content"), s"Expected rejection, got: $result")
+  }
+
+  // ============ Test: UploadContext fresh InputStream (validator can read content) ============
+  test("UploadContext: Validator receives a fresh InputStream (can read magic bytes)") {
+    val pdfPath = "/tmp/test-fresh-is.pdf"
+    createPdfFile(pdfPath)
+
+    // The upload-context-magic-bytes endpoint reads the first 4 bytes.
+    // If the InputStream were exhausted (the old bug), it would read -1
+    // and return false. With the fix, it reads %PDF and accepts.
+    val result = s"curl http://localhost:${server.port}/file/upload-context-magic-bytes -F resourceFile=@$pdfPath".!!.trim
+    assertNoDiff(result, "File accepted: test-fresh-is.pdf")
+  }
+
+  // ============ Test: allowedExtensions rejects disallowed extension ============
+  test("allowedExtensions: Reject .exe file (extension not in allowlist)") {
+    val exePath = "/tmp/test-ext-block.exe"
+    Files.write(Paths.get(exePath), "not really an exe".getBytes(StandardCharsets.UTF_8))
+
+    val result = s"curl http://localhost:${server.port}/file/upload-extension-allowlist -F resourceFile=@$exePath".!!.trim
+    assertNoDiff(result, "Rejected - File extension '.exe' is not allowed")
+  }
+
+  // ============ Test: allowedExtensions accepts allowed extension ============
+  test("allowedExtensions: Accept .scala file (extension in allowlist)") {
+    val scalaPath = "/tmp/test-ext-ok.scala"
+    Files.write(Paths.get(scalaPath), "object Test".getBytes(StandardCharsets.UTF_8))
+
+    val result = s"curl http://localhost:${server.port}/file/upload-extension-allowlist -F resourceFile=@$scalaPath".!!.trim
+    assertNoDiff(result, "File accepted: test-ext-ok.scala")
+  }
+
+  // ============ Test: StorageNameMode.PureToken generates random on-disk name ============
+  test("StorageNameMode.PureToken: On-disk name differs from original, preserves extension") {
+    val scalaPath = "/tmp/test-pure-token.scala"
+    Files.write(Paths.get(scalaPath), "object Token".getBytes(StandardCharsets.UTF_8))
+
+    val result = s"curl http://localhost:${server.port}/file/upload-pure-token -F resourceFile=@$scalaPath".!!.trim
+    // Expected: "Original: test-pure-token.scala, Stored: <16-char-token>.scala"
+    assert(result.startsWith("Original: test-pure-token.scala, Stored: "), s"Unexpected: $result")
+    val storedName = result.substring("Original: test-pure-token.scala, Stored: ".length)
+    // The stored name should be a 16-char alphanumeric token + ".scala"
+    assert(storedName.endsWith(".scala"), s"Stored name should end with .scala: $storedName")
+    val token = storedName.substring(0, storedName.length - ".scala".length)
+    assert(token.length == 16, s"Token should be 16 chars: $token (length=${token.length})")
+    assert(token.forall(c => c.isLetterOrDigit), s"Token should be alphanumeric: $token")
+    assert(token != "test-pure-token", s"Token should not be the original basename")
+  }
+
+  // ============ Test: StorageNameMode.PrefixedToken generates traceable on-disk name ============
+  test("StorageNameMode.PrefixedToken: On-disk name starts with slug from original") {
+    val scalaPath = "/tmp/test-prefixed-token.scala"
+    Files.write(Paths.get(scalaPath), "object Prefixed".getBytes(StandardCharsets.UTF_8))
+
+    val result = s"curl http://localhost:${server.port}/file/upload-prefixed-token -F resourceFile=@$scalaPath".!!.trim
+    assert(result.startsWith("Original: test-prefixed-token.scala, Stored: "), s"Unexpected: $result")
+    val storedName = result.substring("Original: test-prefixed-token.scala, Stored: ".length)
+    assert(storedName.endsWith(".scala"), s"Stored name should end with .scala: $storedName")
+    val basename = storedName.substring(0, storedName.length - ".scala".length)
+    // PrefixedToken format: <slug>-<token>
+    assert(basename.contains("-"), s"Prefixed token should contain '-': $basename")
+    val slug = basename.substring(0, basename.lastIndexOf('-'))
+    assert(slug == "test-prefixed-token", s"Slug should be 'test-prefixed-token': $slug")
+    val token = basename.substring(basename.lastIndexOf('-') + 1)
+    assert(token.length == 16, s"Token should be 16 chars: $token")
+    assert(token.forall(c => c.isLetterOrDigit), s"Token should be alphanumeric: $token")
+  }
+
+  // ============ Test: PrefixedToken sanitizes special characters in filename ============
+  test("StorageNameMode.PrefixedToken: Sanitizes special characters in original filename") {
+    // Create a file with special characters in the name
+    val weirdPath = "/tmp/test weird file!!.scala"
+    Files.write(Paths.get(weirdPath), "object Weird".getBytes(StandardCharsets.UTF_8))
+
+    val result = s"""curl http://localhost:${server.port}/file/upload-prefixed-token -F "resourceFile=@$weirdPath" """.!!.trim
+    assert(result.startsWith("Original: test weird file!!.scala, Stored: "), s"Unexpected: $result")
+    val storedName = result.substring("Original: test weird file!!.scala, Stored: ".length)
+    assert(storedName.endsWith(".scala"), s"Stored name should end with .scala: $storedName")
+    // The slug should have spaces and ! replaced with _
+    val basename = storedName.substring(0, storedName.length - ".scala".length)
+    val slug = basename.substring(0, basename.lastIndexOf('-'))
+    assert(slug == "test_weird_file__", s"Slug should be sanitized: $slug")
+    // Verify no special chars in the on-disk name (except - and .)
+    assert(basename.forall(c => c.isLetterOrDigit || c == '-' || c == '_' || c == '.'),
+      s"On-disk name should be filesystem-safe: $basename")
   }
 
 }

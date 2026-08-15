@@ -21,6 +21,7 @@ import com.linecorp.armeria.server.{HttpService, ServiceRequestContext}
 import org.slf4j.LoggerFactory
 
 import java.io.InputStream
+import java.time.Duration
 import java.util.concurrent.CompletableFuture
 
 type SimpleResponse = String | Array[Byte] | InputStream | HttpResponse
@@ -108,3 +109,33 @@ object Action:
     (request: Request) => request.asMultipartFormData { form =>
       fn(MultipartRequest(form, request.requestContext, request.aggregatedHttpRequest))
     }
+
+  /**
+   * Clears the request timeout for this action, allowing long-running
+   * operations (e.g. LLM streaming, bulk DB operations) to complete without
+   * Armeria's default request timeout interrupting.
+   *
+   * Use sparingly — only for endpoints that genuinely need unlimited time.
+   * Prefer [[Action.timeout]] with an explicit duration where possible.
+   *
+   * @param fn the action body
+   * @return an [[Action]] with no request timeout
+   */
+  def noTimeout(fn: Request => ActionResponse): Action =
+    (request: Request) =>
+      request.requestContext.clearRequestTimeout()
+      fn(request)
+
+  /**
+   * Sets an explicit request timeout for this action, overriding the server's
+   * default. Useful for endpoints that need more (or less) time than the
+   * global default.
+   *
+   * @param duration the maximum time the request is allowed to run
+   * @param fn the action body
+   * @return an [[Action]] with the specified timeout
+   */
+  def timeout(duration: Duration)(fn: Request => ActionResponse): Action =
+    (request: Request) =>
+      request.requestContext.setRequestTimeout(duration)
+      fn(request)

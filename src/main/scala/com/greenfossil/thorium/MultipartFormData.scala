@@ -22,7 +22,55 @@ import com.linecorp.armeria.common.multipart.{AggregatedBodyPart, AggregatedMult
 import java.io.{File, InputStream}
 import java.nio.charset.Charset
 import java.nio.file.*
+import java.util.Locale
 import scala.util.Try
+
+/**
+ * Strategy for generating the on-disk storage filename of an uploaded file.
+ *
+ * The original client-supplied filename is always preserved as metadata in the
+ * returned [[MultipartFile]] (via `filename()`). The `StorageNameMode` only
+ * controls the basename used on disk under the upload directory.
+ *
+ * - [[StorageNameMode.PureToken]]: a cryptographically random alphanumeric token
+ *   (via `HMACUtil.randomAlphaNumericString`) + the validated extension.
+ *   Example: `aB3xK9mP2nQ7x.scala`
+ *
+ * - [[StorageNameMode.PrefixedToken]]: a slugified prefix derived from the
+ *   original basename (sanitized to `[A-Za-z0-9_-]`, truncated to 40 chars)
+ *   followed by `-` + the token + extension.
+ *   Example: `Sql-aB3xK9mP2nQ7x.scala`
+ *   This gives `ls`-level traceability without a DB lookup while still
+ *   guaranteeing uniqueness and unpredictability via the token.
+ */
+enum StorageNameMode:
+  case PureToken
+  case PrefixedToken
+
+/**
+ * Context passed to the application's upload validator.
+ *
+ * - `declaredType` is the HTTP `Content-Type` supplied by the client. It is
+ *   UNTRUSTED metadata (OWASP File Upload Cheat Sheet) — useful as a hint but
+ *   never proof of the actual file content.
+ * - `detectedType` is the server-side MIME type detected from the file bytes
+ *   (via `Files.probeContentType` / `MimeTypeDetector`). It is a detection
+ *   hint, not absolute proof.
+ * - `content` is a freshly opened `InputStream` over the uploaded bytes.
+ *   Unlike the legacy 4-arg validator, this stream has not been consumed by
+ *   MIME detection and may be read by the validator for magic-byte / parser
+ *   checks. The framework closes it after the validator returns.
+ *
+ * The validator returns `true` to accept, `false` to reject (which causes an
+ * `IllegalArgumentException` to be thrown by the framework).
+ */
+final case class UploadContext(
+    fieldName: String,
+    fileName: String,
+    declaredType: MediaType,
+    detectedType: MediaType,
+    content: InputStream
+)
 
 case class MultipartFormData(aggMultipart: AggregatedMultipart, multipartUploadLocation: Path):
   import scala.jdk.CollectionConverters.*
@@ -67,83 +115,275 @@ case class MultipartFormData(aggMultipart: AggregatedMultipart, multipartUploadL
     } yield  MultipartFile.of(name, part.filename(), file)
 
   /**
-   * Save the uploaded file to disk with validation
-   * if real mime type is different from the part.contentType(), an exception is thrown
-   * if validatorFn returns false, an exception is thrown
-   * @param fieldName
-   * @param part
-   * @param validatorFn
-   * @return
+   * Extract the lowercase extension (without leading dot) from a filename.
+   * Returns `None` if there is no extension.
    */
-  private def saveFileTo(fieldName: String, part: AggregatedBodyPart, validatorFn: (fieldName:String, fileName:String, contentType:MediaType, content: InputStream) => Boolean): Try[File] =
-    Try:
-      val is = part.content().toInputStream
-      try
-        // Validate filename: reject null/blank/whitespace-only names and suspicious names
-        val trimmedFilename = Option(part.filename()).map(_.trim).getOrElse("")
-        if trimmedFilename.isBlank then
-          throw new IllegalArgumentException("Empty or whitespace-only filename not allowed")
-        // Prevent obvious path traversal or directory names
-        if trimmedFilename == "." || trimmedFilename == ".." || trimmedFilename.contains(java.io.File.separator) || trimmedFilename.contains("/") || trimmedFilename.contains("\\") then
-          throw new IllegalArgumentException(s"Invalid filename: $trimmedFilename")
-
-        // Ensure target resolves inside the configured upload directory and is not a directory
-        if !Files.exists(multipartUploadLocation) then multipartUploadLocation.toFile.mkdirs()
-        val target = multipartUploadLocation.resolve(trimmedFilename).normalize()
-        if !target.startsWith(multipartUploadLocation.normalize()) then
-          throw new IllegalArgumentException(s"Invalid filename resolves outside upload directory: $trimmedFilename")
-        if Files.exists(target) && Files.isDirectory(target) then
-          throw new IllegalArgumentException(s"Invalid filename resolves to directory: $trimmedFilename")
-
-        // Detect the real MIME type from the file content.
-        // HTTP Content-Type is untrusted metadata — it must not be treated as proof
-        // of what the uploaded bytes contain (OWASP File Upload Cheat Sheet).
-        // The detected type is passed to validatorFn so the application policy can
-        // decide whether to accept or reject. We log mismatches as warnings but do
-        // NOT throw — the application's validatorFn is the authority.
-        val realMimeType = mimeTypeDetector.detectMimeType(trimmedFilename, is)
-        val detectedType = MediaType.parse(realMimeType)
-        val declaredType = part.contentType()
-        if detectedType != declaredType then
-          actionLogger.warn(s"File ${part.filename()} has declared content type $declaredType but detected content type is $detectedType — deferring to validator")
-
-        if !validatorFn(fieldName, trimmedFilename, declaredType, is) then
-          throw new IllegalArgumentException(s"File $trimmedFilename with content type $declaredType is not allowed")
-
-        // multipartUploadLocation already ensured above
-        val filePath = multipartUploadLocation.resolve(trimmedFilename)
-        Files.copy(part.content().toInputStream, filePath, StandardCopyOption.REPLACE_EXISTING)
-        filePath.toFile
-      finally {
-        is.close()
-      }
+  private def fileExtension(filename: String): Option[String] =
+    val idx = filename.lastIndexOf('.')
+    if idx <= 0 || idx == filename.length - 1 then None
+    else Some(filename.substring(idx + 1).toLowerCase(Locale.ROOT))
 
   /**
-   * Find the uploaded files with validation. All files must pass the validation or else an exception is returned.
-   * Note: The field contentType:MediaType is validated such that the uploaded content type and the actual content type will match.
-   * 
-   * @param validatorFn Validation for security. Do not use '(_, _, _, _) => true' as this will bypass the security check
+   * Sanitize the original basename into a filesystem-safe slug for
+   * [[StorageNameMode.PrefixedToken]].
+   *
+   * Rules:
+   *   - strip the extension (the token will carry it)
+   *   - replace any character outside `[A-Za-z0-9_-]` with `_`
+   *   - truncate to 40 characters
+   *   - return `""` if the result is empty (caller falls back to PureToken)
+   */
+  private def slugify(filename: String): String =
+    val base = fileExtension(filename) match
+      case Some(ext) => filename.substring(0, filename.length - ext.length - 1)
+      case None      => filename
+    val slug = base.toCharArray.map(c =>
+      if (c >= 'a' && c <= 'z') || (c >= 'A' && c <= 'Z') ||
+         (c >= '0' && c <= '9') || c == '_' || c == '-' then c else '_'
+    ).mkString
+    val truncated = if slug.length > 40 then slug.substring(0, 40) else slug
+    truncated
+
+  /**
+   * Generate a server-side storage filename using
+   * `HMACUtil.randomAlphaNumericString(16)` (cryptographically random,
+   * filesystem-safe alphanumeric).
+   *
+   * - [[StorageNameMode.PureToken]]: `aB3xK9mP2nQ7x.scala`
+   * - [[StorageNameMode.PrefixedToken]]: `Sql-aB3xK9mP2nQ7x.scala`
+   *   Falls back to `PureToken` form when the slug is empty (e.g. the
+   *   original basename is all non-ASCII).
+   */
+  private def generateStorageName(filename: String, mode: StorageNameMode): String =
+    val ext  = fileExtension(filename)
+    val token = HMACUtil.randomAlphaNumericString(16)
+    mode match
+      case StorageNameMode.PureToken =>
+        ext.fold(token)(e => s"$token.$e")
+      case StorageNameMode.PrefixedToken =>
+        val slug = slugify(filename)
+        if slug.isEmpty then
+          ext.fold(token)(e => s"$token.$e")
+        else
+          ext.fold(s"$slug-$token")(e => s"$slug-$token.$e")
+
+  /**
+   * Core validation-and-save implementation. All public `findFile` /
+   * `findFiles` overloads delegate here.
+   *
+   * Security pipeline (OWASP File Upload Cheat Sheet):
+   *   1. Filename sanitization + path-traversal containment
+   *   2. Extension allowlist (if `allowedExtensions` is non-empty)
+   *   3. Server-side MIME detection (hint, not proof)
+   *   4. Mismatch logged as warning — does NOT throw
+   *   5. `validatorFn` is the authority; receives `UploadContext` with
+   *      declared + detected types and a FRESH `InputStream`
+   *   6. File written to final storage (client name or server-generated name)
+   *
+   * @param allowedExtensions empty set = skip the extension gate (preserves
+   *                          the legacy "validatorFn is the only gate" contract)
+   * @param storageNameMode   `None` = use the client filename verbatim (today's
+   *                          behavior); `Some(mode)` = server-generated name
+   * @param validatorFn       application-level authority
+   */
+  private def saveFileToValidated(
+      fieldName: String,
+      part: AggregatedBodyPart,
+      allowedExtensions: Set[String],
+      storageNameMode: Option[StorageNameMode],
+      validatorFn: UploadContext => Boolean
+  ): Try[MultipartFile] =
+    Try:
+      // --- 1. Filename sanitization ---
+      val trimmedFilename = Option(part.filename()).map(_.trim).getOrElse("")
+      if trimmedFilename.isBlank then
+        throw new IllegalArgumentException("Empty or whitespace-only filename not allowed")
+      if trimmedFilename == "." || trimmedFilename == ".." ||
+         trimmedFilename.contains(java.io.File.separator) ||
+         trimmedFilename.contains("/") || trimmedFilename.contains("\\") then
+        throw new IllegalArgumentException(s"Invalid filename: $trimmedFilename")
+
+      // Ensure upload dir exists
+      if !Files.exists(multipartUploadLocation) then multipartUploadLocation.toFile.mkdirs()
+
+      // --- 2. Extension allowlist (pre-filter; validatorFn is still the authority) ---
+      val ext = fileExtension(trimmedFilename)
+      if allowedExtensions.nonEmpty then
+        ext match
+          case Some(e) if !allowedExtensions.contains(e) =>
+            throw new IllegalArgumentException(s"File extension '.$e' is not allowed")
+          case None =>
+            throw new IllegalArgumentException("File extension is required but none was provided")
+          case _ => ()
+
+      // --- 3. Server-side MIME detection (on a fresh stream) ---
+      val detectionIs = part.content().toInputStream
+      val realMimeType =
+        try mimeTypeDetector.detectMimeType(trimmedFilename, detectionIs)
+        finally detectionIs.close()
+      val detectedType = MediaType.parse(realMimeType)
+      val declaredType = part.contentType()
+      if detectedType != declaredType then
+        actionLogger.warn(
+          s"File ${part.filename()} has declared content type $declaredType " +
+          s"but detected content type is $detectedType — deferring to validator"
+        )
+
+      // --- 4. Validator (fresh stream; the InputStream fix) ---
+      val validatorIs = part.content().toInputStream
+      val ctx = UploadContext(fieldName, trimmedFilename, declaredType, detectedType, validatorIs)
+      val accepted =
+        try validatorFn(ctx)
+        finally validatorIs.close()
+      if !accepted then
+        throw new IllegalArgumentException(
+          s"File $trimmedFilename with content type $declaredType is not allowed"
+        )
+
+      // --- 5. Resolve storage path ---
+      val (storageName, filePath) =
+        storageNameMode match
+          case Some(mode) =>
+            val sName = generateStorageName(trimmedFilename, mode)
+            val fPath = multipartUploadLocation.resolve(sName).normalize()
+            if !fPath.startsWith(multipartUploadLocation.normalize()) then
+              throw new IllegalArgumentException(s"Generated filename resolves outside upload directory: $sName")
+            if Files.exists(fPath) && Files.isDirectory(fPath) then
+              throw new IllegalArgumentException(s"Generated filename resolves to directory: $sName")
+            (sName, fPath)
+          case None =>
+            val fPath = multipartUploadLocation.resolve(trimmedFilename).normalize()
+            if !fPath.startsWith(multipartUploadLocation.normalize()) then
+              throw new IllegalArgumentException(s"Invalid filename resolves outside upload directory: $trimmedFilename")
+            if Files.exists(fPath) && Files.isDirectory(fPath) then
+              throw new IllegalArgumentException(s"Invalid filename resolves to directory: $trimmedFilename")
+            (trimmedFilename, fPath)
+
+      // --- 6. Write to disk ---
+      Files.copy(part.content().toInputStream, filePath, StandardCopyOption.REPLACE_EXISTING)
+
+      // --- 7. Traceability log (only when the on-disk name differs from the original) ---
+      if storageNameMode.isDefined then
+        actionLogger.info(
+          s"Uploaded '$trimmedFilename' stored as '$storageName' " +
+          s"(field=$fieldName, declared=$declaredType, detected=$detectedType)"
+        )
+
+      // Original filename preserved as metadata; file() points to the on-disk path
+      MultipartFile.of(fieldName, part.filename(), filePath.toFile)
+
+  // ---------------------------------------------------------------------------
+  // Legacy 4-arg API — signatures preserved exactly; delegates to the new
+  // path so existing callers automatically get the InputStream fix.
+  // ---------------------------------------------------------------------------
+
+  /**
+   * Find the uploaded files with validation. All files must pass the
+   * validation or else an exception is returned.
+   *
+   * '''Behavior note:''' The `content` `InputStream` passed to `validatorFn`
+   * is freshly opened — it has NOT been consumed by MIME detection.
+   * Previously the stream was exhausted; validators that read `content`
+   * now see the actual bytes.
+   *
+   * @param validatorFn Validation for security. Do not use
+   *                    `(_, _, _, _) => true` as this bypasses the security check
    * @return If validatorFn returns false, this will return a Failure
    */
-  def findFiles(validatorFn: (fieldName:String, fileName:String, contentType:MediaType, content:InputStream) => Boolean): Try[List[MultipartFile]] =
+  def findFiles(validatorFn: (fieldName: String, fileName: String, contentType: MediaType, content: InputStream) => Boolean): Try[List[MultipartFile]] =
+    findFiles(
+      allowedExtensions = Set.empty,
+      storageNameMode   = None,
+      validatorFn       = (ctx: UploadContext) =>
+        validatorFn(ctx.fieldName, ctx.fileName, ctx.declaredType, ctx.content)
+    )
+
+  /**
+   * Find the uploaded file with validation. All files must pass the
+   * validation or else an exception is returned.
+   *
+   * @param validatorFn Validation for security. Do not use
+   *                    `(_, _, _, _) => true` as this bypasses the security check
+   * @return If validatorFn returns false, this will return a Failure
+   */
+  def findFile(validatorFn: (fieldName: String, fileName: String, contentType: MediaType, content: InputStream) => Boolean): Try[MultipartFile] =
+    findFiles(validatorFn).map(_.head)
+
+  // ---------------------------------------------------------------------------
+  // New API — UploadContext validator + optional extension allowlist
+  // ---------------------------------------------------------------------------
+
+  /**
+   * Find the uploaded files with validation. All files must pass the
+   * validation or else an exception is returned.
+   *
+   * The `UploadContext` exposes both the client-declared `Content-Type`
+   * (untrusted) and the server-detected MIME type, plus a fresh
+   * `InputStream` for content-level checks.
+   *
+   * @param allowedExtensions if non-empty, files whose extension is not in
+   *                          this set are rejected before `validatorFn` runs.
+   *                          Empty set = skip (delegate entirely to `validatorFn`)
+   * @param validatorFn       application-level authority. Returns `true` to accept
+   * @return `Failure` if any file fails validation
+   */
+  def findFiles(allowedExtensions: Set[String], validatorFn: UploadContext => Boolean): Try[List[MultipartFile]] =
+    findFiles(allowedExtensions, None, validatorFn)
+
+  /**
+   * Find the uploaded file with validation. See
+   * [[findFiles(allowedExtensions:Set,validatorFn*]] for semantics.
+   */
+  def findFile(allowedExtensions: Set[String], validatorFn: UploadContext => Boolean): Try[MultipartFile] =
+    findFiles(allowedExtensions, validatorFn).map(_.head)
+
+  // ---------------------------------------------------------------------------
+  // New API — UploadContext validator + extension allowlist + server-generated filename
+  // ---------------------------------------------------------------------------
+
+  /**
+   * Find the uploaded files with validation and server-generated storage
+   * filenames.
+   *
+   * When `storageNameMode` is provided, the on-disk filename is replaced with
+   * a cryptographically random token (via `HMACUtil.randomAlphaNumericString`)
+   * while the original client filename is preserved as
+   * `MultipartFile.filename()` metadata. An info-level log line records the
+   * original→storage name mapping for traceability.
+   *
+   * @param allowedExtensions extension allowlist (empty = skip)
+   * @param storageNameMode   `PureToken` or `PrefixedToken`
+   * @param validatorFn       application-level authority
+   */
+  def findFiles(allowedExtensions: Set[String], storageNameMode: StorageNameMode, validatorFn: UploadContext => Boolean): Try[List[MultipartFile]] =
+    findFiles(allowedExtensions, Some(storageNameMode), validatorFn)
+
+  /**
+   * Find the uploaded file with validation and server-generated storage
+   * filename. See
+   * [[findFiles(allowedExtensions:Set,storageNameMode:com.greenfossil.thorium.StorageNameMode,validatorFn*]]
+   * for semantics.
+   */
+  def findFile(allowedExtensions: Set[String], storageNameMode: StorageNameMode, validatorFn: UploadContext => Boolean): Try[MultipartFile] =
+    findFiles(allowedExtensions, storageNameMode, validatorFn).map(_.head)
+
+  // ---------------------------------------------------------------------------
+  // Internal: single implementation used by all public overloads
+  // ---------------------------------------------------------------------------
+
+  private def findFiles(
+      allowedExtensions: Set[String],
+      storageNameMode: Option[StorageNameMode],
+      validatorFn: UploadContext => Boolean
+  ): Try[List[MultipartFile]] =
     Try:
       val fileTries: Seq[Try[MultipartFile]] =
-        for {
+        for
           name <- names
           part <- aggMultipart.fields(name).asScala
           if part.filename() != null && !part.content().isEmpty
-        } yield saveFileTo(name, part, validatorFn).map(file => MultipartFile.of(name, part.filename(), file))
+        yield saveFileToValidated(name, part, allowedExtensions, storageNameMode, validatorFn)
       fileTries.map(_.get).toList
-
-  /**
-   * Find the uploaded file with validation. All files must pass the validation or else an exception is returned.
-   * Note: The field contentType:MediaType is validated such that the uploaded content type and the actual content type will match.
-   * 
-   * @param validatorFn Validation for security. Do not use '(_, _, _, _) => true' as this will bypass the security check
-   * @return If validatorFn returns false, this will return a Failure
-   */
-  def findFile(validatorFn: (fieldName:String, fileName:String, contentType:MediaType, content:InputStream) => Boolean ): Try[MultipartFile] =
-    findFiles(validatorFn).map(_.head)
 
   /**
    * Find a file using the form name
