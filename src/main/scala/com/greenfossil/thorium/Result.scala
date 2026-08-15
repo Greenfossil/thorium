@@ -32,6 +32,171 @@ def Ok(jsValue: JsValue): Result =
 def Ok(tag: Tag): Result =
   Result.of(HttpStatus.OK, tag.render, MediaType.HTML_UTF_8)
 
+/**
+ * 202 Accepted — the request has been received and queued for processing, but the outcome is not yet known.
+ *
+ * This is a fire-and-forget acknowledgement. HTTP delivers exactly one response per request,
+ * so the final result is NEVER sent back on the same connection. Instead, the result is
+ * delivered through one of the following out-of-band mechanisms agreed upon with the client:
+ *
+ * '''Polling (client pulls):'''
+ * Return a job ID and a status URL in the 202 body. The client periodically calls that URL
+ * until the job reaches a terminal state (completed / failed).
+ * {{{
+ *   Accepted(Json.obj("jobId" -> id, "statusUrl" -> s"/jobs/$id"))
+ *   // Client later calls GET /jobs/:id to retrieve the result
+ * }}}
+ *
+ * '''Webhook / Callback (server pushes):'''
+ * The original request includes a callbackUrl. Once processing finishes, the server POSTs
+ * the result to that URL. The client does not poll — it waits to be called back.
+ * {{{
+ *   Accepted(Json.obj("jobId" -> id, "message" -> "Result will be POSTed to your callbackUrl"))
+ * }}}
+ *
+ * '''WebSocket / Server-Sent Events (server pushes, persistent connection):'''
+ * After receiving the 202, the client holds open a WebSocket or SSE connection. The server
+ * pushes the final result over that channel when the work is done.
+ *
+ * '''Out-of-band notification (email, push notification, SMS):'''
+ * For very long-running operations, the result is delivered outside HTTP entirely —
+ * via email, mobile push, or an in-app notification system.
+ *
+ * Common scenarios:
+ *  - Enqueueing a background job (report generation, bulk email send)
+ *  - Publishing a message to Kafka / SQS where processing is deferred
+ *  - Triggering a long-running workflow (data import, ETL, batch processing)
+ *  - Acknowledging an inbound webhook — payload received, will be processed asynchronously
+ *
+ * Do NOT use when the operation completes synchronously — prefer Ok (200) or Created (201).
+ * Note: a 202 does NOT guarantee success — the background job may still fail; errors must
+ * be surfaced through whichever delivery mechanism above was agreed upon.
+ */
+def Accepted(body: SimpleResponse): Result =
+  Result.of(HttpStatus.ACCEPTED, body)
+
+def Accepted(jsValue: JsValue): Result =
+  Result.of(HttpStatus.ACCEPTED, jsValue.stringify, MediaType.JSON)
+
+def Accepted(tag: Tag): Result =
+  Result.of(HttpStatus.ACCEPTED, tag.render, MediaType.HTML_UTF_8)
+
+/**
+ * 201 Created — the request succeeded and a new resource was created as a result.
+ *
+ * Use for successful POST (or PUT) requests that result in resource creation:
+ * - POST /users → new user record created
+ * - POST /orders → new order placed
+ * - POST /files → file uploaded and stored
+ *
+ * Best practice: include a Location header pointing to the newly created resource.
+ * {{{
+ *   Created(json).withHeaders("Location" -> s"/users/${newUser.id}")
+ * }}}
+ */
+def Created(body: SimpleResponse): Result =
+  Result.of(HttpStatus.CREATED, body)
+
+def Created(jsValue: JsValue): Result =
+  Result.of(HttpStatus.CREATED, jsValue.stringify, MediaType.JSON)
+
+def Created(tag: Tag): Result =
+  Result.of(HttpStatus.CREATED, tag.render, MediaType.HTML_UTF_8)
+
+/**
+ * 204 No Content — the request succeeded but there is no content to send back.
+ *
+ * Use when the operation completes successfully but has nothing meaningful to return:
+ * - DELETE /items/1 → item deleted, no body needed
+ * - PUT /settings → settings updated, no body needed
+ * - Clearing a cache or resetting state
+ *
+ * The response must not include a body. Clients should not navigate away from the current page.
+ */
+def NoContent(): Result =
+  Result.of(HttpStatus.NO_CONTENT, "")
+
+/**
+ * 409 Conflict — the request conflicts with the current state of the resource.
+ *
+ * Use when a request cannot be completed due to a conflict with existing data:
+ * - POST /users with an email that already exists (duplicate key)
+ * - Optimistic locking failure (version mismatch on update)
+ * - Trying to transition a resource to an invalid state (e.g., cancelling an already-completed order)
+ */
+def Conflict(body: SimpleResponse): Result =
+  Result.of(HttpStatus.CONFLICT, body)
+
+def Conflict(jsValue: JsValue): Result =
+  Result.of(HttpStatus.CONFLICT, jsValue.stringify, MediaType.JSON)
+
+def Conflict(tag: Tag): Result =
+  Result.of(HttpStatus.CONFLICT, tag.render, MediaType.HTML_UTF_8)
+
+/**
+ * 422 Unprocessable Entity — the request is well-formed but contains semantic errors.
+ *
+ * Use when input passes syntax/parsing validation but fails business rule validation:
+ * - A date range where the end date is before the start date
+ * - A discount percentage exceeding the allowed maximum
+ * - A form field referencing a non-existent foreign key
+ *
+ * Prefer this over BadRequest (400) when the request structure is valid but the content is logically invalid.
+ */
+def UnprocessableEntity(body: SimpleResponse): Result =
+  Result.of(HttpStatus.UNPROCESSABLE_ENTITY, body)
+
+def UnprocessableEntity(jsValue: JsValue): Result =
+  Result.of(HttpStatus.UNPROCESSABLE_ENTITY, jsValue.stringify, MediaType.JSON)
+
+def UnprocessableEntity(tag: Tag): Result =
+  Result.of(HttpStatus.UNPROCESSABLE_ENTITY, tag.render, MediaType.HTML_UTF_8)
+
+/**
+ * 429 Too Many Requests — the client has sent too many requests in a given time window.
+ *
+ * Use when rate limiting is enforced:
+ * - A client exceeds an API call quota (e.g., 100 requests/minute)
+ * - A login endpoint detects brute-force attempts
+ * - A per-user throttle is triggered in a public-facing API
+ *
+ * Best practice: include a Retry-After header indicating when the client may retry.
+ * {{{
+ *   TooManyRequests("Rate limit exceeded").withHeaders("Retry-After" -> "60")
+ * }}}
+ */
+def TooManyRequests(body: SimpleResponse): Result =
+  Result.of(HttpStatus.TOO_MANY_REQUESTS, body)
+
+def TooManyRequests(jsValue: JsValue): Result =
+  Result.of(HttpStatus.TOO_MANY_REQUESTS, jsValue.stringify, MediaType.JSON)
+
+def TooManyRequests(tag: Tag): Result =
+  Result.of(HttpStatus.TOO_MANY_REQUESTS, tag.render, MediaType.HTML_UTF_8)
+
+/**
+ * 503 Service Unavailable — the server is temporarily unable to handle the request.
+ *
+ * Use when the server is temporarily down or overloaded:
+ * - Planned maintenance window
+ * - A downstream dependency (database, third-party service) is unreachable
+ * - A circuit breaker has opened due to repeated failures
+ * - The server is overloaded and shedding load
+ *
+ * Best practice: include a Retry-After header with the expected recovery time.
+ * {{{
+ *   ServiceUnavailable("Maintenance in progress").withHeaders("Retry-After" -> "3600")
+ * }}}
+ */
+def ServiceUnavailable(body: SimpleResponse): Result =
+  Result.of(HttpStatus.SERVICE_UNAVAILABLE, body)
+
+def ServiceUnavailable(jsValue: JsValue): Result =
+  Result.of(HttpStatus.SERVICE_UNAVAILABLE, jsValue.stringify, MediaType.JSON)
+
+def ServiceUnavailable(tag: Tag): Result =
+  Result.of(HttpStatus.SERVICE_UNAVAILABLE, tag.render, MediaType.HTML_UTF_8)
+
 def BadRequest(body: SimpleResponse): Result =
   Result.of(HttpStatus.BAD_REQUEST, body)
 

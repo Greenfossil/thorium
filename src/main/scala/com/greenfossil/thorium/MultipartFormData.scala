@@ -97,12 +97,16 @@ case class MultipartFormData(aggMultipart: AggregatedMultipart, multipartUploadL
 
         //Check if  realMimeType is same as part.contentType()
         val realMimeType = mimeTypeDetector.detectMimeType(trimmedFilename, is) //Read the stream to detect mime type
+        val declaredType = part.contentType()
         MediaType.parse(realMimeType) match
-          case mt if mt != part.contentType() =>
-            actionLogger.error(s"File ${part.filename()} has content type ${part.contentType()} but actual content type is $mt")
-            //This should be uncommented to enforce content type checking
-            throw new IllegalArgumentException(s"File ${part.filename()} has content type ${part.contentType()} but actual content type is $mt")
-          case _ => //All good
+          case mt if mt != declaredType && !declaredType.is(MediaType.OCTET_STREAM) =>
+            // Mismatch — but only reject if the browser declared a specific type.
+            // application/octet-stream is the browser's "I don't know" fallback for
+            // file types not in its MIME database (e.g. .scala, .go, .rs, .ts).
+            // In that case, trust the detector and let validatorFn decide.
+            actionLogger.error(s"File ${part.filename()} has content type $declaredType but actual content type is $mt")
+            throw new IllegalArgumentException(s"File ${part.filename()} has content type $declaredType but actual content type is $mt")
+          case _ => //All good — types match, or declared type is octet-stream (browser fallback)
 
         if !validatorFn(fieldName, trimmedFilename, part.contentType(), is) then
           throw new IllegalArgumentException(s"File $trimmedFilename with content type ${part.contentType()} is not allowed")
