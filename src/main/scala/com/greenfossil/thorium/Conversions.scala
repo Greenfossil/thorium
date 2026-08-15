@@ -39,7 +39,7 @@ given  Conversion[Tag, Result] with
  * with `HttpStatus.OK`).
  * On [[scala.util.Failure]]: re-throws the exception so that Thorium's
  * `EssentialAction.serve` catch block produces an `HttpResponse.ofFailure`,
- * which routes to the registered [[ServerErrorHandler]]. This matches the
+ * which routes to the registered `ServerErrorHandler`. This matches the
  * behavior downstream error handlers expect (branded error pages, logging,
  * etc.) rather than leaking exception messages directly to the client.
  *

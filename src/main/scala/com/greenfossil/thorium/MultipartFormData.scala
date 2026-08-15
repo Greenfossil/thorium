@@ -29,7 +29,7 @@ import scala.util.Try
  * Strategy for generating the on-disk storage filename of an uploaded file.
  *
  * The original client-supplied filename is always preserved as metadata in the
- * returned [[MultipartFile]] (via `filename()`). The `StorageNameMode` only
+ * returned `MultipartFile` (via `filename()`). The `StorageNameMode` only
  * controls the basename used on disk under the upload directory.
  *
  * - [[StorageNameMode.PureToken]]: a cryptographically random alphanumeric token

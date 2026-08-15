@@ -52,6 +52,33 @@ trait Request(val requestContext: ServiceRequestContext,
 
   def flash: Flash = requestContext.attr(RequestAttrs.Flash)
 
+  /**
+   * Registers an `AutoCloseable` resource for deferred release. The resource
+   * will be closed after the HTTP response is fully written to the client.
+   *
+   * Multiple resources can be registered per request; they are closed in
+   * LIFO (reverse registration) order.
+   *
+   * Example:
+   * {{{
+   * Action { req =>
+   *   val conn = req.manageResource(DB.createAutoCommitConnection)
+   *   val stream = DB.use(conn) { implicit c => c.binaryStream("SELECT ...") }
+   *   Ok(stream)
+   *   // conn.close() called by framework after streaming completes
+   * }
+   * }}}
+   */
+  def manageResource[R <: AutoCloseable](rsrc: R): R =
+    val list = requestContext.attr(RequestAttrs.ManagedResources)
+    if list == null then
+      val newList = new java.util.ArrayList[AutoCloseable]()
+      requestContext.setAttr(RequestAttrs.ManagedResources, newList)
+      newList.add(rsrc)
+    else
+      list.add(rsrc)
+    rsrc
+
   def recaptchaResponse: Recaptcha = requestContext.attr(RequestAttrs.RecaptchaResponse)
 
   def csrfTokenName: String = config.httpConfiguration.csrfConfig.cookieName

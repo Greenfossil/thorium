@@ -92,7 +92,6 @@ trait EssentialAction extends HttpService :
       .request()
       .aggregate()
       .thenAccept { aggregateRequest =>
-        // On the event loop — construct Request, then hop to blocking pool
         val req = new Request(svcRequestContext, aggregateRequest) {}
         val blockingEC = ExecutionContext.fromExecutorService(svcRequestContext.blockingTaskExecutor())
 
@@ -103,9 +102,6 @@ trait EssentialAction extends HttpService :
             actionLogger.debug("Response from EssentialAction.apply")
             resp match
               case f: Future[ActionResponse] @unchecked =>
-                // Async: bridge Scala Future → CompletableFuture using the blocking-pool EC.
-                // The blocking-pool thread is freed here; the onComplete callback
-                // runs on the blocking pool when the Future completes.
                 f.onComplete {
                   case Success(ar) =>
                     futureResp.complete(
@@ -116,7 +112,6 @@ trait EssentialAction extends HttpService :
                     futureResp.complete(HttpResponse.ofFailure(ex))
                 }(using blockingEC)
               case ar: ActionResponse =>
-                // Sync: convert and complete immediately on the blocking pool
                 futureResp.complete(
                   HttpResponseConverter.convertActionResponseToHttpResponse(req, ar)
                 )
@@ -126,6 +121,19 @@ trait EssentialAction extends HttpService :
               futureResp.complete(HttpResponse.ofFailure(t))
         })
       }
+    // Close all resources registered via req.manageResource after the response completes.
+    futureResp.whenComplete { (_, _) =>
+      val list = svcRequestContext.attr(RequestAttrs.ManagedResources)
+      if list != null then
+        val it = list.iterator()
+        val toClose = new java.util.ArrayList[AutoCloseable]()
+        while it.hasNext do toClose.add(it.next())
+        // Close in LIFO order (reverse)
+        var i = toClose.size() - 1
+        while i >= 0 do
+          try toClose.get(i).close() catch case _: Throwable => ()
+          i -= 1
+    }
     HttpResponse.of(futureResp)
 
 end EssentialAction

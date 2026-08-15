@@ -27,3 +27,4 @@ object RequestAttrs:
   val Request = AttributeKey.valueOf[Request]("request")
   val CSRFToken = AttributeKey.valueOf[String]("csrf-token")
   val RecaptchaResponse  = AttributeKey.valueOf[Recaptcha]("recaptcha-response")
+  val ManagedResources = AttributeKey.valueOf[java.util.List[AutoCloseable]]("managed-resources")
