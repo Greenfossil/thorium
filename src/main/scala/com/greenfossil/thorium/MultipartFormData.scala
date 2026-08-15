@@ -95,21 +95,20 @@ case class MultipartFormData(aggMultipart: AggregatedMultipart, multipartUploadL
         if Files.exists(target) && Files.isDirectory(target) then
           throw new IllegalArgumentException(s"Invalid filename resolves to directory: $trimmedFilename")
 
-        //Check if  realMimeType is same as part.contentType()
-        val realMimeType = mimeTypeDetector.detectMimeType(trimmedFilename, is) //Read the stream to detect mime type
+        // Detect the real MIME type from the file content.
+        // HTTP Content-Type is untrusted metadata — it must not be treated as proof
+        // of what the uploaded bytes contain (OWASP File Upload Cheat Sheet).
+        // The detected type is passed to validatorFn so the application policy can
+        // decide whether to accept or reject. We log mismatches as warnings but do
+        // NOT throw — the application's validatorFn is the authority.
+        val realMimeType = mimeTypeDetector.detectMimeType(trimmedFilename, is)
+        val detectedType = MediaType.parse(realMimeType)
         val declaredType = part.contentType()
-        MediaType.parse(realMimeType) match
-          case mt if mt != declaredType && !declaredType.is(MediaType.OCTET_STREAM) =>
-            // Mismatch — but only reject if the browser declared a specific type.
-            // application/octet-stream is the browser's "I don't know" fallback for
-            // file types not in its MIME database (e.g. .scala, .go, .rs, .ts).
-            // In that case, trust the detector and let validatorFn decide.
-            actionLogger.error(s"File ${part.filename()} has content type $declaredType but actual content type is $mt")
-            throw new IllegalArgumentException(s"File ${part.filename()} has content type $declaredType but actual content type is $mt")
-          case _ => //All good — types match, or declared type is octet-stream (browser fallback)
+        if detectedType != declaredType then
+          actionLogger.warn(s"File ${part.filename()} has declared content type $declaredType but detected content type is $detectedType — deferring to validator")
 
-        if !validatorFn(fieldName, trimmedFilename, part.contentType(), is) then
-          throw new IllegalArgumentException(s"File $trimmedFilename with content type ${part.contentType()} is not allowed")
+        if !validatorFn(fieldName, trimmedFilename, declaredType, is) then
+          throw new IllegalArgumentException(s"File $trimmedFilename with content type $declaredType is not allowed")
 
         // multipartUploadLocation already ensured above
         val filePath = multipartUploadLocation.resolve(trimmedFilename)
