@@ -95,7 +95,30 @@ extension (l: Long)
     else
       val z = (63 - java.lang.Long.numberOfLeadingZeros(l)) / 10
       f"${(l * 1.0) / (1L << (z * 10))}%.1f ${" KMGTPE".charAt(z)}%sB"
-end  extension
+end extension
+
+extension (d: java.time.Duration)
+  def humanize: String =
+    val seconds = d.getSeconds
+    val nanos = d.getNano
+    if seconds == 0 && nanos == 0 then return "0s"
+    val sb = new StringBuilder
+    val days = seconds / 86400
+    val hours = (seconds % 86400) / 3600
+    val mins = (seconds % 3600) / 60
+    val secs = seconds % 60
+    val ms = nanos / 1_000_000
+    if days > 0 then sb.append(s"${days}d ")
+    if hours > 0 then sb.append(s"${hours}h ")
+    if mins > 0 then sb.append(s"${mins}m ")
+    if secs > 0 || ms > 0 then
+      if secs > 0 then sb.append(secs)
+      if ms > 0 then
+        if secs > 0 then sb.append(".") else sb.append("0.")
+        sb.append(f"$ms%03d")
+      sb.append("s")
+    sb.toString.trim
+end extension
 
 extension (cookie: Cookie)
   def toJson: JsObject =

@@ -125,33 +125,36 @@ trait EssentialAction extends HttpService :
     // is fully written to the client. For InputStream returns, the actual
     // streaming (transferTo) happens AFTER futureResp completes, so we must
     // hook into the HttpResponse's completion future, not futureResp's.
+    // On exception, the onException callback fires before close() with the
+    // actual exception.
     val resourceScope = svcRequestContext
-    futureResp.whenComplete { (httpResp, ex) =>
+    futureResp.whenComplete { (httpResp, _) =>
       if httpResp != null then
-        // HttpResponse.whenComplete() returns a CompletableFuture[Void] that
-        // completes after all bytes are written to the client (or on error).
-        val responseDone = httpResp.whenComplete()
-        responseDone.thenRun(() => closeManagedResources(resourceScope))
+        httpResp.whenComplete().whenComplete { (_, _) =>
+          resourceScope.blockingTaskExecutor().execute(() =>
+            closeManagedResources(resourceScope)
+          )
+        }
       else
-        // futureResp completed exceptionally — no HttpResponse to stream
-        closeManagedResources(resourceScope)
+        resourceScope.blockingTaskExecutor().execute(() =>
+          closeManagedResources(resourceScope)
+        )
     }
     HttpResponse.of(futureResp)
 
   /**
-   * Closes all resources registered via `req.manageResource` on the given
-   * `ServiceRequestContext`. Resources are closed in LIFO (reverse
-   * registration) order. Exceptions during close are swallowed.
+   * Closes all resources registered via `req.manageResource`. Resources are
+   * closed in LIFO (reverse registration) order. If one resource's close()
+   * throws, the remaining resources are still closed.
    */
   private def closeManagedResources(ctx: ServiceRequestContext): Unit =
     val list = ctx.attr(RequestAttrs.ManagedResources)
     if list != null then
-      val it = list.iterator()
-      val toClose = new java.util.ArrayList[AutoCloseable]()
-      while it.hasNext do toClose.add(it.next())
-      var i = toClose.size() - 1
+      val size = list.size()
+      var i = size - 1
       while i >= 0 do
-        try toClose.get(i).close() catch case _: Throwable => ()
+        try list.get(i).close()
+        catch case _: Throwable => ()
         i -= 1
 
 end EssentialAction

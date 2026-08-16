@@ -37,6 +37,7 @@
     <logger name="com.greenfossil.thorium.csrf" level="off"/>
     <logger name="com.greenfossil.thorium.action" level="off"/>
     <logger name="com.greenfossil.thorium.recaptcha" level="off"/>
+    <logger name="com.greenfossil.thorium.resource" level="debug"/>
 
 
 </configuration>

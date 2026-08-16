@@ -59,24 +59,32 @@ trait Request(val requestContext: ServiceRequestContext,
    * Multiple resources can be registered per request; they are closed in
    * LIFO (reverse registration) order.
    *
+   * @param rsrc the resource to manage
+   * @param label optional human-readable name for logging (defaults to class name)
+   * @param maxLease optional max duration the resource may be held; if exceeded,
+   *                 a WARN is logged at close time. `null` disables monitoring.
+   *
    * Example:
    * {{{
    * Action { req =>
-   *   val conn = req.manageResource(DB.createAutoCommitConnection)
+   *   val conn = req.manageResource(DB.createAutoCommitConnection, label = "db-conn")
    *   val stream = DB.use(conn) { implicit c => c.binaryStream("SELECT ...") }
    *   Ok(stream)
    *   // conn.close() called by framework after streaming completes
    * }
    * }}}
    */
-  def manageResource[R <: AutoCloseable](rsrc: R): R =
+  def manageResource[R <: AutoCloseable](rsrc: R, label: String = "", maxLease: java.time.Duration = null): R =
+    val resolvedLabel = if label.isEmpty then rsrc.getClass.getSimpleName else label
+    RequestAttrs.resourceLogger.debug(s"Resource [$resolvedLabel] registered")
+    val entry = RequestAttrs.ManagedResource(rsrc, resolvedLabel, System.nanoTime(), maxLease)
     val list = requestContext.attr(RequestAttrs.ManagedResources)
     if list == null then
-      val newList = new java.util.ArrayList[AutoCloseable]()
+      val newList = new java.util.ArrayList[RequestAttrs.ManagedResource]()
       requestContext.setAttr(RequestAttrs.ManagedResources, newList)
-      newList.add(rsrc)
+      newList.add(entry)
     else
-      list.add(rsrc)
+      list.add(entry)
     rsrc
 
   def recaptchaResponse: Recaptcha = requestContext.attr(RequestAttrs.RecaptchaResponse)

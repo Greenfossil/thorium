@@ -24,7 +24,7 @@ import munit.FunSuite
 import java.net.URI
 import java.net.http.{HttpClient, HttpRequest, HttpResponse}
 import java.nio.charset.StandardCharsets
-import java.nio.file.{Files, Paths}
+import java.nio.file.Files
 
 object FormServices {
   @Post("/multipart3")
@@ -87,12 +87,15 @@ class MultiPartFormSuite extends FunSuite{
     )
 
   test("POST with file content") {
-    Files.write(Paths.get("/tmp/file.txt"), "Hello world".getBytes(StandardCharsets.UTF_8))
-    val mpPub = MultipartFormDataBodyPublisher()
-      .addFile("resourceFile", Paths.get("/tmp/file.txt"), "text/plain")
-    val resp = postMultipart("/multipart3", mpPub)
-    assertEquals(resp.statusCode(), 200)
-    assertNoDiff(resp.body(), "Received multipart request with files: 1")
+    val tmpFile = Files.createTempFile("thorium-mptest-", ".txt")
+    Files.write(tmpFile, "Hello world".getBytes(StandardCharsets.UTF_8))
+    try
+      val mpPub = MultipartFormDataBodyPublisher()
+        .addFile("resourceFile", tmpFile, "text/plain")
+      val resp = postMultipart("/multipart3", mpPub)
+      assertEquals(resp.statusCode(), 200)
+      assertNoDiff(resp.body(), "Received multipart request with files: 1")
+    finally Files.deleteIfExists(tmpFile)
   }
 
   test("POST without file content but with form param") {

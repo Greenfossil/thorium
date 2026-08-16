@@ -34,6 +34,8 @@ lazy val thorium = project
 
 //This is required for testcases that submits header content-length explicitly
 javacOptions += "-Djdk.httpclient.allowRestrictedHeaders=content-length"
+Test / fork := true
+Test / javaOptions += "-Djdk.httpclient.allowRestrictedHeaders=content-length"
 
 //https://www.scala-sbt.org/1.x/docs/Publishing.html
 ThisBuild / versionScheme := Some("early-semver")

@@ -16,7 +16,9 @@
 
 package com.greenfossil.thorium
 
-import java.time.ZoneId
+import org.slf4j.LoggerFactory
+
+import java.time.{Duration, ZoneId}
 
 object RequestAttrs:
   import io.netty.util.AttributeKey
@@ -27,4 +29,33 @@ object RequestAttrs:
   val Request = AttributeKey.valueOf[Request]("request")
   val CSRFToken = AttributeKey.valueOf[String]("csrf-token")
   val RecaptchaResponse  = AttributeKey.valueOf[Recaptcha]("recaptcha-response")
-  val ManagedResources = AttributeKey.valueOf[java.util.List[AutoCloseable]]("managed-resources")
+
+  private[thorium] val resourceLogger = LoggerFactory.getLogger("com.greenfossil.thorium.resource")
+
+  /**
+   * A managed resource entry — holds the AutoCloseable resource with metadata
+   * for logging and lease monitoring. Closed in LIFO order after the HTTP
+   * response is fully written.
+   *
+   * @param resource the AutoCloseable to close
+   * @param label human-readable identity for logging (e.g. "db-conn")
+   * @param registeredAtNanos System.nanoTime() at registration
+   * @param maxLease if non-null, a WARN is logged when the resource is held
+   *                 longer than this duration
+   */
+  final class ManagedResource(
+      val resource: AutoCloseable,
+      val label: String,
+      val registeredAtNanos: Long,
+      val maxLease: Duration
+  ):
+    def close(): Unit =
+      val duration = Duration.ofNanos(System.nanoTime() - registeredAtNanos)
+      if maxLease != null && duration.compareTo(maxLease) > 0 then
+        resourceLogger.warn(s"Resource [$label] held for ${duration.humanize} (maxLease=${maxLease.humanize})")
+      else
+        resourceLogger.debug(s"Resource [$label] closed after ${duration.humanize}")
+      try resource.close()
+      catch case _: Throwable => ()
+
+  val ManagedResources = AttributeKey.valueOf[java.util.List[ManagedResource]]("managed-resources")
