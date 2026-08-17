@@ -124,7 +124,7 @@ object ResourceManagementServices:
    * the action returned a Future.
    */
   @Get("/resource-slow-stream-async")
-  def slowStreamAsync: Action = Action.async { req =>
+  def slowStreamAsync: AsyncAction = AsyncAction { req =>
     import scala.concurrent.{ExecutionContext, Future}
     given ExecutionContext = ExecutionContext.global
     Future {
@@ -149,7 +149,7 @@ object ResourceManagementServices:
   }
 
   @Get("/resource-async")
-  def asyncResource: Action = Action.async { req =>
+  def asyncResource: AsyncAction = AsyncAction { req =>
     val res = req.manageResource(TestResource("async-test"))
     import scala.concurrent.{ExecutionContext, Future}
     given ExecutionContext = ExecutionContext.global
@@ -197,7 +197,7 @@ object ResourceManagementServices:
   }
 
   @Get("/resource-callback-async")
-  def callbackAsync: Action = Action.async { req =>
+  def callbackAsync: AsyncAction = AsyncAction { req =>
     import scala.concurrent.{ExecutionContext, Future}
     given ExecutionContext = ExecutionContext.global
     Future {
@@ -381,7 +381,7 @@ class ResourceManagementSuite extends munit.FunSuite:
     assert(elapsed >= 500, s"Streaming should take at least ~1s (5 bytes × 200ms), took ${elapsed}ms — resource may have been closed early")
 
   test("manageResource with async Future keeps resource open during slow streaming"):
-    // Same as above but via Action.async returning Future[InputStream].
+    // Same as above but via AsyncAction returning Future[InputStream].
     // The InputStream is created inside a Future on ExecutionContext.global.
     // Tests that manageResource works through the async path — the resource
     // must stay open until streaming completes, even though the action

@@ -10,7 +10,7 @@ lazy val thorium = project
   .settings(
     name := "thorium",
     organization := "com.greenfossil",
-    version := "0.11.2-RC1",
+    version := "0.11.2",
     scalaVersion := "3.8.3",
 
     libraryDependencies ++= Seq(
@@ -34,7 +34,6 @@ lazy val thorium = project
 
 //This is required for testcases that submits header content-length explicitly
 javacOptions += "-Djdk.httpclient.allowRestrictedHeaders=content-length"
-Test / fork := true
 Test / javaOptions += "-Djdk.httpclient.allowRestrictedHeaders=content-length"
 
 //https://www.scala-sbt.org/1.x/docs/Publishing.html

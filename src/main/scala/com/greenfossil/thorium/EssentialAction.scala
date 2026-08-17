@@ -159,18 +159,131 @@ trait EssentialAction extends HttpService :
 
 end EssentialAction
 
-trait Action extends EssentialAction
+/**
+ * The base action type for async operations. The system is async by default.
+ *
+ * [[AsyncAction]] accepts `AsyncActionResponse` callbacks (which may return
+ * either a sync `ActionResponse` or a `Future[ActionResponse]`). Timeout control
+ * (`noTimeout`, `timeout`) composes with `apply` and `multipart` orthogonally.
+ *
+ * [[Action]] is a sync-constrained subtype that only accepts `ActionResponse` callbacks.
+ */
+trait AsyncAction extends EssentialAction
+
+object AsyncAction:
+
+  /**
+   * Creates an async action. The action body may return:
+   *   - A `Future[ActionResponse]` for genuinely async work
+   *   - A synchronous `ActionResponse` — the framework handles it without wrapping
+   *
+   * @param fn the action body returning `AsyncActionResponse`
+   * @return an [[AsyncAction]]
+   */
+  def apply(fn: Request => AsyncActionResponse): AsyncAction =
+    actionLogger.debug(s"Processing AsyncAction...")
+    (request: Request) => fn(request)
+
+  /**
+   * Multipart form request with async support. Uses `asMultipartFormDataAsync`
+   * — non-blocking, returns a `Future`. The action body may return sync
+   * `ActionResponse` or `Future[ActionResponse]`.
+   *
+   * @param fn the action body returning `AsyncActionResponse`
+   * @return an [[AsyncAction]]
+   */
+  def multipart(fn: MultipartRequest => AsyncActionResponse): AsyncAction =
+    actionLogger.debug("Processing AsyncAction Multipart...")
+    (request: Request) => request.asMultipartFormDataAsync { form =>
+      fn(MultipartRequest(form, request.requestContext, request.aggregatedHttpRequest))
+    }
+
+  /**
+   * Clears the request timeout for this action, allowing long-running
+   * operations (e.g. LLM streaming, bulk DB operations) to complete without
+   * Armeria's default request timeout interrupting.
+   *
+   * Use sparingly — only for endpoints that genuinely need unlimited time.
+   * Prefer [[AsyncAction.timeout]] with an explicit duration where possible.
+   *
+   * @return an [[AsyncActionBuilder]] with no request timeout
+   */
+  def noTimeout: AsyncActionBuilder = AsyncActionBuilder(ClearTimeout)
+
+  /**
+   * Sets an explicit request timeout for this action, overriding the server's
+   * default. Useful for endpoints that need more (or less) time than the
+   * global default.
+   *
+   * @param duration the maximum time the request is allowed to run
+   * @return an [[AsyncActionBuilder]] with the specified timeout
+   */
+  def timeout(duration: Duration): AsyncActionBuilder = AsyncActionBuilder(SetTimeout(duration))
+
+end AsyncAction
+
+/**
+ * Builder for timeout-controlled async actions. Supports both `apply` (normal request)
+ * and `multipart` (multipart form request) with the configured timeout.
+ *
+ * Created by [[AsyncAction.noTimeout]] or [[AsyncAction.timeout]].
+ *
+ * Example usage:
+ * {{{
+ *   AsyncAction.noTimeout { req => ... }             // normal, no timeout
+ *   AsyncAction.noTimeout.multipart { mpReq => ... } // multipart, no timeout
+ *   AsyncAction.timeout(30.seconds) { req => ... }    // normal, 30s timeout
+ *   AsyncAction.timeout(30.seconds).multipart { mpReq => ... } // multipart, 30s timeout
+ * }}}
+ */
+private trait ActionTimeout:
+  def timeoutConfig: TimeoutConfig
+
+  protected def applyTimeout(request: Request): Unit =
+    timeoutConfig match
+      case ClearTimeout         => request.requestContext.clearRequestTimeout()
+      case SetTimeout(duration) => request.requestContext.setRequestTimeout(duration)
+
+end ActionTimeout
+
+case class AsyncActionBuilder(timeoutConfig: TimeoutConfig) extends ActionTimeout:
+
+  def apply(fn: Request => AsyncActionResponse): AsyncAction =
+    (request: Request) =>
+      applyTimeout(request)
+      fn(request)
+
+  def multipart(fn: MultipartRequest => AsyncActionResponse): AsyncAction =
+    (request: Request) =>
+      applyTimeout(request)
+      request.asMultipartFormDataAsync { form =>
+        fn(MultipartRequest(form, request.requestContext, request.aggregatedHttpRequest))
+      }
+
+end AsyncActionBuilder
+
+sealed trait TimeoutConfig
+case object ClearTimeout extends TimeoutConfig
+case class SetTimeout(duration: Duration) extends TimeoutConfig
+
+/**
+ * A sync-constrained action. The action body must return `ActionResponse` only
+ * (not `Future[ActionResponse]`).
+ *
+ * [[Action]] is a subtype of [[AsyncAction]]. Timeout control (`noTimeout`,
+ * `timeout`) composes with `apply` and `multipart` orthogonally.
+ */
+trait Action extends AsyncAction
 
 object Action:
 
   /**
-   * Creates a synchronous action. The action body may return any `AsyncActionResponse`
-   * (including `Future[ActionResponse]` — the pipeline handles both).
+   * Creates a synchronous action. The action body must return `ActionResponse`.
    *
    * @param fn the action body
    * @return an [[Action]]
    */
-  def apply(fn: Request => AsyncActionResponse): Action =
+  def apply(fn: Request => ActionResponse): Action =
     actionLogger.debug(s"Processing Action...")
     (request: Request) => fn(request)
 
@@ -189,80 +302,49 @@ object Action:
 
   /**
    * Clears the request timeout for this action, allowing long-running
-   * operations (e.g. LLM streaming, bulk DB operations) to complete without
-   * Armeria's default request timeout interrupting.
+   * sync operations to complete without Armeria's default request timeout.
    *
-   * Use sparingly — only for endpoints that genuinely need unlimited time.
-   * Prefer [[Action.timeout]] with an explicit duration where possible.
-   *
-   * @param fn the action body
-   * @return an [[Action]] with no request timeout
+   * @return an [[ActionBuilder]] with no request timeout
    */
-  def noTimeout(fn: Request => AsyncActionResponse): Action =
-    (request: Request) =>
-      request.requestContext.clearRequestTimeout()
-      fn(request)
+  def noTimeout: ActionBuilder = ActionBuilder(ClearTimeout)
 
   /**
    * Sets an explicit request timeout for this action, overriding the server's
-   * default. Useful for endpoints that need more (or less) time than the
-   * global default.
+   * default.
    *
    * @param duration the maximum time the request is allowed to run
-   * @param fn the action body
-   * @return an [[Action]] with the specified timeout
+   * @return an [[ActionBuilder]] with the specified timeout
    */
-  def timeout(duration: Duration)(fn: Request => AsyncActionResponse): Action =
+  def timeout(duration: Duration): ActionBuilder = ActionBuilder(SetTimeout(duration))
+
+end Action
+
+/**
+ * Builder for timeout-controlled sync actions. Supports both `apply` (normal request)
+ * and `multipart` (multipart form request) with the configured timeout.
+ *
+ * Created by [[Action.noTimeout]] or [[Action.timeout]].
+ *
+ * Example usage:
+ * {{{
+ *   Action.noTimeout { req => ... }             // normal, no timeout
+ *   Action.noTimeout.multipart { mpReq => ... } // multipart, no timeout
+ *   Action.timeout(30.seconds) { req => ... }    // normal, 30s timeout
+ *   Action.timeout(30.seconds).multipart { mpReq => ... } // multipart, 30s timeout
+ * }}}
+ */
+case class ActionBuilder(timeoutConfig: TimeoutConfig) extends ActionTimeout:
+
+  def apply(fn: Request => ActionResponse): Action =
     (request: Request) =>
-      request.requestContext.setRequestTimeout(duration)
+      applyTimeout(request)
       fn(request)
 
-  /**
-   * Creates an async action. The action body may return:
-   *   - A `Future[ActionResponse]` for genuinely async work (DB calls, HTTP requests, etc.)
-   *   - A synchronous `ActionResponse` (String, Result, Option, Try, Either, JsValue, etc.)
-   *     — the framework handles it without wrapping in `Future(...)`.
-   *
-   * This is a semantic marker — the pipeline handles both sync and async returns
-   * identically. The user does not need to wrap sync returns in `Future(...)`.
-   *
-   * The user's `Future` body runs on the user's own `ExecutionContext` (typically
-   * `given ExecutionContext = ExecutionContext.global` declared at the controller level).
-   * The framework does not require or capture an `ExecutionContext` — completion
-   * is wired via the blocking-pool executor inside `serve()`.
-   *
-   * Example:
-   * {{{
-   * given ExecutionContext = ExecutionContext.global
-   *
-   * @Get("/search")
-   * def search: Action = Action.async { req =>
-   *   db.findUser(req.queryParam("q")).map(Ok(_))   // Future[Result]
-   * }
-   *
-   * @Get("/sync-in-async")
-   * def syncInAsync: Action = Action.async { req =>
-   *   "hello"   // String — handled directly, no Future wrapping
-   * }
-   * }}}
-   *
-   * @param fn the action body returning `AsyncActionResponse`
-   * @return an [[Action]]
-   */
-  def async(fn: Request => AsyncActionResponse): Action =
-    actionLogger.debug(s"Processing Async Action...")
-    (request: Request) => fn(request)
+  def multipart(fn: MultipartRequest => ActionResponse): Action =
+    (request: Request) =>
+      applyTimeout(request)
+      request.asMultipartFormData { form =>
+        fn(MultipartRequest(form, request.requestContext, request.aggregatedHttpRequest))
+      }
 
-  /**
-   * Multipart form request with async support. The action body may return
-   * sync `ActionResponse` or `Future[ActionResponse]`. Uses
-   * `asMultipartFormDataAsync` — non-blocking, returns a `Future`.
-   *
-   * @param fn the action body returning `AsyncActionResponse`
-   * @return an [[Action]]
-   */
-  def multipartAsync(fn: MultipartRequest => AsyncActionResponse): Action =
-    actionLogger.debug("Processing Multipart Async Action...")
-    (request: Request) => request.asMultipartFormDataAsync { form =>
-      fn(MultipartRequest(form, request.requestContext, request.aggregatedHttpRequest))
-    }
+end ActionBuilder

@@ -8,3 +8,4 @@ metals.sbt
 .bsp
 .lh/
 src/test/scala/experiments/
+/.opencode/
