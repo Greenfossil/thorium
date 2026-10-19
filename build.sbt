@@ -1,34 +1,35 @@
-
 scalacOptions ++= Seq(
   "-feature", "-deprecation", "-Wunused:imports" ,
 //  "-Xprint:postInlining", "-Xmax-inlines:100000",
 )
 
-
+// Sibling libraries are consumed as published artifacts. Jackson 2 is
+// Armeria's internal stack; commons-json owns Jackson 3, so no version pin is
+// needed here.
 lazy val thorium = project
   .in(file("."))
   .settings(
     name := "thorium",
     organization := "com.greenfossil",
-    version := "0.11.2",
+    version := "0.11.3-RC1",
     scalaVersion := "3.8.3",
 
     libraryDependencies ++= Seq(
-      "com.greenfossil" %% "htmltags" % "1.4.0",
-      "com.greenfossil" %% "data-mapping" % "1.4.0",
+      "com.greenfossil" %% "htmltags" % "1.4.1-RC1",
+      "com.greenfossil" %% "commons-json" % "1.5.0-RC1",
+      "com.greenfossil" %% "data-mapping" % "1.4.1-RC1",
       "com.greenfossil" %% "commons-i18n" % "1.4.0",
       "com.greenfossil" %% "typesafe-config-ext" % "1.4.0",
-      "io.projectreactor" % "reactor-core" % "3.8.5",
-      "com.linecorp.armeria" % "armeria" % "1.39.1",
-      "com.linecorp.armeria" % "armeria-logback" % "1.39.1",
+      "io.projectreactor" % "reactor-core" % "3.8.7",
+      "com.linecorp.armeria" % "armeria" % "1.42.0",
+      "com.linecorp.armeria" % "armeria-logback" % "1.42.0",
       "org.overviewproject" % "mime-types" % "2.0.0",
       "io.github.yskszk63" % "jnhttp-multipartformdata-bodypublisher" % "0.0.1",
-      "org.slf4j" % "slf4j-api" % "2.0.18",
-      "com.microsoft.playwright" % "playwright" % "1.60.0" % Test,
-      "ch.qos.logback" % "logback-classic" % "1.5.34" % Test,
-      "org.scalameta" %% "munit" % "1.3.2" % Test,
+      "org.slf4j" % "slf4j-api" % "2.0.20",
+      "com.microsoft.playwright" % "playwright" % "1.63.0" % Test,
+      "ch.qos.logback" % "logback-classic" % "1.6.5" % Test,
+      "org.scalameta" %% "munit" % "1.3.6" % Test,
       "org.scala-lang" %% "scala3-compiler" % scalaVersion.value % Test
-
     )
   )
 

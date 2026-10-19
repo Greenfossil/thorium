@@ -1,4 +1,4 @@
-~~~~# AsyncAction Type Hierarchy
+# AsyncAction Type Hierarchy
 
 ## Context
 

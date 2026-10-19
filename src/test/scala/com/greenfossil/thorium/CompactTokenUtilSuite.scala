@@ -73,7 +73,12 @@ class CompactTokenUtilSuite extends FunSuite {
 
     val res = for {
       token <- TokenUtil.generateCompactToken(value, duration, notBefore, passwordKey, AESUtil.AES_GCM_NOPADDING)
-      tampered = if (token.isEmpty) token + "x" else token.dropRight(1) + (if (token.last != 'a') 'a' else 'b')
+      // Tamper a SIGNIFICANT base64 character. Replacing the final character can
+      // land in padding bits and decode to the same bytes (flaky false pass).
+      tampered =
+        val pos = token.length / 2
+        val replacement = if token.charAt(pos) != 'A' then 'A' else 'B'
+        token.updated(pos, replacement)
       verified <- TokenUtil.verifyCompactToken(tampered, passwordKey, AESUtil.AES_GCM_NOPADDING)
     } yield verified
 
